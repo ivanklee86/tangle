@@ -1,0 +1,15 @@
+argo-cd:
+  configs:
+    cm:
+      accounts.automation: apiKey
+    
+    rbac:
+      policy.csv: |
+        p, role:argonap, projects, create, *, allow
+        p, role:argonap, projects, get, *, allow
+        p, role:argonap, projects, update, *, allow
+        p, role:argonap, projects, delete, *, allow
+        g, automation, role:argonap
+
+    params:
+      server.insecure: true

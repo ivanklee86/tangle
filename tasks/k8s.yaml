@@ -1,0 +1,66 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  CLUSTER_NAME: local
+
+tasks:
+  start:
+    desc: "Start :allthethings:!"
+    cmds:
+      - task: cluster:create
+      - task: bootstrap
+
+  # Cluster management
+  cluster:create:
+    desc: "Create k3d cluster."
+    cmds:
+      - k3d cluster create {{.CLUSTER_NAME}} --config ./k3d-config.yaml
+      - kubectl get nodes
+
+  cluster:delete:
+    desc: "Clean up k3d cluster."
+    cmds:
+      - k3d cluster delete {{.CLUSTER_NAME}}
+  
+  cluster:config:
+    desc: "Get k3d cluster config."
+    cmds:
+      - mkdir ~/.kube || true
+      - k3d kubeconfig get {{.CLUSTER_NAME}} > ~/.kube/config
+
+  # Handy Helm shortcuts
+  helm:update:
+    desc: Update helm dependencies.
+    dir: "{{.USER_WORKING_DIR}}"
+    cmds:
+      - helm dep update
+
+  helm:template:
+    desc: Update helm dependencies.
+    dir: "{{.USER_WORKING_DIR}}"
+    cmds:
+      - task: helm:update
+      - helm template --values values.yaml . > manifests.yaml
+
+  # App deployments.
+  bootstrap:
+    desc: "Bootstrap apps"
+    cmds:
+      - task: bootstrap:argocd
+      - task: bootstrap:ingress-nginx
+
+  bootstrap:argocd:
+    desc: "Bootstrap ArgoCD."
+    cmds:
+      - helm repo add argocd https://argoproj.github.io/argo-helm
+      - cd integration/kubernetes/argocd; helm dependency build
+      - helm install argocd integration/kubernetes/argocd --namespace default
+
+  bootstrap:ingress-nginx:
+    desc: "Bootstrap Ingress"
+    cmds:
+      - helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+      - cd integration/kubernetes/ingress-nginx; helm dependency build
+      - helm install ingress-nginx integration/kubernetes/ingress-nginx --namespace default

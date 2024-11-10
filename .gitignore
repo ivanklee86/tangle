@@ -23,3 +23,15 @@ go.work.sum
 
 # env file
 .env
+
+# Helm
+charts
+manifest*.yaml
+.task
+
+# Binaries
+bin
+dist
+
+# Test files
+report.xml

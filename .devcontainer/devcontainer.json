@@ -10,7 +10,7 @@
 			"VARIANT": "1.23",
 
 			// Choose node version or none to skip.
-			"NODE_VERSION": "none"
+			"NODE_VERSION": "22"
 		}
 	},
 

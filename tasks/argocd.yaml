@@ -1,0 +1,36 @@
+# https://taskfile.dev
+version: '3'
+
+
+tasks:
+  password:
+    desc: "Get ArgoCD password"
+    cmds:
+      - kubectl get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
+
+  login:
+    desc: "Log in to ArgoCD"
+    cmds:
+      - argocd login localhost:8080 --username {{ .ARGOCD_USERNAME }} --password {{ .ARGOCD_PASSWORD }} --insecure --grpc-web
+    vars:
+      ARGOCD_USERNAME: admin
+      ARGOCD_PASSWORD:
+        sh: kubectl get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
+
+  healthcheck:
+    desc: "Wait for servies to start"
+    cmds:
+      - kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=argocd-server
+      - kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=ingress-nginx
+
+  token:
+    desc: "Generate token for service account."
+    cmds:
+      - task: login
+      - ./scripts/template_dotenv.sh
+  
+  clean:
+    desc: "Cleans up projects."
+    cmds:
+      - kubectl get appprojects --no-headers=true | awk /pr/'{print $1}' | xargs kubectl delete appprojects || true
+ 
