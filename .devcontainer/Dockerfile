@@ -11,6 +11,7 @@ USER vscode
 
 # Install tools
 # - Tools
+RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d
 COPY --from=quay.io/argoproj/argocd /usr/local/bin/argocd /usr/local/bin
 
 # - Golang
