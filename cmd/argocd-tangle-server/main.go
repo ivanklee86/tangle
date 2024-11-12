@@ -8,7 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/healthcheck"
 )
 
-func New() fiber.App {
+func New() *fiber.App {
 	app := fiber.New()
 
 	// Initialize health and monitoring
@@ -20,7 +20,7 @@ func New() fiber.App {
 		return c.SendString("Hello world!")
 	})
 
-	return *app
+	return app
 }
 
 func main() {
