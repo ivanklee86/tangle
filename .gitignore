@@ -35,3 +35,4 @@ dist
 
 # Test files
 report.xml
+coverage.html
