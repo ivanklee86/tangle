@@ -1,5 +1,7 @@
 # ArgoCD Tangle
 
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/ivanklee86/argocd-tangle/main.svg)](https://results.pre-commit.ci/latest/github/ivanklee86/argocd-tangle/main)
+
 🚧 Under construction! 🚧
 
 **tangle** (_noun_): A theoretical name for a group of octopuses since in the wild they are solitary creatures.
