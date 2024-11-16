@@ -6,8 +6,8 @@ import (
 	"syscall"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/healthcheck"
 	"github.com/gofiber/fiber/v2/log"
+	"github.com/gofiber/fiber/v2/middleware/healthcheck"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 )
 
@@ -32,9 +32,9 @@ func main() {
 	// Set up graceful service shutdown.
 	gracefulShutdown := make(chan os.Signal, 1)
 	signal.Notify(gracefulShutdown, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	
+
 	go func() {
-		signal := <- gracefulShutdown
+		signal := <-gracefulShutdown
 		log.Fatalf("Shutting down.  Signal: %s", signal)
 		_ = app.Shutdown()
 	}()
