@@ -1,31 +1,31 @@
+---
 # https://taskfile.dev
 version: '3'
 
 includes:
-  go: ./tasks/go.yaml
-  k8s: ./tasks/k8s.yaml
-  argocd: ./tasks/argocd.yaml
-  argonap: ./tasks/argonap.yaml
+    go: ./tasks/go.yaml
+    k8s: ./tasks/k8s.yaml
+    argocd: ./tasks/argocd.yaml
 
-dotenv: ['.env']
+dotenv: [.env]
 
 tasks:
-  default:
-    cmds:
-      - task: go:fmt
-      - task: go:lint
-      - task: go:build
-      - task: argocd:clean
-      - task: go:test
+    default:
+        cmds:
+            - task: go:fmt
+            - task: go:lint
+            - task: go:build
+            - task: argocd:clean
+            - task: go:test
 
-  services:
-    desc: "Set up services (aka ArgoCD) to use for tests."
-    cmds:
-      - task: k8s:start
-      - task: argocd:healthcheck
-      - task: argocd:token
+    services:
+        desc: Set up services (aka ArgoCD) to use for tests.
+        cmds:
+            - task: k8s:start
+            - task: argocd:healthcheck
+            - task: argocd:token
 
-  devcontainer:
-    desc: "Test devcontainer changes"
-    cmds:
-      - docker build -t devcontainer -f ./.devcontainer/Dockerfile .
+    devcontainer:
+        desc: Test devcontainer changes
+        cmds:
+            - docker build -t devcontainer -f ./.devcontainer/Dockerfile .

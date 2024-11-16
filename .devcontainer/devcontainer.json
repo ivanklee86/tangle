@@ -10,7 +10,10 @@
 			"VARIANT": "1.23",
 
 			// Choose node version or none to skip.
-			"NODE_VERSION": "22"
+			"NODE_VERSION": "22",
+
+			// Chose Python version.
+			"PYTHON_VERSION": "3.13"
 		}
 	},
 
