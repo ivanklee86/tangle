@@ -8,6 +8,7 @@ vars:
   COVERAGE_RAW: coverage.out
   COVERAGE_REPORT: coverage.html
   VERSION: "Task"
+  TANGLE_CONFIG_PATH: "./tegration/tangle.yaml"
 
 tasks:
   install:
@@ -43,6 +44,11 @@ tasks:
     desc: Run server
     cmds:
       - go run cmd/tangle-server/main.go
+
+  run-reloading:
+    desc: Run server with hot reloading.
+    cmds:
+      - air -c .air.conf
 
   test:
     desc: Run Golang tests.

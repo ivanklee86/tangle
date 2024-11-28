@@ -36,7 +36,7 @@ func New(config *TangleConfig) *Tangle {
 
 	// Application routes
 	app.Get("/", func(c *fiber.Ctx) error {
-		response := fmt.Sprintf("Hello %s!", tangle.Config.Name)
+		response := fmt.Sprintf("Hello great %s!", tangle.Config.Name)
 		return c.SendString(response)
 	})
 
