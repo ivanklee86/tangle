@@ -5,7 +5,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/ivanklee86/argocd-tangle.git
+    repoURL: https://github.com/ivanklee86/tangle.git
     path: integration/kubernetes/example/manifests
     targetRevision: poc
   destination:

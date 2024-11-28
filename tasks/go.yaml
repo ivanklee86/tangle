@@ -42,7 +42,7 @@ tasks:
   run:
     desc: Run server
     cmds:
-      - go run cmd/argocd-tangle-server/main.go
+      - go run cmd/tangle-server/main.go
 
   test:
     desc: Run Golang tests.
