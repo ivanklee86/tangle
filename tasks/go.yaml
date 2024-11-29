@@ -8,7 +8,9 @@ vars:
   COVERAGE_RAW: coverage.out
   COVERAGE_REPORT: coverage.html
   VERSION: "Task"
-  TANGLE_CONFIG_PATH: "./tegration/tangle.yaml"
+
+env:
+  TANGLE_CONFIG_PATH: "./integration/tangle.yaml"
 
 tasks:
   install:

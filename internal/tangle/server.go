@@ -1,63 +1,86 @@
 package tangle
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	"github.com/ansrivas/fiberprometheus/v2"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
-	"github.com/gofiber/fiber/v2/middleware/healthcheck"
-	"github.com/gofiber/fiber/v2/middleware/monitor"
+	"github.com/hellofresh/health-go/v5"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
+
+	"github.com/ivanklee86/tangle/internal/argocd"
 )
 
 type Tangle struct {
-	App    *fiber.App
-	Config *TangleConfig
+	Server        *http.Server
+	Config        *TangleConfig
+	ArgoCDClients []argocd.ArgoCDClient
+	Log           *zap.SugaredLogger
 }
 
 func New(config *TangleConfig) *Tangle {
 	tangle := Tangle{}
 	tangle.Config = config
 
-	app := fiber.New()
+	// set up logging
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+	tangle.Log = logger.Sugar()
+
+	// Create ArgoCD clients
+	// TODO: Actually do this!
+	tangle.ArgoCDClients = append(tangle.ArgoCDClients, argocd.New(&argocd.ArgoCDClientOptions{}))
+
+	// Set up Server
+	server := &http.Server{
+		Addr: fmt.Sprintf(":%d", tangle.Config.Port),
+	}
+	tangle.Server = server
 
 	//Set up Prometheus
-	prometheus := fiberprometheus.New("tangle")
-	prometheus.RegisterAt(app, "/metrics")
-	prometheus.SetSkipPaths([]string{"/livez", "/readyz", "/console"}) // Optional: Remove some paths from metrics
-	app.Use(prometheus.Middleware)
-
-	// Initialize health and monitoring
-	app.Use(healthcheck.New())
-	app.Get("/console", monitor.New())
+	http.Handle("/metrics", promhttp.Handler())
 
 	// Application routes
-	app.Get("/", func(c *fiber.Ctx) error {
-		response := fmt.Sprintf("Hello great %s!", tangle.Config.Name)
-		return c.SendString(response)
-	})
+	http.HandleFunc("/applications", tangle.applicationsHandler)
 
-	tangle.App = app
+	// Set up healthchecks
+	h, _ := health.New(health.WithComponent(
+		health.Component{
+			Name:    "tangle",
+			Version: "v1.0",
+		},
+	))
+
+	http.Handle("/health", h.Handler())
 
 	return &tangle
 }
 
 func (t *Tangle) Start() {
+	t.Log.Infoln("Starting server.")
+	go func() {
+		if err := t.Server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			t.Log.Fatalf("HTTP server error: %v", err)
+		}
+		t.Log.Infoln("Stopped serving new connections.")
+	}()
+
 	// Set up graceful service shutdown.
 	gracefulShutdown := make(chan os.Signal, 1)
 	signal.Notify(gracefulShutdown, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	<-gracefulShutdown
 
-	go func() {
-		signal := <-gracefulShutdown
-		log.Fatalf("Shutting down.  Signal: %s", signal)
-		_ = t.App.Shutdown()
-	}()
+	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownRelease()
 
-	// Start service.
-	if err := t.App.Listen(fmt.Sprintf(":%d", t.Config.Port)); err != nil {
-		log.Error(err)
+	if err := t.Server.Shutdown(shutdownCtx); err != nil {
+		t.Log.Fatalf("HTTP shutdown error: %v", err)
 	}
+	t.Log.Info("Graceful shutdown complete.")
 }
