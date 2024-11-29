@@ -28,7 +28,7 @@ type ArgoCDClient struct {
 	DiffWorkerPool      pond.ResultPool[string]
 }
 
-func registerWorkerPoolsWithPrometheus(name string, pool pond.ResultPool[string]) {
+func instrumentWorkerPool(name string, pool pond.ResultPool[string]) {
 	poolLabels := make(map[string]string)
 	poolLabels["pool"] = name
 	prometheus.MustRegister(prometheus.NewGaugeFunc(
@@ -102,9 +102,9 @@ func New(options *ArgoCDClientOptions) ArgoCDClient {
 	}
 
 	client.ListWorkerPool = pond.NewResultPool[string](options.ListPoolWorkers)
-	registerWorkerPoolsWithPrometheus("list", client.ListWorkerPool)
+	instrumentWorkerPool("list", client.ListWorkerPool)
 	client.DiffWorkerPool = pond.NewResultPool[string](options.DiffPoolWokers)
-	registerWorkerPoolsWithPrometheus("diff", client.DiffWorkerPool)
+	instrumentWorkerPool("diff", client.DiffWorkerPool)
 
 	return client
 }
