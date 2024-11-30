@@ -2,7 +2,8 @@
 package tangle
 
 type TangleConfig struct {
-	Name   string `koanf:"name"`
-	Domain string `koanf:"domain"`
-	Port   int    `koanf:"port"`
+	Name                   string `koanf:"name"`
+	Domain                 string `koanf:"domain"`
+	Port                   int    `koanf:"port"`
+	DoNotInstrumentWorkers bool
 }

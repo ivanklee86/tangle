@@ -1,6 +1,6 @@
 # ArgoCD Tangle
 
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/ivanklee86//main.svg)](https://results.pre-commit.ci/latest/github/ivanklee86/tangle/main)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/ivanklee86/tangle/main.svg)](https://results.pre-commit.ci/latest/github/ivanklee86/tangle/main)
 
 🚧 Under construction! 🚧
 

@@ -9,6 +9,9 @@ vars:
   COVERAGE_REPORT: coverage.html
   VERSION: "Task"
 
+env:
+  TANGLE_CONFIG_PATH: "./integration/tangle.yaml"
+
 tasks:
   install:
     desc: Installs Golang dependencies and testing tools.
@@ -43,6 +46,11 @@ tasks:
     desc: Run server
     cmds:
       - go run cmd/tangle-server/main.go
+
+  run-reloading:
+    desc: Run server with hot reloading.
+    cmds:
+      - air -c .air.conf
 
   test:
     desc: Run Golang tests.

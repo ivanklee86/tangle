@@ -41,6 +41,10 @@ RUN go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 RUN go install github.com/jstemmer/go-junit-report/v2@latest
 RUN go install github.com/hairyhenderson/gomplate/v4/cmd/gomplate@latest
 RUN go install github.com/goreleaser/goreleaser/v2@latest
+RUN go install github.com/air-verse/air@latest
+
+# - NPM
+RUN npm install -g @usebruno/cli
 
 # - Kubernetes
 RUN curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
