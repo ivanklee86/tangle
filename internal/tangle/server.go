@@ -35,19 +35,23 @@ func New(config *TangleConfig) *Tangle {
 
 	// Create ArgoCD clients
 	// TODO: Actually do this!
-	tangle.ArgoCDClients = append(tangle.ArgoCDClients, argocd.New(&argocd.ArgoCDClientOptions{}))
+	tangle.ArgoCDClients = append(tangle.ArgoCDClients, argocd.New(&argocd.ArgoCDClientOptions{
+		DoNotInstrumentWorkers: tangle.Config.DoNotInstrumentWorkers,
+	}))
 
+	mux := http.NewServeMux()
 	// Set up Server
 	server := &http.Server{
-		Addr: fmt.Sprintf(":%d", tangle.Config.Port),
+		Addr:    fmt.Sprintf(":%d", tangle.Config.Port),
+		Handler: mux,
 	}
 	tangle.Server = server
 
 	//Set up Prometheus
-	http.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/metrics", promhttp.Handler())
 
 	// Application routes
-	http.HandleFunc("/applications", tangle.applicationsHandler)
+	mux.HandleFunc("/applications", tangle.applicationsHandler)
 
 	// Set up healthchecks
 	h, _ := health.New(health.WithComponent(
@@ -57,7 +61,7 @@ func New(config *TangleConfig) *Tangle {
 		},
 	))
 
-	http.Handle("/health", h.Handler())
+	mux.Handle("/health", h.Handler())
 
 	return &tangle
 }

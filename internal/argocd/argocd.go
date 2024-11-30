@@ -15,11 +15,12 @@ const (
 type IArgoCDClient interface{}
 
 type ArgoCDClientOptions struct {
-	ServerAddr      string
-	Insecure        bool
-	AuthToken       string
-	ListPoolWorkers int
-	DiffPoolWokers  int
+	ServerAddr             string
+	Insecure               bool
+	AuthToken              string
+	ListPoolWorkers        int
+	DiffPoolWokers         int
+	DoNotInstrumentWorkers bool
 }
 
 type ArgoCDClient struct {
@@ -28,7 +29,7 @@ type ArgoCDClient struct {
 	DiffWorkerPool      pond.ResultPool[string]
 }
 
-func instrumentWorkerPool(name string, pool pond.ResultPool[string]) {
+func instrumentWorkers(name string, pool pond.ResultPool[string]) {
 	poolLabels := make(map[string]string)
 	poolLabels["pool"] = name
 	prometheus.MustRegister(prometheus.NewGaugeFunc(
@@ -102,9 +103,12 @@ func New(options *ArgoCDClientOptions) ArgoCDClient {
 	}
 
 	client.ListWorkerPool = pond.NewResultPool[string](options.ListPoolWorkers)
-	instrumentWorkerPool("list", client.ListWorkerPool)
 	client.DiffWorkerPool = pond.NewResultPool[string](options.DiffPoolWokers)
-	instrumentWorkerPool("diff", client.DiffWorkerPool)
+
+	if !options.DoNotInstrumentWorkers {
+		instrumentWorkers("list", client.ListWorkerPool)
+		instrumentWorkers("diff", client.DiffWorkerPool)
+	}
 
 	return client
 }
