@@ -25,5 +25,8 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 
 	response := ApplicationsResponse{Results: queryResults}
 
-	json.NewEncoder(w).Encode(response)
+	err := json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }

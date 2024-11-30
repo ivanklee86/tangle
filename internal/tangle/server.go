@@ -30,7 +30,7 @@ func New(config *TangleConfig) *Tangle {
 
 	// set up logging
 	logger, _ := zap.NewProduction()
-	defer logger.Sync()
+	defer logger.Sync() //nolint:all
 	tangle.Log = logger.Sugar()
 
 	// Create ArgoCD clients
