@@ -19,5 +19,6 @@ func TestConfig(t *testing.T) {
 		assert.NotNil(t, loadedConfig)
 		assert.Equal(t, "tangle", config.String("name"))
 		assert.Equal(t, "tangle", loadedConfig.Name)
+		assert.Len(t, loadedConfig.ArgoCDs, 1)
 	})
 }
