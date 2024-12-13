@@ -3,6 +3,6 @@ domain: "https://tangle.test.com"
 port: 8081
 argocds:
   test:
-    address: "http://localhost:80"
+    address: "https://localhost:8080"
     insecure: true
     authTokenEnvVar: "ARGOCD_JWT_TEST"

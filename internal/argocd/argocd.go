@@ -2,8 +2,11 @@ package argocd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/alitto/pond/v2"
+	"github.com/argoproj/argo-cd/v2/pkg/apiclient"
+	"github.com/argoproj/argo-cd/v2/pkg/apiclient/application"
 )
 
 const (
@@ -11,7 +14,9 @@ const (
 	defaultDiffPoolWorkers = 5
 )
 
-type IArgoCDClient interface{}
+type IArgoCDClient interface {
+	ListApplicationsByLabels(labels map[string]string) []string
+}
 
 type ArgoCDClientOptions struct {
 	Address                string
@@ -26,9 +31,10 @@ type ArgoCDClient struct {
 	ArgoCDClientOptions *ArgoCDClientOptions
 	ListWorkerPool      pond.ResultPool[string]
 	DiffWorkerPool      pond.ResultPool[string]
+	ApplicationClient   application.ApplicationServiceClient
 }
 
-func New(options *ArgoCDClientOptions) ArgoCDClient {
+func New(options *ArgoCDClientOptions) (IArgoCDClient, error) {
 	if options.ListPoolWorkers == 0 {
 		options.ListPoolWorkers = defaultListPoolWorkers
 	}
@@ -49,7 +55,29 @@ func New(options *ArgoCDClientOptions) ArgoCDClient {
 		instrumentWorkers("diff", client.DiffWorkerPool)
 	}
 
-	return client
+	authToken, found := os.LookupEnv(options.AuthTokenEnvVar)
+	if !found {
+		return nil, fmt.Errorf("%s not found", options.AuthTokenEnvVar)
+	}
+
+	apiClient, err := apiclient.NewClient(&apiclient.ClientOptions{
+		ServerAddr: options.Address,
+		Insecure:   options.Insecure,
+		AuthToken:  authToken,
+		GRPCWeb:    true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	_, applicationClient, err := apiClient.NewApplicationClient()
+	if err != nil {
+		return nil, err
+	}
+
+	client.ApplicationClient = applicationClient
+
+	return &client, nil
 }
 
 func (a *ArgoCDClient) ListApplicationsByLabels(labels map[string]string) []string {

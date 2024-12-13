@@ -21,7 +21,7 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 		labels[rawLabel[0]] = rawLabel[1]
 	}
 
-	queryResults := t.ArgoCDClients[0].ListApplicationsByLabels(labels)
+	queryResults := t.ArgoCDClients["test"].ListApplicationsByLabels(labels)
 
 	response := ApplicationsResponse{Results: queryResults}
 
