@@ -14,11 +14,11 @@ const (
 	defaultDiffPoolWorkers = 5
 )
 
-type IArgoCDClient interface {
+type IArgoCDWrapper interface {
 	ListApplicationsByLabels(labels map[string]string) []string
 }
 
-type ArgoCDClientOptions struct {
+type ArgoCDWrapperOptions struct {
 	Address                string
 	Insecure               bool
 	AuthTokenEnvVar        string
@@ -27,14 +27,14 @@ type ArgoCDClientOptions struct {
 	DoNotInstrumentWorkers bool
 }
 
-type ArgoCDClient struct {
-	ArgoCDClientOptions *ArgoCDClientOptions
+type ArgoCDWrapper struct {
+	ArgoCDClientOptions *ArgoCDWrapperOptions
 	ListWorkerPool      pond.ResultPool[string]
 	DiffWorkerPool      pond.ResultPool[string]
 	ApplicationClient   application.ApplicationServiceClient
 }
 
-func New(options *ArgoCDClientOptions) (IArgoCDClient, error) {
+func New(client *ArgoCDClient, options *ArgoCDWrapperOptions) (IArgoCDWrapper, error) {
 	if options.ListPoolWorkers == 0 {
 		options.ListPoolWorkers = defaultListPoolWorkers
 	}
@@ -43,16 +43,16 @@ func New(options *ArgoCDClientOptions) (IArgoCDClient, error) {
 		options.DiffPoolWokers = defaultDiffPoolWorkers
 	}
 
-	client := ArgoCDClient{
+	wrapper := ArgoCDWrapper{
 		ArgoCDClientOptions: options,
 	}
 
-	client.ListWorkerPool = pond.NewResultPool[string](options.ListPoolWorkers)
-	client.DiffWorkerPool = pond.NewResultPool[string](options.DiffPoolWokers)
+	wrapper.ListWorkerPool = pond.NewResultPool[string](options.ListPoolWorkers)
+	wrapper.DiffWorkerPool = pond.NewResultPool[string](options.DiffPoolWokers)
 
 	if !options.DoNotInstrumentWorkers {
-		instrumentWorkers("list", client.ListWorkerPool)
-		instrumentWorkers("diff", client.DiffWorkerPool)
+		instrumentWorkers("list", wrapper.ListWorkerPool)
+		instrumentWorkers("diff", wrapper.DiffWorkerPool)
 	}
 
 	authToken, found := os.LookupEnv(options.AuthTokenEnvVar)
@@ -75,12 +75,12 @@ func New(options *ArgoCDClientOptions) (IArgoCDClient, error) {
 		return nil, err
 	}
 
-	client.ApplicationClient = applicationClient
+	wrapper.ApplicationClient = applicationClient
 
-	return &client, nil
+	return &wrapper, nil
 }
 
-func (a *ArgoCDClient) ListApplicationsByLabels(labels map[string]string) []string {
+func (a *ArgoCDWrapper) ListApplicationsByLabels(labels map[string]string) []string {
 	group := a.ListWorkerPool.NewGroup()
 
 	for key := range labels {
