@@ -14,7 +14,7 @@ const (
 )
 
 type IArgoCDWrapper interface {
-	ListApplicationsByLabels(labels map[string]string) []string
+	ListApplicationsByLabels(labels map[string]string) []ListApplicationsResult
 }
 
 type ArgoCDWrapperOptions struct {
@@ -25,12 +25,12 @@ type ArgoCDWrapperOptions struct {
 
 type ArgoCDWrapper struct {
 	ArgoCDClientOptions *ArgoCDWrapperOptions
-	ListWorkerPool      pond.ResultPool[[]v1alpha1.Application]
+	ListWorkerPool      pond.ResultPool[[]ListApplicationsResult]
 	DiffWorkerPool      pond.ResultPool[[]v1alpha1.Application]
 	ApplicationClient   IArgoCDClient
 }
 
-func New(client *IArgoCDClient, options *ArgoCDWrapperOptions) (IArgoCDWrapper, error) {
+func New(client IArgoCDClient, options *ArgoCDWrapperOptions) (IArgoCDWrapper, error) {
 	if options.ListPoolWorkers == 0 {
 		options.ListPoolWorkers = defaultListPoolWorkers
 	}
@@ -43,7 +43,7 @@ func New(client *IArgoCDClient, options *ArgoCDWrapperOptions) (IArgoCDWrapper, 
 		ArgoCDClientOptions: options,
 	}
 
-	wrapper.ListWorkerPool = pond.NewResultPool[[]v1alpha1.Application](options.ListPoolWorkers)
+	wrapper.ListWorkerPool = pond.NewResultPool[[]ListApplicationsResult](options.ListPoolWorkers)
 	wrapper.DiffWorkerPool = pond.NewResultPool[[]v1alpha1.Application](options.DiffPoolWokers)
 
 	if !options.DoNotInstrumentWorkers {
@@ -51,19 +51,23 @@ func New(client *IArgoCDClient, options *ArgoCDWrapperOptions) (IArgoCDWrapper, 
 		instrumentWorkers("diff", wrapper.DiffWorkerPool)
 	}
 
-	wrapper.ApplicationClient = *client
+	wrapper.ApplicationClient = client
 
 	return &wrapper, nil
 }
 
-func (a *ArgoCDWrapper) ListApplicationsByLabels(labels map[string]string) []string {
+func (a *ArgoCDWrapper) ListApplicationsByLabels(labels map[string]string) []ListApplicationsResult {
 	group := a.ListWorkerPool.NewGroup()
 	k8sLabel := ""
 	for key, value := range labels {
-		k8sLabel = k8sLabel + key + "=" + value + ","
+		if len(k8sLabel) == 0 {
+			k8sLabel = k8sLabel + key + "=" + value
+		} else {
+			k8sLabel = k8sLabel + key + "=" + value + ","
+		}
 	}
 
-	group.SubmitErr(func() ([]v1alpha1.Application, error) {
+	group.SubmitErr(func() ([]ListApplicationsResult, error) {
 		apps, err := a.ApplicationClient.List(context.Background(), &application.ApplicationQuery{
 			Selector: &k8sLabel,
 		})
@@ -71,15 +75,22 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(labels map[string]string) []str
 			return nil, err
 		}
 
-		return apps.Items, nil
+		results := []ListApplicationsResult{}
+		for _, app := range apps.Items {
+			results = append(results, ListApplicationsResult{
+				Name: app.Name,
+			})
+		}
+
+		return results, nil
 	})
 
-	results, _ := group.Wait()
+	poolResults, _ := group.Wait()
 
-	appNames := ""
-	for _, result := range results[0] {
-		appNames = appNames + result.Name + ","
+	apps := []ListApplicationsResult{}
+	for _, result := range poolResults {
+		apps = append(apps, result...)
 	}
 
-	return appNames
+	return apps
 }

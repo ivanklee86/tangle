@@ -21,9 +21,14 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 		labels[rawLabel[0]] = rawLabel[1]
 	}
 
-	queryResults := t.ArgoCDClients["test"].ListApplicationsByLabels(labels)
+	queryResults := t.ArgoCDs["test"].ListApplicationsByLabels(labels)
 
-	response := ApplicationsResponse{Results: queryResults}
+	apiResults := []string{}
+	for _, queryResult := range queryResults {
+		apiResults = append(apiResults, queryResult.Name)
+	}
+
+	response := ApplicationsResponse{Results: apiResults}
 
 	err := json.NewEncoder(w).Encode(response)
 	if err != nil {

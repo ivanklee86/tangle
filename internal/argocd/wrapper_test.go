@@ -17,14 +17,14 @@ func TestArgoCDWrapper(t *testing.T) {
 		})
 		assert.Nil(t, err)
 
-		wrapper, err := New(&client, &ArgoCDWrapperOptions{})
+		wrapper, err := New(client, &ArgoCDWrapperOptions{})
 		assert.Nil(t, err)
 
 		labels := make(map[string]string)
-		labels["foo"] = "bar"
-		labels["apple"] = "banana"
+		labels["env"] = "test"
 
 		results := wrapper.ListApplicationsByLabels(labels)
-		assert.Len(t, results, 2)
+		assert.Len(t, results, 1)
+		assert.Equal(t, "test", results[0].Name)
 	})
 }
