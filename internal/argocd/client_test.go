@@ -60,7 +60,7 @@ func TestNewArgoCDClient(t *testing.T) {
 func TestArgoCDClient_List(t *testing.T) {
 	setup(t)
 
-	// labelQuery := "env=test"
+	labelQuery := "env=test"
 
 	tests := []struct {
 		name    string
@@ -77,7 +77,7 @@ func TestArgoCDClient_List(t *testing.T) {
 				AuthTokenEnvVar: "ARGOCD_TOKEN",
 			},
 			query: &application.ApplicationQuery{
-				// Selector: &labelQuery,
+				Selector: &labelQuery,
 			},
 			resultsLength: 1,
 			wantErr: false,

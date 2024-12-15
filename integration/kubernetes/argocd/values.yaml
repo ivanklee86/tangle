@@ -5,10 +5,7 @@ argo-cd:
 
     rbac:
       policy.csv: |
-        p, role:tangle, projects, create, *, allow
-        p, role:tangle, projects, get, *, allow
-        p, role:tangle, projects, update, *, allow
-        p, role:tangle, projects, delete, *, allow
+        p, role:tangle, applications, *, *, allow
         g, automation, role:tangle
 
     params:

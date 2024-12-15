@@ -3,9 +3,10 @@ package argocd
 import (
 	"github.com/alitto/pond/v2"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 )
 
-func instrumentWorkers(name string, pool pond.ResultPool[string]) {
+func instrumentWorkers(name string, pool pond.ResultPool[[]v1alpha1.Application]) {
 	poolLabels := make(map[string]string)
 	poolLabels["pool"] = name
 	prometheus.MustRegister(prometheus.NewGaugeFunc(
