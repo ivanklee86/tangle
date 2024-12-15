@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	github.com/alitto/pond/v2 v2.1.5
-	github.com/argoproj/argo-cd/v2 v2.13.1
+	github.com/argoproj/argo-cd/v2 v2.13.2
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/hellofresh/health-go/v5 v5.5.3
 	github.com/joho/godotenv v1.5.1
