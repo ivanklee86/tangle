@@ -63,11 +63,11 @@ func TestArgoCDClient_List(t *testing.T) {
 	labelQuery := "env=test"
 
 	tests := []struct {
-		name    string
-		options *ArgoCDClientOptions
-		query   *application.ApplicationQuery
+		name          string
+		options       *ArgoCDClientOptions
+		query         *application.ApplicationQuery
 		resultsLength int
-		wantErr bool
+		wantErr       bool
 	}{
 		{
 			name: "lists applications successfully",
@@ -80,7 +80,7 @@ func TestArgoCDClient_List(t *testing.T) {
 				Selector: &labelQuery,
 			},
 			resultsLength: 1,
-			wantErr: false,
+			wantErr:       false,
 		},
 	}
 
