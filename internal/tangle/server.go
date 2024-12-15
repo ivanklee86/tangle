@@ -18,10 +18,10 @@ import (
 )
 
 type Tangle struct {
-	Server        *http.Server
-	Config        *TangleConfig
-	ArgoCDClients []argocd.ArgoCDClient
-	Log           *zap.SugaredLogger
+	Server  *http.Server
+	Config  *TangleConfig
+	ArgoCDs map[string]argocd.IArgoCDWrapper
+	Log     *zap.SugaredLogger
 }
 
 func New(config *TangleConfig) *Tangle {
@@ -34,10 +34,21 @@ func New(config *TangleConfig) *Tangle {
 	tangle.Log = logger.Sugar()
 
 	// Create ArgoCD clients
-	// TODO: Actually do this!
-	tangle.ArgoCDClients = append(tangle.ArgoCDClients, argocd.New(&argocd.ArgoCDClientOptions{
-		DoNotInstrumentWorkers: tangle.Config.DoNotInstrumentWorkers,
-	}))
+	wrappers := make(map[string]argocd.IArgoCDWrapper)
+	for key, value := range config.ArgoCDs {
+		client, _ := argocd.NewArgoCDClient(&argocd.ArgoCDClientOptions{
+			Address:         value.Address,
+			Insecure:        value.Insecure,
+			AuthTokenEnvVar: value.AuthTokenEnvVar,
+		})
+
+		wrapper, _ := argocd.New(client, &argocd.ArgoCDWrapperOptions{
+			DoNotInstrumentWorkers: tangle.Config.DoNotInstrumentWorkers,
+		})
+
+		wrappers[key] = wrapper
+	}
+	tangle.ArgoCDs = wrappers
 
 	mux := http.NewServeMux()
 	// Set up Server

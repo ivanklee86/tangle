@@ -1,3 +1,8 @@
 name: "tangle"
 domain: "https://tangle.test.com"
 port: 8081
+argocds:
+  test:
+    address: "localhost:8080"
+    insecure: true
+    authTokenEnvVar: "ARGOCD_TOKEN"

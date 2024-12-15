@@ -5,14 +5,28 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestHandlers(t *testing.T) {
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	argocdConfig := make(map[string]TangleArgoCDConfig)
+	argocdConfig["test"] = TangleArgoCDConfig{
+		Address:         "https://localhost:8080",
+		Insecure:        true,
+		AuthTokenEnvVar: "ARGOCD_TOKEN",
+	}
+
 	config := TangleConfig{
 		Name:                   "test-tangle",
 		Domain:                 "localhost",
 		Port:                   8081,
+		ArgoCDs:                argocdConfig,
 		DoNotInstrumentWorkers: true,
 	}
 
