@@ -42,6 +42,7 @@ RUN go install github.com/jstemmer/go-junit-report/v2@latest
 RUN go install github.com/hairyhenderson/gomplate/v4/cmd/gomplate@latest
 RUN go install github.com/goreleaser/goreleaser/v2@latest
 RUN go install github.com/air-verse/air@latest
+RUN go install github.com/go-swagger/go-swagger/cmd/swagger@latest
 
 # - NPM
 RUN npm install -g @usebruno/cli

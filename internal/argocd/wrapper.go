@@ -15,6 +15,7 @@ const (
 
 type IArgoCDWrapper interface {
 	ListApplicationsByLabels(labels map[string]string) []ListApplicationsResult
+	GetUrl() string
 }
 
 type ArgoCDWrapperOptions struct {
@@ -77,8 +78,17 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(labels map[string]string) []Lis
 
 		results := []ListApplicationsResult{}
 		for _, app := range apps.Items {
+			project := ""
+			if len(app.Spec.Project) > 0 {
+				project = app.Spec.Project
+			} else {
+				// Empty project == default
+				project = "default"
+			}
+
 			results = append(results, ListApplicationsResult{
-				Name: app.Name,
+				Name:    app.Name,
+				Project: project,
 			})
 		}
 
@@ -93,4 +103,8 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(labels map[string]string) []Lis
 	}
 
 	return apps
+}
+
+func (a *ArgoCDWrapper) GetUrl() string {
+	return a.ApplicationClient.GetUrl()
 }
