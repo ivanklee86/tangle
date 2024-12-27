@@ -14,7 +14,8 @@ const (
 )
 
 type IArgoCDWrapper interface {
-	ListApplicationsByLabels(labels map[string]string) []ListApplicationsResult
+	ListApplicationsByLabels(ctx context.Context, labels map[string]string) ([]ListApplicationsResult, error)
+	GetUrl() string
 }
 
 type ArgoCDWrapperOptions struct {
@@ -30,7 +31,7 @@ type ArgoCDWrapper struct {
 	ApplicationClient   IArgoCDClient
 }
 
-func New(client IArgoCDClient, options *ArgoCDWrapperOptions) (IArgoCDWrapper, error) {
+func New(client IArgoCDClient, argoCDName string, options *ArgoCDWrapperOptions) (IArgoCDWrapper, error) {
 	if options.ListPoolWorkers == 0 {
 		options.ListPoolWorkers = defaultListPoolWorkers
 	}
@@ -47,8 +48,8 @@ func New(client IArgoCDClient, options *ArgoCDWrapperOptions) (IArgoCDWrapper, e
 	wrapper.DiffWorkerPool = pond.NewResultPool[[]v1alpha1.Application](options.DiffPoolWokers)
 
 	if !options.DoNotInstrumentWorkers {
-		instrumentWorkers("list", wrapper.ListWorkerPool)
-		instrumentWorkers("diff", wrapper.DiffWorkerPool)
+		instrumentWorkers("list", argoCDName, wrapper.ListWorkerPool)
+		instrumentWorkers("diff", argoCDName, wrapper.DiffWorkerPool)
 	}
 
 	wrapper.ApplicationClient = client
@@ -56,7 +57,7 @@ func New(client IArgoCDClient, options *ArgoCDWrapperOptions) (IArgoCDWrapper, e
 	return &wrapper, nil
 }
 
-func (a *ArgoCDWrapper) ListApplicationsByLabels(labels map[string]string) []ListApplicationsResult {
+func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map[string]string) ([]ListApplicationsResult, error) {
 	group := a.ListWorkerPool.NewGroup()
 	k8sLabel := ""
 	for key, value := range labels {
@@ -68,29 +69,53 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(labels map[string]string) []Lis
 	}
 
 	group.SubmitErr(func() ([]ListApplicationsResult, error) {
-		apps, err := a.ApplicationClient.List(context.Background(), &application.ApplicationQuery{
-			Selector: &k8sLabel,
-		})
+		var query *application.ApplicationQuery
+		if len(k8sLabel) > 0 {
+			query = &application.ApplicationQuery{
+				Selector: &k8sLabel,
+			}
+		} else {
+			query = &application.ApplicationQuery{}
+		}
+
+		apps, err := a.ApplicationClient.List(ctx, query)
 		if err != nil {
 			return nil, err
 		}
 
 		results := []ListApplicationsResult{}
 		for _, app := range apps.Items {
+			project := ""
+			if len(app.Spec.Project) > 0 {
+				project = app.Spec.Project
+			} else {
+				// Empty project == default
+				project = "default"
+			}
+
 			results = append(results, ListApplicationsResult{
-				Name: app.Name,
+				Name:      app.Name,
+				Project:   project,
+				Namespace: app.Namespace,
 			})
 		}
 
 		return results, nil
 	})
 
-	poolResults, _ := group.Wait()
+	poolResults, err := group.Wait()
+	if err != nil {
+		return nil, err
+	}
 
 	apps := []ListApplicationsResult{}
 	for _, result := range poolResults {
 		apps = append(apps, result...)
 	}
 
-	return apps
+	return apps, nil
+}
+
+func (a *ArgoCDWrapper) GetUrl() string {
+	return a.ApplicationClient.GetUrl()
 }

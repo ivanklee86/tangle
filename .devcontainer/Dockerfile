@@ -4,7 +4,7 @@ FROM mcr.microsoft.com/devcontainers/go:1-${VARIANT}
 
 # Install dependencies.
 # [Choice] Node.js version: none, lts/*, 16, 14, 12, 10
-ARG NODE_VERSION="none"
+ARG NODE_VERSION="22"
 RUN if [ "${NODE_VERSION}" != "none" ]; then su vscode -c "umask 0002 && . /usr/local/share/nvm/nvm.sh && nvm install ${NODE_VERSION} 2>&1"; fi
 
 # Setup
@@ -42,6 +42,7 @@ RUN go install github.com/jstemmer/go-junit-report/v2@latest
 RUN go install github.com/hairyhenderson/gomplate/v4/cmd/gomplate@latest
 RUN go install github.com/goreleaser/goreleaser/v2@latest
 RUN go install github.com/air-verse/air@latest
+RUN go install github.com/go-swagger/go-swagger/cmd/swagger@latest
 
 # - NPM
 RUN npm install -g @usebruno/cli

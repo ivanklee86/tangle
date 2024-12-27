@@ -25,12 +25,19 @@ tasks:
       - go install github.com/jstemmer/go-junit-report/v2@latest
       - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
       - go install github.com/hairyhenderson/gomplate/v4/cmd/gomplate@latest
+      - go install github.com/go-swagger/go-swagger/cmd/swagger@latest
 
   build:
     desc: Builds binary.
     cmds:
+      - task: generate
       - mkdir {{.BUILD_DIR}} | true
       - go build -ldflags "-X main.version=${VERSION}" -o {{.BUILD_DIR}} ./...
+
+  generate:
+    desc: Generate code.
+    cmds:
+      - swagger generate spec -o ./internal/tangle/swagger.json --scan-models
 
   fmt:
     desc: Formats Golang code.
@@ -45,11 +52,13 @@ tasks:
   run:
     desc: Run server
     cmds:
+      - task: generate
       - go run cmd/tangle-server/main.go
 
   run-reloading:
     desc: Run server with hot reloading.
     cmds:
+      - task: generate
       - air -c .air.conf
 
   test:

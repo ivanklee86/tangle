@@ -1,5 +1,7 @@
 package argocd
 
 type ListApplicationsResult struct {
-	Name string
+	Name      string
+	Project   string
+	Namespace string
 }

@@ -1,16 +1,16 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: test
+  name: test-3
   labels:
-    env: test
+    env: prod
     foo: bar
 spec:
-  project: default
+  project: my-project
   source:
     repoURL: https://github.com/ivanklee86/tangle.git
-    path: integration/kubernetes/example/manifests
-    targetRevision: main
+    path: integration/kubernetes/example/manifests/3
+    targetRevision: list_applications_api
   destination:
     server: https://kubernetes.default.svc
     namespace: default

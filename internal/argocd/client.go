@@ -14,6 +14,7 @@ import (
 type IArgoCDClient interface {
 	// List returns all ArgoCD applications
 	List(ctx context.Context, in *application.ApplicationQuery) (*v1alpha1.ApplicationList, error)
+	GetUrl() string
 }
 
 type ArgoCDClientOptions struct {
@@ -57,4 +58,8 @@ func (c *ArgoCDClient) List(ctx context.Context, query *application.ApplicationQ
 	}
 
 	return appList, nil
+}
+
+func (c *ArgoCDClient) GetUrl() string {
+	return c.Options.Address
 }

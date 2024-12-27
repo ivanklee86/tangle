@@ -2,17 +2,23 @@ package tangle
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/flowchartsman/swaggerui"
 	"github.com/hellofresh/health-go/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"go.uber.org/zap"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/httplog/v2"
 
 	"github.com/ivanklee86/tangle/internal/argocd"
 )
@@ -21,17 +27,37 @@ type Tangle struct {
 	Server  *http.Server
 	Config  *TangleConfig
 	ArgoCDs map[string]argocd.IArgoCDWrapper
-	Log     *zap.SugaredLogger
+	Log     *httplog.Logger
 }
+
+//go:embed swagger.json
+var spec []byte
 
 func New(config *TangleConfig) *Tangle {
 	tangle := Tangle{}
 	tangle.Config = config
 
 	// set up logging
-	logger, _ := zap.NewProduction()
-	defer logger.Sync() //nolint:all
-	tangle.Log = logger.Sugar()
+	logger := httplog.NewLogger("tangle", httplog.Options{
+		// JSON:             true,
+		LogLevel:         slog.LevelDebug,
+		Concise:          true,
+		RequestHeaders:   false,
+		MessageFieldName: "message",
+		// TimeFieldFormat: time.RFC850,
+		Tags: map[string]string{
+			"version": "v1.0-81aa4244d9fc8076a",
+			"env":     "dev",
+		},
+		QuietDownRoutes: []string{
+			"/",
+			"/metrics",
+			"/swagger",
+			"/health",
+		},
+		QuietDownPeriod: 10 * time.Second,
+	})
+	tangle.Log = logger
 
 	// Create ArgoCD clients
 	wrappers := make(map[string]argocd.IArgoCDWrapper)
@@ -42,7 +68,7 @@ func New(config *TangleConfig) *Tangle {
 			AuthTokenEnvVar: value.AuthTokenEnvVar,
 		})
 
-		wrapper, _ := argocd.New(client, &argocd.ArgoCDWrapperOptions{
+		wrapper, _ := argocd.New(client, key, &argocd.ArgoCDWrapperOptions{
 			DoNotInstrumentWorkers: tangle.Config.DoNotInstrumentWorkers,
 		})
 
@@ -50,40 +76,46 @@ func New(config *TangleConfig) *Tangle {
 	}
 	tangle.ArgoCDs = wrappers
 
-	mux := http.NewServeMux()
-	// Set up Server
+	router := chi.NewRouter()
+	// Server
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", tangle.Config.Port),
-		Handler: mux,
+		Handler: router,
 	}
 	tangle.Server = server
 
-	//Set up Prometheus
-	mux.Handle("/metrics", promhttp.Handler())
+	// Middlewares
+	router.Use(httplog.RequestLogger(logger))
+	router.Use(middleware.RequestID)
+	router.Use(middleware.RealIP)
+	router.Use(middleware.Recoverer)
+
+	// Metrics
+	router.Handle("/metrics", promhttp.Handler())
 
 	// Application routes
-	mux.HandleFunc("/applications", tangle.applicationsHandler)
+	router.HandleFunc("/applications", tangle.applicationsHandler)
+	router.Mount("/swagger", http.StripPrefix("/swagger", swaggerui.Handler(spec)))
 
-	// Set up healthchecks
+	// Healthcheck
 	h, _ := health.New(health.WithComponent(
 		health.Component{
 			Name:    "tangle",
 			Version: "v1.0",
 		},
 	))
-
-	mux.Handle("/health", h.Handler())
+	router.Handle("/health", h.Handler())
 
 	return &tangle
 }
 
 func (t *Tangle) Start() {
-	t.Log.Infoln("Starting server.")
+	t.Log.Info("Starting server.")
 	go func() {
 		if err := t.Server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-			t.Log.Fatalf("HTTP server error: %v", err)
+			t.Log.Error("HTTP server error.", httplog.ErrAttr(err))
 		}
-		t.Log.Infoln("Stopped serving new connections.")
+		t.Log.Info("Stopped serving new connections.")
 	}()
 
 	// Set up graceful service shutdown.
@@ -95,7 +127,7 @@ func (t *Tangle) Start() {
 	defer shutdownRelease()
 
 	if err := t.Server.Shutdown(shutdownCtx); err != nil {
-		t.Log.Fatalf("HTTP shutdown error: %v", err)
+		t.Log.Error("HTTP shutdown error", httplog.ErrAttr(err))
 	}
 	t.Log.Info("Graceful shutdown complete.")
 }

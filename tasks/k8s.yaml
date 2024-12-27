@@ -69,4 +69,5 @@ tasks:
   bootstrap:application:
     desc: "Bootstrap testing application"
     cmds:
-      - kubectl apply -f integration/kubernetes/example/application.yaml
+      - kubectl apply -f integration/kubernetes/example/project.yaml
+      - kubectl apply -f integration/kubernetes/example
