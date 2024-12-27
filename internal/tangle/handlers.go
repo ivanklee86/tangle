@@ -36,7 +36,7 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 
 	apiResults := []ArgoCDApplicationResults{}
 	for name, argoCD := range t.ArgoCDs {
-		queryResults := argoCD.ListApplicationsByLabels(labels)
+		queryResults := argoCD.ListApplicationsByLabels(req.Context(), labels)
 
 		argoCDApplicationResult := ArgoCDApplicationResults{
 			Name:         name,

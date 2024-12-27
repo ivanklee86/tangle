@@ -1,6 +1,7 @@
 package argocd
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,7 +24,7 @@ func TestArgoCDWrapper(t *testing.T) {
 		labels := make(map[string]string)
 		labels["env"] = "test"
 
-		results := wrapper.ListApplicationsByLabels(labels)
+		results := wrapper.ListApplicationsByLabels(context.Background(), labels)
 		assert.Len(t, results, 1)
 		assert.Equal(t, "test-1", results[0].Name)
 	})

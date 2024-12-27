@@ -9,4 +9,4 @@ argocds:
   prod:
     address: "localhost:8080"
     insecure: true
-    authTokenEnvVar: "ARGOCD_TEST_TOKEN"
+    authTokenEnvVar: "ARGOCD_PROD_TOKEN"

@@ -14,7 +14,7 @@ const (
 )
 
 type IArgoCDWrapper interface {
-	ListApplicationsByLabels(labels map[string]string) []ListApplicationsResult
+	ListApplicationsByLabels(ctx context.Context, labels map[string]string) []ListApplicationsResult
 	GetUrl() string
 }
 
@@ -57,7 +57,7 @@ func New(client IArgoCDClient, argoCDName string, options *ArgoCDWrapperOptions)
 	return &wrapper, nil
 }
 
-func (a *ArgoCDWrapper) ListApplicationsByLabels(labels map[string]string) []ListApplicationsResult {
+func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map[string]string) []ListApplicationsResult {
 	group := a.ListWorkerPool.NewGroup()
 	k8sLabel := ""
 	for key, value := range labels {
@@ -69,9 +69,16 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(labels map[string]string) []Lis
 	}
 
 	group.SubmitErr(func() ([]ListApplicationsResult, error) {
-		apps, err := a.ApplicationClient.List(context.Background(), &application.ApplicationQuery{
-			Selector: &k8sLabel,
-		})
+		var query *application.ApplicationQuery
+		if len(k8sLabel) > 0 {
+			query = &application.ApplicationQuery{
+				Selector: &k8sLabel,
+			}
+		} else {
+			query = &application.ApplicationQuery{}
+		}
+
+		apps, err := a.ApplicationClient.List(ctx, query)
 		if err != nil {
 			return nil, err
 		}
