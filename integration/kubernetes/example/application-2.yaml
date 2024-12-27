@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/ivanklee86/tangle.git
     path: integration/kubernetes/example/manifests/2
-    targetRevision: list_applications_api
+    targetRevision: main
   destination:
     server: https://kubernetes.default.svc
     namespace: default
