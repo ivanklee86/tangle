@@ -5,9 +5,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func instrumentWorkers[P any](name string, pool pond.ResultPool[P]) {
+func instrumentWorkers[P any](name string, argoCDName string, pool pond.ResultPool[P]) {
 	poolLabels := make(map[string]string)
 	poolLabels["pool"] = name
+	poolLabels["argocd"] = argoCDName
 	prometheus.MustRegister(prometheus.NewGaugeFunc(
 		prometheus.GaugeOpts{
 			Name:        "pool_workers_running",

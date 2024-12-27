@@ -17,7 +17,7 @@ func TestArgoCDWrapper(t *testing.T) {
 		})
 		assert.Nil(t, err)
 
-		wrapper, err := New(client, &ArgoCDWrapperOptions{})
+		wrapper, err := New(client, "test", &ArgoCDWrapperOptions{})
 		assert.Nil(t, err)
 
 		labels := make(map[string]string)

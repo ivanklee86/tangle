@@ -68,7 +68,7 @@ func New(config *TangleConfig) *Tangle {
 			AuthTokenEnvVar: value.AuthTokenEnvVar,
 		})
 
-		wrapper, _ := argocd.New(client, &argocd.ArgoCDWrapperOptions{
+		wrapper, _ := argocd.New(client, key, &argocd.ArgoCDWrapperOptions{
 			DoNotInstrumentWorkers: tangle.Config.DoNotInstrumentWorkers,
 		})
 

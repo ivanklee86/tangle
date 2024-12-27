@@ -31,7 +31,7 @@ type ArgoCDWrapper struct {
 	ApplicationClient   IArgoCDClient
 }
 
-func New(client IArgoCDClient, options *ArgoCDWrapperOptions) (IArgoCDWrapper, error) {
+func New(client IArgoCDClient, argoCDName string, options *ArgoCDWrapperOptions) (IArgoCDWrapper, error) {
 	if options.ListPoolWorkers == 0 {
 		options.ListPoolWorkers = defaultListPoolWorkers
 	}
@@ -48,8 +48,8 @@ func New(client IArgoCDClient, options *ArgoCDWrapperOptions) (IArgoCDWrapper, e
 	wrapper.DiffWorkerPool = pond.NewResultPool[[]v1alpha1.Application](options.DiffPoolWokers)
 
 	if !options.DoNotInstrumentWorkers {
-		instrumentWorkers("list", wrapper.ListWorkerPool)
-		instrumentWorkers("diff", wrapper.DiffWorkerPool)
+		instrumentWorkers("list", argoCDName, wrapper.ListWorkerPool)
+		instrumentWorkers("diff", argoCDName, wrapper.DiffWorkerPool)
 	}
 
 	wrapper.ApplicationClient = client

@@ -2,11 +2,14 @@ argo-cd:
   configs:
     cm:
       accounts.automation: apiKey
+      accounts.automationTest: apiKey
 
     rbac:
       policy.csv: |
-        p, role:tangle, applications, *, *, allow
-        g, automation, role:tangle
+        p, role:automation, applications, *, default/*, allow
+        g, automation, role:automation
+        p, role:automationTest, applications, *, my-project/*, allow
+        g, automationTest, role:automationTest
 
     params:
       server.insecure: true
