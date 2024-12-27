@@ -3,7 +3,7 @@ module github.com/ivanklee86/tangle
 go 1.23.2
 
 require (
-	github.com/alitto/pond/v2 v2.1.5
+	github.com/alitto/pond/v2 v2.1.6
 	github.com/argoproj/argo-cd/v2 v2.13.2
 	github.com/flowchartsman/swaggerui v0.0.0-20221017034628-909ed4f3701b
 	github.com/go-chi/chi/v5 v5.2.0
