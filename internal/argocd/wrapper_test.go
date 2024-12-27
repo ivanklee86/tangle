@@ -18,14 +18,37 @@ func TestArgoCDWrapper(t *testing.T) {
 		})
 		assert.Nil(t, err)
 
-		wrapper, err := New(client, "test", &ArgoCDWrapperOptions{})
+		wrapper, err := New(client, "test", &ArgoCDWrapperOptions{
+			DoNotInstrumentWorkers: true,
+		})
 		assert.Nil(t, err)
 
 		labels := make(map[string]string)
 		labels["env"] = "test"
 
-		results := wrapper.ListApplicationsByLabels(context.Background(), labels)
+		results, err := wrapper.ListApplicationsByLabels(context.Background(), labels)
+		assert.Nil(t, err)
 		assert.Len(t, results, 1)
 		assert.Equal(t, "test-1", results[0].Name)
+	})
+
+	t.Run("error", func(t *testing.T) {
+		client, err := NewArgoCDClient(&ArgoCDClientOptions{
+			Address:         "https://localhost:8080",
+			Insecure:        true,
+			AuthTokenEnvVar: "ARGOCD_TOKEN",
+		})
+		assert.Nil(t, err)
+
+		wrapper, err := New(client, "test", &ArgoCDWrapperOptions{
+			DoNotInstrumentWorkers: true,
+		})
+		assert.Nil(t, err)
+
+		labels := make(map[string]string)
+		labels["env"] = "test"
+
+		_, err = wrapper.ListApplicationsByLabels(context.Background(), labels)
+		assert.NotNil(t, err)
 	})
 }

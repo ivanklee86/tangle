@@ -94,3 +94,63 @@ func TestHandlers(t *testing.T) {
 		})
 	}
 }
+
+func TestHandlersError(t *testing.T) {
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	argocdConfig := make(map[string]TangleArgoCDConfig)
+	argocdConfig["test"] = TangleArgoCDConfig{
+		Address:         "localhost:8080",
+		Insecure:        true,
+		AuthTokenEnvVar: "ARGOCD_TOKEN",
+	}
+	argocdConfig["prod"] = TangleArgoCDConfig{
+		Address:         "https://localhost:8080",
+		Insecure:        true,
+		AuthTokenEnvVar: "ARGOCD_PROD_TOKEN",
+	}
+
+	config := TangleConfig{
+		Name:                   "test-tangle",
+		Domain:                 "localhost",
+		Port:                   8081,
+		ArgoCDs:                argocdConfig,
+		DoNotInstrumentWorkers: true,
+	}
+
+	tests := []struct {
+		name        string
+		url         string
+		expectedErr int
+	}{
+		{
+			name:        "applications",
+			url:         "/applications",
+			expectedErr: http.StatusInternalServerError,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tangle := New(&config)
+
+			req, _ := http.NewRequest("GET", test.url, nil)
+
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(tangle.applicationsHandler)
+			handler.ServeHTTP(rr, req)
+
+			assert.NotNil(t, rr.Body.String())
+			assert.Equal(t, test.expectedErr, rr.Code)
+
+			var result ErrorResponse
+			err := json.NewDecoder(rr.Body).Decode(&result)
+			assert.Nil(t, err)
+
+			assert.NotNil(t, result.Error)
+		})
+	}
+}

@@ -36,10 +36,18 @@ type applicationsQueryParams struct {
 //
 // Responses:
 //   200: applicationsResponse
+//   500: errorResponse
 
 // Response for successful application lookup
 // swagger:response applicationsResponse
 type applicationsResponse struct {
 	// in: body
 	Body tangle.ApplicationsResponse
+}
+
+// Response for error
+// swagger:response errorResponse
+type errorResponse struct {
+	// in: body
+	Body tangle.ErrorResponse
 }

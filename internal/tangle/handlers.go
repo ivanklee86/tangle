@@ -21,6 +21,10 @@ type ApplicationsResponse struct {
 	Results []ArgoCDApplicationResults `json:"results"`
 }
 
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
 func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	query := req.URL.Query()
@@ -36,7 +40,13 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 
 	apiResults := []ArgoCDApplicationResults{}
 	for name, argoCD := range t.ArgoCDs {
-		queryResults := argoCD.ListApplicationsByLabels(req.Context(), labels)
+		queryResults, err := argoCD.ListApplicationsByLabels(req.Context(), labels)
+		if err != nil {
+			t.Log.Error("Failed to list applications by labels", "argocd", name, "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(ErrorResponse{Error: err.Error()}) // nolint: errcheck
+			return
+		}
 
 		argoCDApplicationResult := ArgoCDApplicationResults{
 			Name:         name,
