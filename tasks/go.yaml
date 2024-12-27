@@ -29,8 +29,14 @@ tasks:
   build:
     desc: Builds binary.
     cmds:
+      - task: generate
       - mkdir {{.BUILD_DIR}} | true
       - go build -ldflags "-X main.version=${VERSION}" -o {{.BUILD_DIR}} ./...
+
+  generate:
+    desc: Generate code.
+    cmds:
+      - swagger generate spec -o ./internal/tangle/swagger.json --scan-models
 
   fmt:
     desc: Formats Golang code.
@@ -45,11 +51,13 @@ tasks:
   run:
     desc: Run server
     cmds:
+      - task: generate
       - go run cmd/tangle-server/main.go
 
   run-reloading:
     desc: Run server with hot reloading.
     cmds:
+      - task: generate
       - air -c .air.conf
 
   test:

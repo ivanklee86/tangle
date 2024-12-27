@@ -3,7 +3,7 @@
 //	Schemes: http
 //	BasePath: /
 //	Version: 1.0.0
-//	Host: localhost:8080
+//	Host: localhost:8081
 //
 //	Consumes:
 //	- application/json
@@ -12,19 +12,34 @@
 //	- application/json
 //
 // swagger:meta
+
+// nolint
 package docs
 
 import "github.com/ivanklee86/tangle/internal/tangle"
 
-// swagger:route GET /applications test-tag idOfBooksEndpoint
+// swagger:parameters labels
+type applicationsQueryParams struct {
+	// Labels to filter applications by
+	// in: query
+	// required: false
+	Labels string `json:"labels"`
+
+	// Name of the ArgoCD instance
+	// in: query
+	// required: false
+	Instance string `json:"instance"`
+}
+
+// swagger:route GET /applications labels
 // Get information about all Applications with matching tags.
 //
-// responses:
-//   200: foobarResponse
+// Responses:
+//   200: applicationsResponse
 
-// This text will appear as description of your response body.
-// swagger:response foobarResponse
-type applicationsResponseWrapper struct {
-	// in:body
+// Response for successful application lookup
+// swagger:response applicationsResponse
+type applicationsResponse struct {
+	// in: body
 	Body tangle.ApplicationsResponse
 }

@@ -15,7 +15,6 @@ tasks:
             - task: go:fmt
             - task: go:lint
             - task: go:build
-            - task: argocd:clean
             - task: go:test
 
     services:

@@ -26,10 +26,12 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 	query := req.URL.Query()
 
 	labels := make(map[string]string)
-	rawLabels := strings.Split(query.Get("labels"), ",")
-	for idx := range rawLabels {
-		rawLabel := strings.Split(rawLabels[idx], ":")
-		labels[rawLabel[0]] = rawLabel[1]
+	if len(query.Get("labels")) > 0 {
+		rawLabels := strings.Split(query.Get("labels"), ",")
+		for idx := range rawLabels {
+			rawLabel := strings.Split(rawLabels[idx], ":")
+			labels[rawLabel[0]] = rawLabel[1]
+		}
 	}
 
 	apiResults := []ArgoCDApplicationResults{}
