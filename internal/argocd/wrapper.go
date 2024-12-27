@@ -87,8 +87,9 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(labels map[string]string) []Lis
 			}
 
 			results = append(results, ListApplicationsResult{
-				Name:    app.Name,
-				Project: project,
+				Name:      app.Name,
+				Project:   project,
+				Namespace: app.Namespace,
 			})
 		}
 

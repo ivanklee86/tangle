@@ -25,6 +25,6 @@ func TestArgoCDWrapper(t *testing.T) {
 
 		results := wrapper.ListApplicationsByLabels(labels)
 		assert.Len(t, results, 1)
-		assert.Equal(t, "test", results[0].Name)
+		assert.Equal(t, "test-1", results[0].Name)
 	})
 }

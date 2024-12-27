@@ -46,7 +46,7 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 		for _, queryResult := range queryResults {
 			argoCDApplicationResult.Applications = append(argoCDApplicationResult.Applications, ApplicationLinks{
 				Name: queryResult.Name,
-				URL:  fmt.Sprintf("https://%s/applications/%s/%s", argoCD.GetUrl(), queryResult.Project, queryResult.Name),
+				URL:  fmt.Sprintf("https://%s/applications/%s/%s", argoCD.GetUrl(), queryResult.Namespace, queryResult.Name),
 			})
 		}
 
