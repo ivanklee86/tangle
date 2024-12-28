@@ -33,11 +33,14 @@ func LoadConfig(config *koanf.Koanf, options LoadConfigOptions) (*TangleConfig, 
 	}
 
 	// Sensible defaults
-	config.Load(structs.Provider(TangleConfigDefaults, "koanf"), nil)
+	err := config.Load(structs.Provider(TangleConfigDefaults, "koanf"), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	// Load configuration from environment then apply env overrides
 	file := file.Provider(configPath)
-	err := config.Load(file, yaml.Parser())
+	err = config.Load(file, yaml.Parser())
 	if err != nil {
 		return nil, err
 	}
