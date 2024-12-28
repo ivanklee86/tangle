@@ -94,7 +94,10 @@ func New(config *TangleConfig) *Tangle {
 	router.Handle("/metrics", promhttp.Handler())
 
 	// Application routes
-	router.HandleFunc("/applications", tangle.applicationsHandler)
+	router.Route("/api", func(r chi.Router) {
+		r.Get("/applications", tangle.applicationsHandler)
+	})
+
 	router.Mount("/swagger", http.StripPrefix("/swagger", swaggerui.Handler(spec)))
 
 	// Healthcheck
