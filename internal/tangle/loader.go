@@ -9,6 +9,7 @@ import (
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/providers/structs"
 	"github.com/knadh/koanf/v2"
 )
 
@@ -31,10 +32,15 @@ func LoadConfig(config *koanf.Koanf, options LoadConfigOptions) (*TangleConfig, 
 		configPath = options.Path
 	}
 
+	// Sensible defaults
+	err := config.Load(structs.Provider(TangleConfigDefaults, "koanf"), nil)
+	if err != nil {
+		return nil, err
+	}
+
 	// Load configuration from environment then apply env overrides
 	file := file.Provider(configPath)
-
-	err := config.Load(file, yaml.Parser())
+	err = config.Load(file, yaml.Parser())
 	if err != nil {
 		return nil, err
 	}

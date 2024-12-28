@@ -31,7 +31,7 @@ type applicationsQueryParams struct {
 	Instance string `json:"instance"`
 }
 
-// swagger:route GET /applications labels
+// swagger:route GET /api/applications labels
 // Get information about all Applications with matching tags.
 //
 // Responses:

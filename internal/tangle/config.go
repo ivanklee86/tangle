@@ -11,8 +11,13 @@ type TangleConfig struct {
 	Name    string                        `koanf:"name"`
 	Domain  string                        `koanf:"domain"`
 	Port    int                           `koanf:"port"`
+	Timeout int                           `koanf:"timeout"`
 	ArgoCDs map[string]TangleArgoCDConfig `koanf:"argocds"`
 
 	// Internal configuration (for testing)
 	DoNotInstrumentWorkers bool
+}
+
+var TangleConfigDefaults = TangleConfig{
+	Timeout: 60,
 }

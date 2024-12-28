@@ -18,6 +18,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/go-chi/httplog/v2"
 
 	"github.com/ivanklee86/tangle/internal/argocd"
@@ -89,12 +90,24 @@ func New(config *TangleConfig) *Tangle {
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
+	router.Use(middleware.Timeout(time.Duration(config.Timeout) * time.Second))
+	router.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedMethods:   []string{"GET", "POST"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300, // Maximum value not ignored by any of major browsers
+	}))
 
 	// Metrics
 	router.Handle("/metrics", promhttp.Handler())
 
 	// Application routes
-	router.HandleFunc("/applications", tangle.applicationsHandler)
+	router.Route("/api", func(r chi.Router) {
+		r.Get("/applications", tangle.applicationsHandler)
+	})
+
 	router.Mount("/swagger", http.StripPrefix("/swagger", swaggerui.Handler(spec)))
 
 	// Healthcheck
