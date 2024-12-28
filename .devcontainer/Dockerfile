@@ -44,9 +44,6 @@ RUN go install github.com/goreleaser/goreleaser/v2@latest
 RUN go install github.com/air-verse/air@latest
 RUN go install github.com/go-swagger/go-swagger/cmd/swagger@latest
 
-# - NPM
-RUN npm install -g @usebruno/cli
-
 # - Kubernetes
 RUN curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
 
