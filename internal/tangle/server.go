@@ -89,6 +89,7 @@ func New(config *TangleConfig) *Tangle {
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
+	router.Use(middleware.Timeout(time.Duration(config.Timeout) * time.Second))
 
 	// Metrics
 	router.Handle("/metrics", promhttp.Handler())
