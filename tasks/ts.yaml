@@ -1,0 +1,35 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  STATIC_DIR: build
+
+tasks:
+  build:
+    desc: Build the project
+    dir: web
+    cmds:
+      - rm -rf ../{{.STATIC_DIR}}
+      - mkdir  ../{{.STATIC_DIR}} || true
+      - npm run build
+      - cp -r build/* ../{{.STATIC_DIR}}
+
+  fmt:
+    desc: Format the code
+    dir: web
+    cmds:
+      - npm run format
+
+  lint:
+    desc: Lint the code
+    dir: web
+    cmds:
+      - npm run check
+      - npm run lint
+
+  test:
+    desc: Run tests
+    dir: web
+    cmds:
+      - npm run test:unit

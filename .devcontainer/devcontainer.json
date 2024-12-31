@@ -33,12 +33,14 @@
 
 			// Add the IDs of extensions you want installed when the container is created.
 			"extensions": [
+				"GitHub.copilot",
 				"github.vscode-github-actions",
 				"golang.go",
                 "ms-azuretools.vscode-docker",
 				"ms-vscode.vscode-typescript-next",
 				"redhat.vscode-yaml",
 				"ritwickdey.LiveServer",
+				"svelte.svelte-vscode",
 				"tamasfe.even-better-toml",
 				"task.vscode-task"
 			]

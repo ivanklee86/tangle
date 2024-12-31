@@ -119,6 +119,9 @@ func New(config *TangleConfig) *Tangle {
 	))
 	router.Handle("/health", h.Handler())
 
+	fileDir := http.Dir("./build")
+	router.Handle("/*", http.FileServer(fileDir))
+
 	return &tangle
 }
 
