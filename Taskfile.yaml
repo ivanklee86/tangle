@@ -21,6 +21,7 @@ tasks:
     services:
         desc: Set up services (aka ArgoCD) to use for tests.
         cmds:
+            - task: k8s:cluster:delete
             - task: k8s:start
             - task: argocd:healthcheck
             - task: argocd:token

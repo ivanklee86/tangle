@@ -33,3 +33,9 @@ tasks:
     dir: web
     cmds:
       - npm run test:unit
+
+  dev:
+    desc: Run the development server
+    dir: web
+    cmds:
+      - npm run dev

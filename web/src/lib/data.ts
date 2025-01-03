@@ -7,6 +7,7 @@ interface ApplicationLinks {
 
 interface ArgoCDApplicationResults {
 	name: string;
+	link: string;
 	applications: ApplicationLinks[];
 }
 
