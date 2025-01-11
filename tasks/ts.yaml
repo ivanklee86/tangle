@@ -21,6 +21,12 @@ tasks:
     cmds:
       - npm run format
 
+  install:
+    desc: Install dependencies
+    dir: web
+    cmds:
+      - npm install
+
   lint:
     desc: Lint the code
     dir: web
