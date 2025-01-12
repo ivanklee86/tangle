@@ -15,24 +15,13 @@
 	import { onMount } from 'svelte';
 	import { apiData } from '$lib/data';
 	import { page } from '$app/stores';
-	import { PUBLIC_BASE_URL } from '$env/static/public';
+	import TangleAPIClient from '$lib/client';
 
 	const labels = $page.url.searchParams.get('labels');
-	var url = `${PUBLIC_BASE_URL}/api/applications`;
-	if (labels) {
-		url = url + '?labels=' + labels;
-	}
+	var client = new TangleAPIClient();
 
-	onMount(async () => {
-		fetch(url)
-			.then((response) => response.json())
-			.then((data) => {
-				apiData.set(data);
-			})
-			.catch((error) => {
-				console.log(error);
-				return [];
-			});
+	onMount(() => {
+		client.getApplications(labels);
 	});
 </script>
 

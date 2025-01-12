@@ -1,4 +1,4 @@
-import { writable, derived } from 'svelte/store';
+import { writable } from 'svelte/store';
 
 interface ApplicationLinks {
 	name: string;
@@ -16,7 +16,3 @@ interface ApplicationsResponse {
 }
 
 export const apiData = writable<ApplicationsResponse>({ results: [] });
-
-export const title = derived(apiData, ($apiData) => {
-	return $apiData.results.map((result) => result.name).join(', ');
-});
