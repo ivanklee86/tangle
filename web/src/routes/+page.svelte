@@ -1,3 +1,9 @@
-<p>Welcome to Tangle!</p>
+<script>
+	import { Card } from 'flowbite-svelte';
+</script>
+
 <br />
-<a href="/applications" class="link">Applications</a>
+<Card href="/applications" class="justify-center ml-5">
+	<h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Applications</h5>
+</Card>
+<br />

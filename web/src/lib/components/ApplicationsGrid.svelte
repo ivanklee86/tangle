@@ -1,6 +1,16 @@
 <script>
-
-	import { Tabs, TabItem } from 'flowbite-svelte';
+	import {
+		Button,
+		Tabs,
+		TabItem,
+		Spinner,
+		Table,
+		TableBody,
+		TableBodyCell,
+		TableBodyRow,
+		TableHead,
+		TableHeadCell
+	} from 'flowbite-svelte';
 
 	import { onMount } from 'svelte';
 	import { apiData } from '$lib/data';
@@ -26,73 +36,29 @@
 	});
 </script>
 
-<!-- {#if apiData}
-	<Card>
-		<TabContent>
-			{#each $apiData.results as argoCDApplications, index}
-				<TabPane tabId={argoCDApplications.name} tab={argoCDApplications.name} active={index === 0}>
-					<Table bordered>
-						<thead>
-							<tr>
-								<th
-									>Applications (<a
-										href={argoCDApplications.link}
-										target="_blank"
-										class="link-underline-primary">Link</a
-									>)</th
-								>
-							</tr>
-						</thead>
-						<tbody>
-							{#each argoCDApplications.applications as application}
-								<tr>
-									<td
-										><a href={application.url} target="_blank" class="link-underline-primary"
-											>{application.name}</a
-										></td
-									>
-								</tr>
-							{/each}
-						</tbody>
-					</Table>
-				</TabPane>
-			{/each}
-		</TabContent>
-	</Card>
+{#if apiData}
+	<Tabs tabStyle="underline" class="ml-5 mr-5">
+		{#each $apiData.results as argoCDApplications, index}
+			<TabItem title={argoCDApplications.name} open={index === 0}>
+				<span slot="title">{argoCDApplications.name}</span>
+				<Button href={argoCDApplications.link} target="_blank" class="mb-3">Take me there!</Button>
+				<br />
+				<Table hoverable={true} items={argoCDApplications.applications}>
+					<TableHead>
+						<TableHeadCell sort={(a, b) => a.name.localeCompare(b.name)}>Applications</TableHeadCell
+						>
+					</TableHead>
+					<TableBody tableBodyClass="divide-y">
+						<TableBodyRow slot="row" let:item>
+							<TableBodyCell>
+								<a href={item.url} target="_blank" class="link-underline-primary">{item.name}</a>
+							</TableBodyCell>
+						</TableBodyRow>
+					</TableBody>
+				</Table>
+			</TabItem>
+		{/each}
+	</Tabs>
 {:else}
-	<Spinner color="primary" />
-{/if} -->
-
-<Tabs>
-	<TabItem open title="Profile">
-	  <p class="text-sm text-gray-500 dark:text-gray-400">
-		<b>Profile:</b>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-	  </p>
-	</TabItem>
-	<TabItem title="Settings">
-	  <p class="text-sm text-gray-500 dark:text-gray-400">
-		<b>Settings:</b>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-	  </p>
-	</TabItem>
-	<TabItem title="Users">
-	  <p class="text-sm text-gray-500 dark:text-gray-400">
-		<b>Users:</b>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-	  </p>
-	</TabItem>
-	<TabItem title="Dashboard">
-	  <p class="text-sm text-gray-500 dark:text-gray-400">
-		<b>Dashboard:</b>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-	  </p>
-	</TabItem>
-	<TabItem disabled>
-	  <span slot="title" class="text-gray-400 dark:text-gray-500">Disabled</span>
-	  <p class="text-sm text-gray-500 dark:text-gray-400">
-		<b>Disabled:</b>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-	  </p>
-	</TabItem>
-  </Tabs>
+	<Spinner />
+{/if}
