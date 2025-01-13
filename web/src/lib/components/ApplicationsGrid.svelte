@@ -1,5 +1,6 @@
 <script>
 	import {
+		Alert,
 		Button,
 		Tabs,
 		TabItem,
@@ -25,9 +26,17 @@
 	});
 </script>
 
+{#if $apiData.error}
+	<Alert color="none" class="bg-red-500 text-white">
+		<span class="font-medium">System error!</span>
+		<br />
+		{$apiData.errorResponse?.error}
+	</Alert>
+{/if}
+
 {#if apiData}
 	<Tabs tabStyle="underline" class="ml-5 mr-5">
-		{#each $apiData.results as argoCDApplications, index}
+		{#each $apiData.response.results as argoCDApplications, index}
 			<TabItem title={argoCDApplications.name} open={index === 0}>
 				<span slot="title">{argoCDApplications.name}</span>
 				<Button href={argoCDApplications.link} target="_blank" class="mb-3">Take me there!</Button>

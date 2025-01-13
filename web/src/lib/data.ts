@@ -1,5 +1,9 @@
 import { writable } from 'svelte/store';
 
+interface TangleError {
+	error: string;
+}
+
 interface ApplicationLinks {
 	name: string;
 	url: string;
@@ -15,4 +19,16 @@ interface ApplicationsResponse {
 	results: ArgoCDApplicationResults[];
 }
 
-export const apiData = writable<ApplicationsResponse>({ results: [] });
+interface ApplicationResponseStore {
+	response: ApplicationsResponse;
+	errorResponse: TangleError | null;
+	error: boolean;
+}
+
+export const apiData = writable<ApplicationResponseStore>({
+	response: { results: [] },
+	errorResponse: { error: '' },
+	error: false
+});
+
+export type { ApplicationsResponse, ApplicationResponseStore, TangleError };
