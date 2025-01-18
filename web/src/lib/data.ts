@@ -7,6 +7,8 @@ interface TangleError {
 interface ApplicationLinks {
 	name: string;
 	url: string;
+	health: string;
+	syncStatus: string;
 }
 
 interface ArgoCDApplicationResults {
