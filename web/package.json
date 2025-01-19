@@ -24,7 +24,7 @@
 		"autoprefixer": "^10.4.20",
 		"daisyui": "^4.12.23",
 		"eslint": "^9.7.0",
-		"eslint-config-prettier": "^9.1.0",
+		"eslint-config-prettier": "^10.0.0",
 		"eslint-plugin-svelte": "^2.36.0",
 		"flowbite": "^2.5.2",
 		"flowbite-svelte": "^0.47.4",
