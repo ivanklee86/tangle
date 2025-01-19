@@ -15,6 +15,7 @@ import (
 	"github.com/flowchartsman/swaggerui"
 	"github.com/hellofresh/health-go/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/yarlson/chiprom"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -91,6 +92,7 @@ func New(config *TangleConfig) *Tangle {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(time.Duration(config.Timeout) * time.Second))
+	router.Use(chiprom.NewPatternMiddleware("tangle"))
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST"},
