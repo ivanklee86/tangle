@@ -12,4 +12,4 @@ repos:
       rev: v0.5.1
       hooks:
           - id: go-fmt
-exclude: "integration/kubernetes/example/manifests/*"
+exclude: "integration/kubernetes/example/manifests/.*"
