@@ -8,6 +8,8 @@ ARG NODE_VERSION="22"
 RUN if [ "${NODE_VERSION}" != "none" ]; then su vscode -c "umask 0002 && . /usr/local/share/nvm/nvm.sh && nvm install ${NODE_VERSION} 2>&1"; fi
 
 # Setup
+ENV GOTOOLCHAIN=auto
+
 ENV HOME="/home/vscode"
 WORKDIR /home/vscode
 

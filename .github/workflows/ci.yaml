@@ -11,7 +11,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  test:
+  go:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -60,6 +60,24 @@ jobs:
       with:
         name: Coverage report.
         path: ./coverage.html
+
+  ts:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Install Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '22'
+    - name: Install Task
+      uses: arduino/setup-task@v2
+    - name: Install packages
+      run: task ts:install
+    - name: Lint code
+      run: task ts:lint
+    - name: Build website
+      run: task ts:build
 
   format:
     runs-on: ubuntu-latest

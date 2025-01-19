@@ -38,3 +38,4 @@ report.xml
 coverage.html
 tmp
 tangle-server
+build

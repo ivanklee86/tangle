@@ -8,12 +8,15 @@ import (
 )
 
 type ApplicationLinks struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
+	Name       string `json:"name"`
+	URL        string `json:"url"`
+	Health     string `json:"health"`
+	SyncStatus string `json:"syncStatus"`
 }
 
 type ArgoCDApplicationResults struct {
 	Name         string             `json:"name"`
+	Link         string             `json:"link"`
 	Applications []ApplicationLinks `json:"applications"`
 }
 
@@ -23,6 +26,25 @@ type ApplicationsResponse struct {
 
 type ErrorResponse struct {
 	Error string `json:"error"`
+}
+
+func (t *Tangle) sortResults(apiResults []ArgoCDApplicationResults) []ArgoCDApplicationResults {
+	sortOrder := t.Config.SortOrder
+	if len(sortOrder) == 0 {
+		return apiResults
+	}
+
+	sortedResults := []ArgoCDApplicationResults{}
+	for _, name := range sortOrder {
+		for _, result := range apiResults {
+			if result.Name == name {
+				sortedResults = append(sortedResults, result)
+			}
+		}
+	}
+
+	return sortedResults
+
 }
 
 func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
@@ -48,22 +70,37 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
+		baseLink := fmt.Sprintf("https://%s/applications", argoCD.GetUrl())
+		if len(labels) > 0 {
+			mergedLabels := []string{}
+			for key, value := range labels {
+				mergedLabels = append(mergedLabels, fmt.Sprintf("%s%%253D%s", key, value))
+			}
+
+			tags := strings.Join(mergedLabels, "%2C")
+
+			baseLink = fmt.Sprintf("%s?labels=%s", baseLink, tags)
+		}
+
 		argoCDApplicationResult := ArgoCDApplicationResults{
 			Name:         name,
+			Link:         baseLink,
 			Applications: []ApplicationLinks{},
 		}
 
 		for _, queryResult := range queryResults {
 			argoCDApplicationResult.Applications = append(argoCDApplicationResult.Applications, ApplicationLinks{
-				Name: queryResult.Name,
-				URL:  fmt.Sprintf("https://%s/applications/%s/%s", argoCD.GetUrl(), queryResult.Namespace, queryResult.Name),
+				Name:       queryResult.Name,
+				URL:        fmt.Sprintf("https://%s/applications/%s/%s", argoCD.GetUrl(), queryResult.Namespace, queryResult.Name),
+				Health:     string(queryResult.Health.Status),
+				SyncStatus: string(queryResult.SyncStatus.Status),
 			})
 		}
 
 		apiResults = append(apiResults, argoCDApplicationResult)
 	}
 
-	response := ApplicationsResponse{Results: apiResults}
+	response := ApplicationsResponse{Results: t.sortResults(apiResults)}
 
 	err := json.NewEncoder(w).Encode(response)
 	if err != nil {

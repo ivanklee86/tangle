@@ -8,11 +8,12 @@ type TangleArgoCDConfig struct {
 }
 
 type TangleConfig struct {
-	Name    string                        `koanf:"name"`
-	Domain  string                        `koanf:"domain"`
-	Port    int                           `koanf:"port"`
-	Timeout int                           `koanf:"timeout"`
-	ArgoCDs map[string]TangleArgoCDConfig `koanf:"argocds"`
+	Name      string                        `koanf:"name"`
+	Domain    string                        `koanf:"domain"`
+	Port      int                           `koanf:"port"`
+	Timeout   int                           `koanf:"timeout"`
+	ArgoCDs   map[string]TangleArgoCDConfig `koanf:"argocds"`
+	SortOrder []string                      `koanf:"sortOrder"`
 
 	// Internal configuration (for testing)
 	DoNotInstrumentWorkers bool

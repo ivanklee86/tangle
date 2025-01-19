@@ -21,6 +21,7 @@ tasks:
 
   cluster:delete:
     desc: "Clean up k3d cluster."
+    ignore_error: true
     cmds:
       - k3d cluster delete {{.CLUSTER_NAME}}
 
