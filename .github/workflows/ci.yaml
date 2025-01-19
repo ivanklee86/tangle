@@ -73,7 +73,7 @@ jobs:
     - name: Install Task
       uses: arduino/setup-task@v2
     - name: Install packages
-      run: task ts:instal
+      run: task ts:install
     - name: Lint code
       run: task ts:lint
     - name: Build website
