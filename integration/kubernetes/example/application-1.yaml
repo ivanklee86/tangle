@@ -13,4 +13,8 @@ spec:
     targetRevision: main
   destination:
     server: https://kubernetes.default.svc
-    namespace: default
+    namespace: tweak_integration_tests
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

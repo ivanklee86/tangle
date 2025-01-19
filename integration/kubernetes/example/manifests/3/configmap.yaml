@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: example-cm-3
+  name: example-cm-3#&!*@#
 data:
   foo: "bar"
   hamsters: "no"
