@@ -10,10 +10,10 @@ spec:
   source:
     repoURL: https://github.com/ivanklee86/tangle.git
     path: integration/kubernetes/example/manifests/1
-    targetRevision: main
+    targetRevision: tweak_integration_tests
   destination:
     server: https://kubernetes.default.svc
-    namespace: tweak_integration_tests
+    namespace: default
   syncPolicy:
     automated:
       prune: true
