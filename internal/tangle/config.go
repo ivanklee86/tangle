@@ -16,7 +16,7 @@ type TangleConfig struct {
 	SortOrder []string                      `koanf:"sortOrder"`
 
 	// Internal configuration (for testing)
-	DoNotInstrumentWorkers bool
+	DoNotInstrument bool
 }
 
 var TangleConfigDefaults = TangleConfig{

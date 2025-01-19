@@ -29,11 +29,11 @@ func TestHandlers(t *testing.T) {
 	}
 
 	config := TangleConfig{
-		Name:                   "test-tangle",
-		Domain:                 "localhost",
-		Port:                   8081,
-		ArgoCDs:                argocdConfig,
-		DoNotInstrumentWorkers: true,
+		Name:            "test-tangle",
+		Domain:          "localhost",
+		Port:            8081,
+		ArgoCDs:         argocdConfig,
+		DoNotInstrument: true,
 	}
 
 	tests := []struct {
@@ -114,11 +114,11 @@ func TestHandlersError(t *testing.T) {
 	}
 
 	config := TangleConfig{
-		Name:                   "test-tangle",
-		Domain:                 "localhost",
-		Port:                   8081,
-		ArgoCDs:                argocdConfig,
-		DoNotInstrumentWorkers: true,
+		Name:            "test-tangle",
+		Domain:          "localhost",
+		Port:            8081,
+		ArgoCDs:         argocdConfig,
+		DoNotInstrument: true,
 	}
 
 	tests := []struct {

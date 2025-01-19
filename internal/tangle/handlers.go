@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type ApplicationLinks struct {
@@ -108,4 +110,14 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (t *Tangle) applicationManifestsHandler(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	argocdName := chi.URLParam(req, "argocd")
+	applicationName := chi.URLParam(req, "name")
+	ref := req.URL.Query().Get("ref")
+
+	t.Log.Info("Received request to diff application manifests", "argocd", argocdName, "application", applicationName, "ref", ref)
 }
