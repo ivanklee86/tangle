@@ -8,12 +8,14 @@ import (
 	"github.com/argoproj/argo-cd/v2/pkg/apiclient"
 	"github.com/argoproj/argo-cd/v2/pkg/apiclient/application"
 	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
+	repoServerApiClient "github.com/argoproj/argo-cd/v2/reposerver/apiclient"
 )
 
 // ArgoCDClient defines the interface for interacting with ArgoCD
 type IArgoCDClient interface {
 	// List returns all ArgoCD applications
 	List(ctx context.Context, in *application.ApplicationQuery) (*v1alpha1.ApplicationList, error)
+	GetApplicationManifests(ctx context.Context, in *application.ApplicationManifestQuery) (*repoServerApiClient.ManifestResponse, error)
 	GetUrl() string
 }
 
@@ -58,6 +60,15 @@ func (c *ArgoCDClient) List(ctx context.Context, query *application.ApplicationQ
 	}
 
 	return appList, nil
+}
+
+func (c *ArgoCDClient) GetApplicationManifests(ctx context.Context, query *application.ApplicationManifestQuery) (*repoServerApiClient.ManifestResponse, error) {
+	manifests, err := c.applicationsClient.GetManifests(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return manifests, nil
 }
 
 func (c *ArgoCDClient) GetUrl() string {
