@@ -14,5 +14,6 @@ repos:
           - id: go-fmt
 exclude: |
     (?x)(
-        ^integration/kubernetes/example/manifests/.*
+        ^integration/kubernetes/example/manifests/1/templates/.*|
+        ^integration/kubernetes/example/manifests/3/templates/.*
     )
