@@ -8,8 +8,8 @@ repos:
           - id: trailing-whitespace
           - id: end-of-file-fixer
           - id: check-yaml
+            exclude: ^integration/kubernetes/example/manifests/.*$
     - repo: https://github.com/dnephin/pre-commit-golang
       rev: v0.5.1
       hooks:
           - id: go-fmt
-exclude: "integration/kubernetes/example/manifests/.*"
