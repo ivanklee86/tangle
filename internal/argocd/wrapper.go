@@ -94,11 +94,12 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map
 			}
 
 			results = append(results, ListApplicationsResult{
-				Name:       app.Name,
-				Project:    project,
-				Namespace:  app.Namespace,
-				Health:     app.Status.Health,
-				SyncStatus: app.Status.Sync,
+				Name:           app.Name,
+				Project:        project,
+				Namespace:      app.Namespace,
+				Health:         app.Status.Health,
+				SyncStatus:     app.Status.Sync,
+				TargetRevision: app.Spec.Source.TargetRevision,
 			})
 		}
 

@@ -105,7 +105,7 @@ func TestArgoCDClient_GetApplicationManifests(t *testing.T) {
 	setup(t)
 
 	applicationName := "test-1"
-	revision := "main"
+	// revision := "main"
 
 	tests := []struct {
 		name    string
@@ -121,8 +121,7 @@ func TestArgoCDClient_GetApplicationManifests(t *testing.T) {
 				AuthTokenEnvVar: "ARGOCD_TOKEN",
 			},
 			query: &application.ApplicationManifestQuery{
-				Name:     &applicationName,
-				Revision: &revision,
+				Name: &applicationName,
 			},
 			wantErr: false,
 		},

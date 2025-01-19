@@ -8,10 +8,11 @@ import (
 )
 
 type ApplicationLinks struct {
-	Name       string `json:"name"`
-	URL        string `json:"url"`
-	Health     string `json:"health"`
-	SyncStatus string `json:"syncStatus"`
+	Name           string `json:"name"`
+	URL            string `json:"url"`
+	Health         string `json:"health"`
+	SyncStatus     string `json:"syncStatus"`
+	TargetRevision string `json:"targetRevision"`
 }
 
 type ArgoCDApplicationResults struct {
@@ -90,10 +91,11 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 
 		for _, queryResult := range queryResults {
 			argoCDApplicationResult.Applications = append(argoCDApplicationResult.Applications, ApplicationLinks{
-				Name:       queryResult.Name,
-				URL:        fmt.Sprintf("https://%s/applications/%s/%s", argoCD.GetUrl(), queryResult.Namespace, queryResult.Name),
-				Health:     string(queryResult.Health.Status),
-				SyncStatus: string(queryResult.SyncStatus.Status),
+				Name:           queryResult.Name,
+				URL:            fmt.Sprintf("https://%s/applications/%s/%s", argoCD.GetUrl(), queryResult.Namespace, queryResult.Name),
+				Health:         string(queryResult.Health.Status),
+				SyncStatus:     string(queryResult.SyncStatus.Status),
+				TargetRevision: queryResult.TargetRevision,
 			})
 		}
 
