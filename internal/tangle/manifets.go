@@ -2,6 +2,8 @@ package tangle
 
 import (
 	"sigs.k8s.io/yaml"
+
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 func assembleManifests(manifests []string) (*string, error) {
@@ -16,4 +18,11 @@ func assembleManifests(manifests []string) (*string, error) {
 	}
 
 	return &assembledManifests, nil
+}
+
+func diffManifests(currentManifest string, compareManifest string) string {
+	dmp := diffmatchpatch.New()
+	diffs := dmp.DiffMain(currentManifest, compareManifest, false)
+
+	return dmp.DiffToDelta(diffs)
 }

@@ -110,7 +110,7 @@ func New(config *TangleConfig) *Tangle {
 	// Application routes
 	router.Route("/api", func(r chi.Router) {
 		r.Get("/applications", tangle.applicationsHandler)
-		// r.Post("{argocd}/applications/{name}/diffs", tangle.applicationManifestsHandler)
+		r.Post("/{argocd}/applications/{name}/diffs", tangle.applicationManifestsHandler)
 	})
 
 	router.Mount("/swagger", http.StripPrefix("/swagger", swaggerui.Handler(spec)))

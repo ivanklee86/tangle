@@ -140,6 +140,18 @@ func (t *Tangle) applicationManifestsHandler(w http.ResponseWriter, req *http.Re
 		t.Log.Error("Failed to get manifests", "argocd", argocdName, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	print(generatedManifests)
+	
+	assembledCurrentManifest, _ := assembleManifests(generatedManifests.CurrentManifest)
+	assembledCompareManifest, _ := assembleManifests(generatedManifests.CompareManifest)
+	response := DiffsResponse{
+		CurrentManifests: *assembledCurrentManifest,
+		CompareManifests: *assembledCompareManifest,
+		Diffs: 		  diffManifests(*assembledCurrentManifest, *assembledCompareManifest),
+	}
+
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
 }
