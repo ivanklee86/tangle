@@ -31,6 +31,17 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+type DiffsRequest struct {
+	CurrentRef string `json:"currentRef"`
+	CompareRef string `json:"compareRef"`
+}
+
+type DiffsResponse struct {
+	CurrentManifests string `json:"currentManifests"`
+	CompareManifests string `json:"compareManifests"`
+	Diffs            string `json:"diffs"`
+}
+
 func (t *Tangle) sortResults(apiResults []ArgoCDApplicationResults) []ArgoCDApplicationResults {
 	sortOrder := t.Config.SortOrder
 	if len(sortOrder) == 0 {
@@ -117,7 +128,18 @@ func (t *Tangle) applicationManifestsHandler(w http.ResponseWriter, req *http.Re
 
 	argocdName := chi.URLParam(req, "argocd")
 	applicationName := chi.URLParam(req, "name")
-	ref := req.URL.Query().Get("ref")
 
-	t.Log.Info("Received request to diff application manifests", "argocd", argocdName, "application", applicationName, "ref", ref)
+	var diffsRequest DiffsRequest
+	if err := json.NewDecoder(req.Body).Decode(&diffsRequest); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	generatedManifests, err := t.ArgoCDs[argocdName].GetManifests(req.Context(), applicationName, diffsRequest.CurrentRef, diffsRequest.CompareRef)
+	if err != nil {
+		t.Log.Error("Failed to get manifests", "argocd", argocdName, "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	print(generatedManifests)
+
 }
