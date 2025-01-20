@@ -14,7 +14,7 @@ const (
 
 type IArgoCDWrapper interface {
 	ListApplicationsByLabels(ctx context.Context, labels map[string]string) ([]ListApplicationsResult, error)
-	GetManifests(ctx context.Context, applicationName string, ref string) ([]string, error)
+	GetManifests(ctx context.Context, applicationName string, currentRef string, compareRef string) (*GetManifestsResponse, error)
 	GetUrl() string
 }
 
@@ -29,6 +29,11 @@ type ArgoCDWrapper struct {
 	ListWorkerPool      pond.ResultPool[[]ListApplicationsResult]
 	ManifestsWorkerPool pond.ResultPool[[]string]
 	ApplicationClient   IArgoCDClient
+}
+
+type GetManifestsResponse struct {
+	CurrentManifest []string
+	CompareManifest []string
 }
 
 func New(client IArgoCDClient, argoCDName string, options *ArgoCDWrapperOptions) (IArgoCDWrapper, error) {
@@ -119,28 +124,33 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map
 	return apps, nil
 }
 
-func (a *ArgoCDWrapper) GetManifests(ctx context.Context, applicationName string, ref string) ([]string, error) {
+func (a *ArgoCDWrapper) GetManifests(ctx context.Context, applicationName string, currenRef string, compareRef string) (*GetManifestsResponse, error) {
 	group := a.ManifestsWorkerPool.NewGroup()
-	group.SubmitErr(func() ([]string, error) {
-		manifestsQuery := &application.ApplicationManifestQuery{
-			Name:     &applicationName,
-			Revision: &ref,
-		}
 
-		manifestsResp, err := a.ApplicationClient.GetApplicationManifests(ctx, manifestsQuery)
-		if err != nil {
-			return nil, err
-		}
+	for _, ref := range []string{currenRef, compareRef} {
+		group.SubmitErr(func() ([]string, error) {
+			manifestsQuery := &application.ApplicationManifestQuery{
+				Name:     &applicationName,
+				Revision: &ref,
+			}
 
-		return manifestsResp.Manifests, nil
-	})
+			manifestsResp, err := a.ApplicationClient.GetApplicationManifests(ctx, manifestsQuery)
+			if err != nil {
+				return nil, err
+			}
+
+			return manifestsResp.Manifests, nil
+		})
+	}
 
 	poolResults, err := group.Wait()
 	if err != nil {
 		return nil, err
 	}
 
-	return poolResults[0], nil
+	response := GetManifestsResponse{CurrentManifest: poolResults[0], CompareManifest: poolResults[1]}
+
+	return &response, nil
 }
 
 func (a *ArgoCDWrapper) GetUrl() string {
