@@ -10,11 +10,11 @@ import (
 )
 
 type ApplicationLinks struct {
-	Name           string `json:"name"`
-	URL            string `json:"url"`
-	Health         string `json:"health"`
-	SyncStatus     string `json:"syncStatus"`
-	TargetRevision string `json:"targetRevision"`
+	Name       string `json:"name"`
+	URL        string `json:"url"`
+	Health     string `json:"health"`
+	SyncStatus string `json:"syncStatus"`
+	LiveRef    string `json:"LiveRef"`
 }
 
 type ArgoCDApplicationResults struct {
@@ -32,14 +32,14 @@ type ErrorResponse struct {
 }
 
 type DiffsRequest struct {
-	CurrentRef string `json:"currentRef"`
-	CompareRef string `json:"compareRef"`
+	LiveRef   string `json:"liveRef"`
+	TargetRef string `json:"targetRef"`
 }
 
 type DiffsResponse struct {
-	CurrentManifests string `json:"currentManifests"`
-	CompareManifests string `json:"compareManifests"`
-	Diffs            string `json:"diffs"`
+	LiveManifests   string `json:"liveManifests"`
+	TargetManifests string `json:"targetManifests"`
+	Diffs           string `json:"diffs"`
 }
 
 func (t *Tangle) sortResults(apiResults []ArgoCDApplicationResults) []ArgoCDApplicationResults {
@@ -104,11 +104,11 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 
 		for _, queryResult := range queryResults {
 			argoCDApplicationResult.Applications = append(argoCDApplicationResult.Applications, ApplicationLinks{
-				Name:           queryResult.Name,
-				URL:            fmt.Sprintf("https://%s/applications/%s/%s", argoCD.GetUrl(), queryResult.Namespace, queryResult.Name),
-				Health:         string(queryResult.Health.Status),
-				SyncStatus:     string(queryResult.SyncStatus.Status),
-				TargetRevision: queryResult.TargetRevision,
+				Name:       queryResult.Name,
+				URL:        fmt.Sprintf("https://%s/applications/%s/%s", argoCD.GetUrl(), queryResult.Namespace, queryResult.Name),
+				Health:     string(queryResult.Health.Status),
+				SyncStatus: string(queryResult.SyncStatus.Status),
+				LiveRef:    queryResult.TargetRevision,
 			})
 		}
 
@@ -135,18 +135,18 @@ func (t *Tangle) applicationManifestsHandler(w http.ResponseWriter, req *http.Re
 		return
 	}
 
-	generatedManifests, err := t.ArgoCDs[argocdName].GetManifests(req.Context(), applicationName, diffsRequest.CurrentRef, diffsRequest.CompareRef)
+	generatedManifests, err := t.ArgoCDs[argocdName].GetManifests(req.Context(), applicationName, diffsRequest.LiveRef, diffsRequest.TargetRef)
 	if err != nil {
 		t.Log.Error("Failed to get manifests", "argocd", argocdName, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	
-	assembledCurrentManifest, _ := assembleManifests(generatedManifests.CurrentManifest)
-	assembledCompareManifest, _ := assembleManifests(generatedManifests.CompareManifest)
+
+	live, _ := assembleManifests(generatedManifests.LiveManifests)
+	target, _ := assembleManifests(generatedManifests.TargetManifests)
 	response := DiffsResponse{
-		CurrentManifests: *assembledCurrentManifest,
-		CompareManifests: *assembledCompareManifest,
-		Diffs: 		  diffManifests(*assembledCurrentManifest, *assembledCompareManifest),
+		LiveManifests:   *live,
+		TargetManifests: *target,
+		Diffs:           diffManifests(*live, *target),
 	}
 
 	err = json.NewEncoder(w).Encode(response)

@@ -32,8 +32,8 @@ type ArgoCDWrapper struct {
 }
 
 type GetManifestsResponse struct {
-	CurrentManifest []string
-	CompareManifest []string
+	LiveManifests   []string
+	TargetManifests []string
 }
 
 func New(client IArgoCDClient, argoCDName string, options *ArgoCDWrapperOptions) (IArgoCDWrapper, error) {
@@ -124,10 +124,10 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map
 	return apps, nil
 }
 
-func (a *ArgoCDWrapper) GetManifests(ctx context.Context, applicationName string, currenRef string, compareRef string) (*GetManifestsResponse, error) {
+func (a *ArgoCDWrapper) GetManifests(ctx context.Context, applicationName string, liveRef string, targetRef string) (*GetManifestsResponse, error) {
 	group := a.ManifestsWorkerPool.NewGroup()
 
-	for _, ref := range []string{currenRef, compareRef} {
+	for _, ref := range []string{liveRef, targetRef} {
 		group.SubmitErr(func() ([]string, error) {
 			manifestsQuery := &application.ApplicationManifestQuery{
 				Name:     &applicationName,
@@ -148,7 +148,7 @@ func (a *ArgoCDWrapper) GetManifests(ctx context.Context, applicationName string
 		return nil, err
 	}
 
-	response := GetManifestsResponse{CurrentManifest: poolResults[0], CompareManifest: poolResults[1]}
+	response := GetManifestsResponse{LiveManifests: poolResults[0], TargetManifests: poolResults[1]}
 
 	return &response, nil
 }

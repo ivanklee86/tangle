@@ -25,7 +25,6 @@ func TestManifests(t *testing.T) {
 
 	t.Run("Test stiching yamls", func(t *testing.T) {
 		manifests, err := assembleManifests(manifestsCurrent)
-
 		assert.Nil(t, err)
 		assert.NotNil(t, manifests)
 
@@ -33,12 +32,10 @@ func TestManifests(t *testing.T) {
 	})
 
 	t.Run("Test diffing yamls", func(t *testing.T) {
-		currentManifst, err := assembleManifests(manifestsCurrent)
-		assert.Nil(t, err)
-		compareManifest, err := assembleManifests(manifestsCompare)
-		assert.Nil(t, err)
+		live, _ := assembleManifests(manifestsCurrent)
+		target, _ := assembleManifests(manifestsCompare)
 
-		diff := diffManifests(*currentManifst, *compareManifest)
+		diff := diffManifests(*live, *target)
 		assert.NotNil(t, diff)
 	})
 }
