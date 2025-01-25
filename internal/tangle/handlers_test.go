@@ -191,7 +191,7 @@ func TestDiffs(t *testing.T) {
 	}{
 		{
 			name: "happy_path",
-			url:  "/api/test/applications/test-1/diffs",
+			url:  "/api/argocd/test/applications/test-1/diffs",
 			requestBody: map[string]interface{}{
 				"currentRef": "main",
 				"compareRef": "test_gitops",

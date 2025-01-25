@@ -31,8 +31,17 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+// DiffsRequest contains the git refs to compare
+// swagger:model DiffsRequest
 type DiffsRequest struct {
-	LiveRef   string `json:"liveRef"`
+	// Current git ref to compare from
+	// required: true
+	// example: main
+	LiveRef string `json:"liveRef"`
+
+	// Target git ref to compare to
+	// required: true
+	// example: feature-branch
 	TargetRef string `json:"targetRef"`
 }
 
