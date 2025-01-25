@@ -35,7 +35,8 @@ func TestManifests(t *testing.T) {
 		live, _ := assembleManifests(manifestsCurrent)
 		target, _ := assembleManifests(manifestsCompare)
 
-		diff := diffManifests(*live, *target)
+		diff, err := diffManifests(*live, *target)
 		assert.NotNil(t, diff)
+		assert.Nil(t, err)
 	})
 }

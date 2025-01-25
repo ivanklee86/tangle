@@ -152,10 +152,11 @@ func (t *Tangle) applicationManifestsHandler(w http.ResponseWriter, req *http.Re
 
 	live, _ := assembleManifests(generatedManifests.LiveManifests)
 	target, _ := assembleManifests(generatedManifests.TargetManifests)
+	diff, _ := diffManifests(*live, *target)
 	response := DiffsResponse{
 		LiveManifests:   *live,
 		TargetManifests: *target,
-		Diffs:           diffManifests(*live, *target),
+		Diffs:           *diff,
 	}
 
 	err = json.NewEncoder(w).Encode(response)
