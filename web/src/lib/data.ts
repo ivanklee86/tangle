@@ -30,7 +30,7 @@ interface ApplicationResponseStore {
 interface ApplicationDiffResponse {
 	liveManifests: string;
 	targetManifests: string;
-	diff: string;
+	diffs: string;
 }
 
 interface ApplicationDiff {
@@ -46,7 +46,7 @@ export const apiData = writable<ApplicationResponseStore>({
 });
 
 export const diffData = writable<ApplicationDiff>({
-	response: { liveManifests: '', targetManifests: '', diff: '' },
+	response: { liveManifests: '', targetManifests: '', diffs: '' },
 	errorResponse: { error: '' },
 	error: false
 });

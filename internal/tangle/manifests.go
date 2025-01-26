@@ -54,7 +54,7 @@ func diffManifests(currentManifest string, compareManifest string) (*string, err
 	}
 
 	diffBinary := "diff"
-	args := []string{currrentFile, compareFile}
+	args := []string{"-uNar", currrentFile, compareFile}
 
 	cmd := exec.Command(diffBinary, args...)
 	// TODO: Diffs = 1

@@ -10,6 +10,8 @@
 	import { apiData } from '$lib/data';
 	import { page } from '$app/stores';
 	import TangleAPIClient from '$lib/client';
+	import { ApplicationGrid } from '$lib/components';
+	import AppManifests from '$lib/components/AppManifests.svelte';
 
 	const labels = $page.url.searchParams.get('labels');
     const compareRef = $page.url.searchParams.get('compareRef');
@@ -53,6 +55,12 @@
                         <TabItem title={application.name} open={appIndex === 0}>
                             <span slot="title">{application.name}</span>
                             <br />
+							<AppManifests
+								argocd={argoCDApplications.name}
+								appName={application.name}
+								currentRef="main"
+								compareRef="test_gitops"
+							/>
                         </TabItem>
                     {/each}
                 </Tabs>
