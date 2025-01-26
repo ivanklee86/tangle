@@ -17,6 +17,8 @@ tasks:
             - task: go:lint
             - task: go:build
             - task: go:test
+            - task: ts:lint
+            - task: ts:build
 
     services:
         desc: Set up services (aka ArgoCD) to use for tests.
