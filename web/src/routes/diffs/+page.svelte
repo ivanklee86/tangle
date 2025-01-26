@@ -1,11 +1,7 @@
 <script>
 	import { A, Alert, Heading, List, Li, P, Tabs, TabItem, Spinner } from 'flowbite-svelte';
 
-	import {
-		CheckCircleSolid,
-		CloseCircleSolid,
-		ExclamationCircleSolid
-	} from 'flowbite-svelte-icons';
+	import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
 
 	import { onMount } from 'svelte';
 	import { apiData } from '$lib/data';
