@@ -17,6 +17,7 @@
 	import { apiData } from '$lib/data';
 	import { page } from '$app/stores';
 	import TangleAPIClient from '$lib/client';
+	import { ArgoCDHealthStatus, ArgoCDSyncStatus } from '$lib/components';
 
 	const labels = $page.url.searchParams.get('labels');
 	var client = new TangleAPIClient();
@@ -67,8 +68,8 @@
 							<TableBodyCell>
 								<a href={item.url} target="_blank" class="link-underline-primary">{item.name}</a>
 							</TableBodyCell>
-							<TableBodyCell>{item.health}</TableBodyCell>
-							<TableBodyCell>{item.syncStatus}</TableBodyCell>
+							<TableBodyCell><ArgoCDHealthStatus healthStatus={item.health} /></TableBodyCell>
+							<TableBodyCell><ArgoCDSyncStatus syncStatus={item.syncStatus} /></TableBodyCell>
 						</TableBodyRow>
 					</TableBody>
 				</Table>

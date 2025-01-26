@@ -48,7 +48,7 @@
 	<br />
 	<A href={generateApplicationsUrl(labels)}>
 		<GradientButton color="pinkToOrange" class="w-fit">
-			See diffs<ArrowRightOutline class="w-6 h-6 ms-2 text-white" />
+			See applications<ArrowRightOutline class="w-6 h-6 ms-2 text-white" />
 		</GradientButton>
 	</A>
 </Card>
