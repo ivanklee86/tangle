@@ -5,10 +5,10 @@ import (
 )
 
 type ListApplicationsResult struct {
-	Name           string
-	Project        string
-	Namespace      string
-	Health         v1alpha1.HealthStatus
-	SyncStatus     v1alpha1.SyncStatus
-	TargetRevision string
+	Name         string
+	Project      string
+	Namespace    string
+	Health       v1alpha1.HealthStatus
+	SyncStatus   v1alpha1.SyncStatus
+	LiveRevision string
 }

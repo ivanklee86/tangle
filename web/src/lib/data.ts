@@ -9,6 +9,7 @@ interface ApplicationLinks {
 	url: string;
 	health: string;
 	syncStatus: string;
+	liveRef: string;
 }
 
 interface ArgoCDApplicationResults {
@@ -31,6 +32,7 @@ interface ApplicationDiffResponse {
 	liveManifests: string;
 	targetManifests: string;
 	diffs: string;
+	manifestGenerationError: string;
 }
 
 interface ApplicationDiff {
@@ -46,9 +48,15 @@ export const apiData = writable<ApplicationResponseStore>({
 });
 
 export const diffData = writable<ApplicationDiff>({
-	response: { liveManifests: '', targetManifests: '', diffs: '' },
+	response: { liveManifests: '', targetManifests: '', diffs: '', manifestGenerationError: '' },
 	errorResponse: { error: '' },
 	error: false
 });
 
-export type { ApplicationsResponse, ApplicationResponseStore, ApplicationDiff, TangleError };
+export type {
+	ApplicationsResponse,
+	ApplicationResponseStore,
+	ApplicationDiff,
+	ApplicationDiffResponse,
+	TangleError
+};

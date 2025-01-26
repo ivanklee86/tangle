@@ -7,7 +7,6 @@ import {
 } from '$lib/data';
 import { apiData } from '$lib/data';
 import { PUBLIC_BASE_URL } from '$env/static/public';
-import { error } from '@sveltejs/kit';
 
 const PATH_APPLICATIONS: string = '/api/applications';
 
@@ -56,11 +55,16 @@ class TangleAPIClient {
 		}
 	}
 
-	async getApplicationDiff(argoCD: string, applicationName: string, liveRef: string, targetRef: string): Promise<ApplicationDiff> {
-		const url =`${this.baseUrl}/api/argocd/${argoCD}/applications/${applicationName}/diffs`;
-		const body = { 
+	async getApplicationDiff(
+		argoCD: string,
+		applicationName: string,
+		liveRef: string,
+		targetRef: string
+	): Promise<ApplicationDiff> {
+		const url = `${this.baseUrl}/api/argocd/${argoCD}/applications/${applicationName}/diffs`;
+		const body = {
 			liveRef: liveRef,
-			targetRef: targetRef 
+			targetRef: targetRef
 		};
 
 		try {
@@ -70,16 +74,17 @@ class TangleAPIClient {
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify(body)
-			})
+			});
 			const data = await response.json();
-			
+
 			let appDiffResp: ApplicationDiff;
 			if (response.status !== 200) {
 				appDiffResp = {
 					response: {
 						liveManifests: '',
 						targetManifests: '',
-						diff: ''
+						diffs: '',
+						manifestGenerationError: ''
 					},
 					errorResponse: data as TangleError,
 					error: true
@@ -90,9 +95,9 @@ class TangleAPIClient {
 					errorResponse: { error: '' },
 					error: false
 				};
-			};
+			}
 
-			return appDiffResp
+			return appDiffResp;
 		} catch (error) {
 			console.error('Failed to fetch applications:', error);
 
@@ -100,13 +105,14 @@ class TangleAPIClient {
 				response: {
 					liveManifests: '',
 					targetManifests: '',
-					diff: ''
+					diffs: '',
+					manifestGenerationError: ''
 				},
 				errorResponse: {
 					error: error as string
 				},
 				error: true
-			}
+			};
 
 			return errResp;
 		}

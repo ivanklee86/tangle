@@ -14,7 +14,7 @@ const (
 
 type IArgoCDWrapper interface {
 	ListApplicationsByLabels(ctx context.Context, labels map[string]string) ([]ListApplicationsResult, error)
-	GetManifests(ctx context.Context, applicationName string, currentRef string, compareRef string) (*GetManifestsResponse, error)
+	GetManifests(ctx context.Context, applicationName string, liveRef string, targetRef string) (*GetManifestsResponse, error)
 	GetUrl() string
 }
 
@@ -99,12 +99,12 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map
 			}
 
 			results = append(results, ListApplicationsResult{
-				Name:           app.Name,
-				Project:        project,
-				Namespace:      app.Namespace,
-				Health:         app.Status.Health,
-				SyncStatus:     app.Status.Sync,
-				TargetRevision: app.Spec.Source.TargetRevision,
+				Name:         app.Name,
+				Project:      project,
+				Namespace:    app.Namespace,
+				Health:       app.Status.Health,
+				SyncStatus:   app.Status.Sync,
+				LiveRevision: app.Spec.Source.TargetRevision,
 			})
 		}
 

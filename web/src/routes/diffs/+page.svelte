@@ -1,25 +1,23 @@
 <script>
-    import {
-		Alert,
-		Tabs,
-		TabItem,
-		Spinner
-	} from 'flowbite-svelte';
+	import { A, Alert, Heading, List, Li, P, Tabs, TabItem, Spinner } from 'flowbite-svelte';
+
+	import {
+		CheckCircleSolid,
+		CloseCircleSolid,
+		ExclamationCircleSolid
+	} from 'flowbite-svelte-icons';
 
 	import { onMount } from 'svelte';
 	import { apiData } from '$lib/data';
 	import { page } from '$app/stores';
 	import TangleAPIClient from '$lib/client';
-	import { ApplicationGrid } from '$lib/components';
 	import AppManifests from '$lib/components/AppManifests.svelte';
 
 	const labels = $page.url.searchParams.get('labels');
-    const compareRef = $page.url.searchParams.get('compareRef');
+	const targetRef = $page.url.searchParams.get('targetRef');
 	var client = new TangleAPIClient();
 
-    let applications = [];
-
-    let firstIndex = 0;
+	let firstIndex = 0;
 	onMount(() => {
 		client.getApplications(labels).then(() => {
 			if (!$apiData.error && $apiData.response.results.length > 0) {
@@ -47,23 +45,62 @@
 		{#each $apiData.response.results as argoCDApplications, index}
 			<TabItem
 				title={argoCDApplications.name}
-                open={index === firstIndex}
+				open={index === firstIndex}
 				disabled={argoCDApplications.applications.length === 0}
 			>
-                <Tabs>
-                    {#each argoCDApplications.applications as application, appIndex}
-                        <TabItem title={application.name} open={appIndex === 0}>
-                            <span slot="title">{application.name}</span>
-                            <br />
+				<Tabs>
+					{#each argoCDApplications.applications as application, appIndex}
+						<TabItem title={application.name} open={appIndex === 0}>
+							<div slot="title" class="flex items-center">
+								{#if application.syncStatus === 'Unknown'}<ExclamationCircleSolid
+										class="w-5 h-5 me-2 text-amber-500 dark:text-amber-400"
+									/>{/if}
+								{application.name}
+							</div>
+							<Heading tag="h3">Status</Heading>
+							<List tag="ul" class="space-y-1 text-gray-500 dark:text-gray-400" list="none">
+								{#if application.health == 'Healthy'}
+									<Li icon>
+										<CheckCircleSolid class="w-5 h-5 me-2 text-green-500 dark:text-green-400" />
+										Healthy
+									</Li>
+								{:else}
+									<Li icon>
+										<CloseCircleSolid class="w-5 h-5 me-2 text-red-500 dark:text-red-400" />
+										Unhealthy
+									</Li>
+								{/if}
+								{#if application.syncStatus == 'Synced'}
+									<Li icon>
+										<CheckCircleSolid class="w-5 h-5 me-2 text-green-500 dark:text-green-400" />
+										Synced
+									</Li>
+								{:else if application.syncStatus == 'OutOfSync'}
+									<Li icon>
+										<CloseCircleSolid class="w-5 h-5 me-2 text-red-500 dark:text-red-400" />
+										Out of Sync
+									</Li>
+								{:else if application.syncStatus == 'Unknown'}
+									<Li icon>
+										<ExclamationCircleSolid
+											class="w-5 h-5 me-2 text-amber-500 dark:text-amber-400"
+										/>
+										Unknown
+									</Li>
+								{/if}
+							</List>
+							<br />
+							<P>(<A href={application.url} aClass="xs">More Info</A>)</P>
+							<br />
 							<AppManifests
 								argocd={argoCDApplications.name}
 								appName={application.name}
-								currentRef="main"
-								compareRef="test_gitops"
+								liveRef={application.liveRef}
+								targetRef={targetRef ? targetRef : application.liveRef}
 							/>
-                        </TabItem>
-                    {/each}
-                </Tabs>
+						</TabItem>
+					{/each}
+				</Tabs>
 			</TabItem>
 		{/each}
 	</Tabs>

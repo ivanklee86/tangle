@@ -46,9 +46,10 @@ type DiffsRequest struct {
 }
 
 type DiffsResponse struct {
-	LiveManifests   string `json:"liveManifests"`
-	TargetManifests string `json:"targetManifests"`
-	Diffs           string `json:"diffs"`
+	LiveManifests           string `json:"liveManifests"`
+	TargetManifests         string `json:"targetManifests"`
+	Diffs                   string `json:"diffs"`
+	ManifestGenerationError string `json:"manifestGenerationError"`
 }
 
 func (t *Tangle) sortResults(apiResults []ArgoCDApplicationResults) []ArgoCDApplicationResults {
@@ -117,7 +118,7 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 				URL:        fmt.Sprintf("https://%s/applications/%s/%s", argoCD.GetUrl(), queryResult.Namespace, queryResult.Name),
 				Health:     string(queryResult.Health.Status),
 				SyncStatus: string(queryResult.SyncStatus.Status),
-				LiveRef:    queryResult.TargetRevision,
+				LiveRef:    queryResult.LiveRevision,
 			})
 		}
 
@@ -147,7 +148,13 @@ func (t *Tangle) applicationManifestsHandler(w http.ResponseWriter, req *http.Re
 	generatedManifests, err := t.ArgoCDs[argocdName].GetManifests(req.Context(), applicationName, diffsRequest.LiveRef, diffsRequest.TargetRef)
 	if err != nil {
 		t.Log.Error("Failed to get manifests", "argocd", argocdName, "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		response := DiffsResponse{
+			ManifestGenerationError: err.Error(),
+		}
+		err = json.NewEncoder(w).Encode(response)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 
 	live, _ := assembleManifests(generatedManifests.LiveManifests)
