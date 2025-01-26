@@ -1,17 +1,13 @@
 <script>
 	import { A, Alert, Heading, List, Li, P, Tabs, TabItem, Spinner } from 'flowbite-svelte';
 
-	import {
-		CheckCircleSolid,
-		CloseCircleSolid,
-		ExclamationCircleSolid
-	} from 'flowbite-svelte-icons';
+	import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
 
 	import { onMount } from 'svelte';
 	import { apiData } from '$lib/data';
 	import { page } from '$app/stores';
 	import TangleAPIClient from '$lib/client';
-	import AppManifests from '$lib/components/AppManifests.svelte';
+	import { AppManifests, ArgoCDHealthStatus, ArgoCDSyncStatus } from '$lib/components';
 
 	const labels = $page.url.searchParams.get('labels');
 	const targetRef = $page.url.searchParams.get('targetRef');
@@ -59,35 +55,12 @@
 							</div>
 							<Heading tag="h3">Status</Heading>
 							<List tag="ul" class="space-y-1 text-gray-500 dark:text-gray-400" list="none">
-								{#if application.health == 'Healthy'}
-									<Li icon>
-										<CheckCircleSolid class="w-5 h-5 me-2 text-green-500 dark:text-green-400" />
-										Healthy
-									</Li>
-								{:else}
-									<Li icon>
-										<CloseCircleSolid class="w-5 h-5 me-2 text-red-500 dark:text-red-400" />
-										Unhealthy
-									</Li>
-								{/if}
-								{#if application.syncStatus == 'Synced'}
-									<Li icon>
-										<CheckCircleSolid class="w-5 h-5 me-2 text-green-500 dark:text-green-400" />
-										Synced
-									</Li>
-								{:else if application.syncStatus == 'OutOfSync'}
-									<Li icon>
-										<CloseCircleSolid class="w-5 h-5 me-2 text-red-500 dark:text-red-400" />
-										Out of Sync
-									</Li>
-								{:else if application.syncStatus == 'Unknown'}
-									<Li icon>
-										<ExclamationCircleSolid
-											class="w-5 h-5 me-2 text-amber-500 dark:text-amber-400"
-										/>
-										Unknown
-									</Li>
-								{/if}
+								<Li icon>
+									<ArgoCDHealthStatus healthStatus={application.health} />
+								</Li>
+								<Li icon>
+									<ArgoCDSyncStatus syncStatus={application.syncStatus} />
+								</Li>
 							</List>
 							<br />
 							<P>(<A href={application.url} aClass="xs">More Info</A>)</P>
