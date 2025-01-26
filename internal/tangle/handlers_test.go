@@ -1,11 +1,14 @@
 package tangle
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
@@ -29,11 +32,11 @@ func TestHandlers(t *testing.T) {
 	}
 
 	config := TangleConfig{
-		Name:                   "test-tangle",
-		Domain:                 "localhost",
-		Port:                   8081,
-		ArgoCDs:                argocdConfig,
-		DoNotInstrumentWorkers: true,
+		Name:            "test-tangle",
+		Domain:          "localhost",
+		Port:            8081,
+		ArgoCDs:         argocdConfig,
+		DoNotInstrument: true,
 	}
 
 	tests := []struct {
@@ -114,11 +117,11 @@ func TestHandlersError(t *testing.T) {
 	}
 
 	config := TangleConfig{
-		Name:                   "test-tangle",
-		Domain:                 "localhost",
-		Port:                   8081,
-		ArgoCDs:                argocdConfig,
-		DoNotInstrumentWorkers: true,
+		Name:            "test-tangle",
+		Domain:          "localhost",
+		Port:            8081,
+		ArgoCDs:         argocdConfig,
+		DoNotInstrument: true,
 	}
 
 	tests := []struct {
@@ -151,6 +154,72 @@ func TestHandlersError(t *testing.T) {
 			assert.Nil(t, err)
 
 			assert.NotNil(t, result.Error)
+		})
+	}
+}
+
+func TestDiffs(t *testing.T) {
+	err := godotenv.Load("../../.env")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	argocdConfig := make(map[string]TangleArgoCDConfig)
+	argocdConfig["test"] = TangleArgoCDConfig{
+		Address:         "localhost:8080",
+		Insecure:        true,
+		AuthTokenEnvVar: "ARGOCD_TOKEN",
+	}
+	argocdConfig["prod"] = TangleArgoCDConfig{
+		Address:         "localhost:8080",
+		Insecure:        true,
+		AuthTokenEnvVar: "ARGOCD_PROD_TOKEN",
+	}
+
+	config := TangleConfig{
+		Name:            "test-tangle",
+		Domain:          "localhost",
+		Port:            8081,
+		ArgoCDs:         argocdConfig,
+		DoNotInstrument: true,
+	}
+
+	tests := []struct {
+		name        string
+		url         string
+		requestBody map[string]interface{}
+	}{
+		{
+			name: "happy_path",
+			url:  "/api/argocd/test/applications/test-1/diffs",
+			requestBody: map[string]interface{}{
+				"currentRef": "main",
+				"compareRef": "test_gitops",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tangle := New(&config)
+
+			body, _ := json.Marshal(test.requestBody)
+			req, _ := http.NewRequest("POST", test.url, bytes.NewBuffer(body))
+			req.Header.Set("Content-Type", "application/json")
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("argocd", "test")
+			rctx.URLParams.Add("name", "test-1")
+			ctx := context.Background()
+			ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+
+			req = req.WithContext(ctx)
+
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(tangle.applicationManifestsHandler)
+			handler.ServeHTTP(rr, req)
+
+			assert.NotNil(t, rr.Body.String())
+			assert.Equal(t, http.StatusOK, rr.Code)
 		})
 	}
 }

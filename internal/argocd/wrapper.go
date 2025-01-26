@@ -5,30 +5,35 @@ import (
 
 	"github.com/alitto/pond/v2"
 	"github.com/argoproj/argo-cd/v2/pkg/apiclient/application"
-	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 )
 
 const (
-	defaultListPoolWorkers = 10
-	defaultDiffPoolWorkers = 5
+	defaultListPoolWorkers      = 10
+	defaultManifestsPoolWorkers = 5
 )
 
 type IArgoCDWrapper interface {
 	ListApplicationsByLabels(ctx context.Context, labels map[string]string) ([]ListApplicationsResult, error)
+	GetManifests(ctx context.Context, applicationName string, liveRef string, targetRef string) (*GetManifestsResponse, error)
 	GetUrl() string
 }
 
 type ArgoCDWrapperOptions struct {
 	ListPoolWorkers        int
-	DiffPoolWokers         int
+	ManifestsPoolWorkers   int
 	DoNotInstrumentWorkers bool
 }
 
 type ArgoCDWrapper struct {
 	ArgoCDClientOptions *ArgoCDWrapperOptions
 	ListWorkerPool      pond.ResultPool[[]ListApplicationsResult]
-	DiffWorkerPool      pond.ResultPool[[]v1alpha1.Application]
+	ManifestsWorkerPool pond.ResultPool[[]string]
 	ApplicationClient   IArgoCDClient
+}
+
+type GetManifestsResponse struct {
+	LiveManifests   []string
+	TargetManifests []string
 }
 
 func New(client IArgoCDClient, argoCDName string, options *ArgoCDWrapperOptions) (IArgoCDWrapper, error) {
@@ -36,8 +41,8 @@ func New(client IArgoCDClient, argoCDName string, options *ArgoCDWrapperOptions)
 		options.ListPoolWorkers = defaultListPoolWorkers
 	}
 
-	if options.DiffPoolWokers == 0 {
-		options.DiffPoolWokers = defaultDiffPoolWorkers
+	if options.ManifestsPoolWorkers == 0 {
+		options.ManifestsPoolWorkers = defaultManifestsPoolWorkers
 	}
 
 	wrapper := ArgoCDWrapper{
@@ -45,11 +50,11 @@ func New(client IArgoCDClient, argoCDName string, options *ArgoCDWrapperOptions)
 	}
 
 	wrapper.ListWorkerPool = pond.NewResultPool[[]ListApplicationsResult](options.ListPoolWorkers)
-	wrapper.DiffWorkerPool = pond.NewResultPool[[]v1alpha1.Application](options.DiffPoolWokers)
+	wrapper.ManifestsWorkerPool = pond.NewResultPool[[]string](options.ManifestsPoolWorkers)
 
 	if !options.DoNotInstrumentWorkers {
 		instrumentWorkers("list", argoCDName, wrapper.ListWorkerPool)
-		instrumentWorkers("diff", argoCDName, wrapper.DiffWorkerPool)
+		instrumentWorkers("diff", argoCDName, wrapper.ManifestsWorkerPool)
 	}
 
 	wrapper.ApplicationClient = client
@@ -94,11 +99,12 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map
 			}
 
 			results = append(results, ListApplicationsResult{
-				Name:       app.Name,
-				Project:    project,
-				Namespace:  app.Namespace,
-				Health:     app.Status.Health,
-				SyncStatus: app.Status.Sync,
+				Name:         app.Name,
+				Project:      project,
+				Namespace:    app.Namespace,
+				Health:       app.Status.Health,
+				SyncStatus:   app.Status.Sync,
+				LiveRevision: app.Spec.Source.TargetRevision,
 			})
 		}
 
@@ -116,6 +122,35 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map
 	}
 
 	return apps, nil
+}
+
+func (a *ArgoCDWrapper) GetManifests(ctx context.Context, applicationName string, liveRef string, targetRef string) (*GetManifestsResponse, error) {
+	group := a.ManifestsWorkerPool.NewGroup()
+
+	for _, ref := range []string{liveRef, targetRef} {
+		group.SubmitErr(func() ([]string, error) {
+			manifestsQuery := &application.ApplicationManifestQuery{
+				Name:     &applicationName,
+				Revision: &ref,
+			}
+
+			manifestsResp, err := a.ApplicationClient.GetApplicationManifests(ctx, manifestsQuery)
+			if err != nil {
+				return nil, err
+			}
+
+			return manifestsResp.Manifests, nil
+		})
+	}
+
+	poolResults, err := group.Wait()
+	if err != nil {
+		return nil, err
+	}
+
+	response := GetManifestsResponse{LiveManifests: poolResults[0], TargetManifests: poolResults[1]}
+
+	return &response, nil
 }
 
 func (a *ArgoCDWrapper) GetUrl() string {

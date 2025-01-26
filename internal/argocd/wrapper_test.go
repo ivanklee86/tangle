@@ -51,4 +51,40 @@ func TestArgoCDWrapper(t *testing.T) {
 		_, err = wrapper.ListApplicationsByLabels(context.Background(), labels)
 		assert.NotNil(t, err)
 	})
+
+	t.Run("get manifests from pool", func(t *testing.T) {
+		client, err := NewArgoCDClient(&ArgoCDClientOptions{
+			Address:         "localhost:8080",
+			Insecure:        true,
+			AuthTokenEnvVar: "ARGOCD_TOKEN",
+		})
+		assert.Nil(t, err)
+
+		wrapper, err := New(client, "test", &ArgoCDWrapperOptions{
+			DoNotInstrumentWorkers: true,
+		})
+		assert.Nil(t, err)
+
+		results, err := wrapper.GetManifests(context.Background(), "test-1", "main", "test_gitops")
+		assert.Nil(t, err)
+		assert.NotNil(t, results)
+	})
+
+	t.Run("not found getting manifests", func(t *testing.T) {
+		client, err := NewArgoCDClient(&ArgoCDClientOptions{
+			Address:         "localhost:8080",
+			Insecure:        true,
+			AuthTokenEnvVar: "ARGOCD_TOKEN",
+		})
+		assert.Nil(t, err)
+
+		wrapper, err := New(client, "test", &ArgoCDWrapperOptions{
+			DoNotInstrumentWorkers: true,
+		})
+		assert.Nil(t, err)
+
+		_, err = wrapper.GetManifests(context.Background(), "test-5", "main", "test_gitops")
+		assert.NotNil(t, err)
+	})
+
 }

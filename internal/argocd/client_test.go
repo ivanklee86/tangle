@@ -100,3 +100,45 @@ func TestArgoCDClient_List(t *testing.T) {
 		})
 	}
 }
+
+func TestArgoCDClient_GetApplicationManifests(t *testing.T) {
+	setup(t)
+
+	applicationName := "test-1"
+	// revision := "main"
+
+	tests := []struct {
+		name    string
+		options *ArgoCDClientOptions
+		query   *application.ApplicationManifestQuery
+		wantErr bool
+	}{
+		{
+			name: "gets application manifests successfully",
+			options: &ArgoCDClientOptions{
+				Address:         "localhost:8080",
+				Insecure:        true,
+				AuthTokenEnvVar: "ARGOCD_TOKEN",
+			},
+			query: &application.ApplicationManifestQuery{
+				Name: &applicationName,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client, err := NewArgoCDClient(tt.options)
+			assert.NoError(t, err)
+
+			got, err := client.GetApplicationManifests(context.Background(), tt.query)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotNil(t, got)
+		})
+	}
+}

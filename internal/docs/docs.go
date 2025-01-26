@@ -45,6 +45,41 @@ type applicationsResponse struct {
 	Body tangle.ApplicationsResponse
 }
 
+// swagger:route POST /api/argocd/{ArgoCD}/applications/{Name}/diffs diffsRequestParams
+// Get manifests and diffs for an application.
+// consumes:
+// - application/json
+// produces:
+// - application/json
+// Responses:
+//   200: diffsResponse
+//   500: errorResponse
+
+// swagger:parameters diffsRequestParams
+type diffsRequestParams struct {
+	// ArgoCD instance name
+	// in: path
+	// required: true
+	ArgoCD string
+
+	// Application name
+	// in: path
+	// required: true
+	Name string
+
+	// in: body
+	// required: true
+	// swagger:model diffReqeust
+	Body tangle.DiffsRequest
+}
+
+// Response for successful diffs generation
+// swagger:response diffsResponse
+type diffsResponse struct {
+	// in: body
+	Body tangle.DiffsResponse
+}
+
 // Response for error
 // swagger:response errorResponse
 type errorResponse struct {

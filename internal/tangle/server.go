@@ -15,6 +15,7 @@ import (
 	"github.com/flowchartsman/swaggerui"
 	"github.com/hellofresh/health-go/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/yarlson/chiprom"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -70,7 +71,7 @@ func New(config *TangleConfig) *Tangle {
 		})
 
 		wrapper, _ := argocd.New(client, key, &argocd.ArgoCDWrapperOptions{
-			DoNotInstrumentWorkers: tangle.Config.DoNotInstrumentWorkers,
+			DoNotInstrumentWorkers: tangle.Config.DoNotInstrument,
 		})
 
 		wrappers[key] = wrapper
@@ -91,6 +92,9 @@ func New(config *TangleConfig) *Tangle {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(time.Duration(config.Timeout) * time.Second))
+	if !config.DoNotInstrument {
+		router.Use(chiprom.NewPatternMiddleware("tangle"))
+	}
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST"},
@@ -106,6 +110,7 @@ func New(config *TangleConfig) *Tangle {
 	// Application routes
 	router.Route("/api", func(r chi.Router) {
 		r.Get("/applications", tangle.applicationsHandler)
+		r.Post("/argocd/{argocd}/applications/{name}/diffs", tangle.applicationManifestsHandler)
 	})
 
 	router.Mount("/swagger", http.StripPrefix("/swagger", swaggerui.Handler(spec)))

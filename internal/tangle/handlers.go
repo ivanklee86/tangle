@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type ApplicationLinks struct {
@@ -12,6 +14,7 @@ type ApplicationLinks struct {
 	URL        string `json:"url"`
 	Health     string `json:"health"`
 	SyncStatus string `json:"syncStatus"`
+	LiveRef    string `json:"LiveRef"`
 }
 
 type ArgoCDApplicationResults struct {
@@ -26,6 +29,27 @@ type ApplicationsResponse struct {
 
 type ErrorResponse struct {
 	Error string `json:"error"`
+}
+
+// DiffsRequest contains the git refs to compare
+// swagger:model DiffsRequest
+type DiffsRequest struct {
+	// Current git ref to compare from
+	// required: true
+	// example: main
+	LiveRef string `json:"liveRef"`
+
+	// Target git ref to compare to
+	// required: true
+	// example: feature-branch
+	TargetRef string `json:"targetRef"`
+}
+
+type DiffsResponse struct {
+	LiveManifests           string `json:"liveManifests"`
+	TargetManifests         string `json:"targetManifests"`
+	Diffs                   string `json:"diffs"`
+	ManifestGenerationError string `json:"manifestGenerationError"`
 }
 
 func (t *Tangle) sortResults(apiResults []ArgoCDApplicationResults) []ArgoCDApplicationResults {
@@ -94,6 +118,7 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 				URL:        fmt.Sprintf("https://%s/applications/%s/%s", argoCD.GetUrl(), queryResult.Namespace, queryResult.Name),
 				Health:     string(queryResult.Health.Status),
 				SyncStatus: string(queryResult.SyncStatus.Status),
+				LiveRef:    queryResult.LiveRevision,
 			})
 		}
 
@@ -106,4 +131,44 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (t *Tangle) applicationManifestsHandler(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	argocdName := chi.URLParam(req, "argocd")
+	applicationName := chi.URLParam(req, "name")
+
+	var diffsRequest DiffsRequest
+	if err := json.NewDecoder(req.Body).Decode(&diffsRequest); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	generatedManifests, err := t.ArgoCDs[argocdName].GetManifests(req.Context(), applicationName, diffsRequest.LiveRef, diffsRequest.TargetRef)
+	if err != nil {
+		t.Log.Error("Failed to get manifests", "argocd", argocdName, "error", err)
+		response := DiffsResponse{
+			ManifestGenerationError: err.Error(),
+		}
+		err = json.NewEncoder(w).Encode(response)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+
+	live, _ := assembleManifests(generatedManifests.LiveManifests)
+	target, _ := assembleManifests(generatedManifests.TargetManifests)
+	diff, _ := diffManifests(*live, *target)
+	response := DiffsResponse{
+		LiveManifests:   *live,
+		TargetManifests: *target,
+		Diffs:           *diff,
+	}
+
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
 }
