@@ -11,4 +11,9 @@ tasks:
   shell:
     desc: Run shell in Docker container.
     cmds:
-      - docker run -it --rm tangle sh
+      - docker run -it --rm --entrypoint sh tangle
+
+  run:
+    desc: Run Docker container.
+    cmds:
+      - docker run -v `pwd`/integration:/config -e TANGLE_CONFIG_PATH=/config/tangle.yaml --network=host --env-file .env --rm -p 8082:8081 tangle
