@@ -32,10 +32,14 @@ type Tangle struct {
 	Log     *httplog.Logger
 }
 
-//go:embed swagger.json
-var spec []byte
+var (
+	// Injected at build time.
+	version = "package_default"
+	//go:embed swagger.json
+	spec []byte
+)
 
-func New(config *TangleConfig) *Tangle {
+func New(config *TangleConfig, version string) *Tangle {
 	tangle := Tangle{}
 	tangle.Config = config
 
@@ -48,8 +52,8 @@ func New(config *TangleConfig) *Tangle {
 		MessageFieldName: "message",
 		// TimeFieldFormat: time.RFC850,
 		Tags: map[string]string{
-			"version": "v1.0-81aa4244d9fc8076a",
-			"env":     "dev",
+			"version": version,
+			"env":     config.Env,
 		},
 		QuietDownRoutes: []string{
 			"/",
@@ -119,7 +123,7 @@ func New(config *TangleConfig) *Tangle {
 	h, _ := health.New(health.WithComponent(
 		health.Component{
 			Name:    "tangle",
-			Version: "v1.0",
+			Version: version,
 		},
 	))
 	router.Handle("/health", h.Handler())

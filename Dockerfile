@@ -18,7 +18,7 @@ RUN npm install
 RUN npm run build
 
 # Stage 3 - Runtime Image
-FROM alpine:latest as runtime
+FROM alpine:latest AS runtime
 
 RUN addgroup -S tangle && adduser -S tangle -G tangle
 

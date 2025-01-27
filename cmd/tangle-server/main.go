@@ -9,12 +9,15 @@ import (
 
 var k = koanf.New(".")
 
+// Injected at build time.
+var version = "dev"
+
 func main() {
 	config, err := tangle.LoadConfig(k, tangle.LoadConfigOptions{})
 	if err != nil {
 		log.Fatalf("Cannot load configuraiton. Error: %s", err)
 	}
 
-	tangle := tangle.New(config)
+	tangle := tangle.New(config, version)
 	tangle.Start()
 }
