@@ -1,0 +1,14 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  build:
+    desc: Build Dockerfile.
+    cmds:
+      - docker build -f Dockerfile -t tangle .
+
+  shell:
+    desc: Run shell in Docker container.
+    cmds:
+      - docker run -it --rm tangle sh
