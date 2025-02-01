@@ -34,7 +34,7 @@ type Tangle struct {
 
 var (
 	// Injected at build time.
-	version = "package_default"
+	version = "package_default" //nolint:unused
 	//go:embed swagger.json
 	spec []byte
 )
