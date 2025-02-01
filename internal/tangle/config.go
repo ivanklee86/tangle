@@ -9,6 +9,7 @@ type TangleArgoCDConfig struct {
 
 type TangleConfig struct {
 	Name      string                        `koanf:"name"`
+	Env       string                        `koanf:"env"`
 	Domain    string                        `koanf:"domain"`
 	Port      int                           `koanf:"port"`
 	Timeout   int                           `koanf:"timeout"`
@@ -20,5 +21,6 @@ type TangleConfig struct {
 }
 
 var TangleConfigDefaults = TangleConfig{
+	Env:     "dev",
 	Timeout: 60,
 }

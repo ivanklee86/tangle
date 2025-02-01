@@ -79,6 +79,16 @@ jobs:
     - name: Build website
       run: task ts:build
 
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Install Task
+      uses: arduino/setup-task@v2
+    - name: Build Docker image
+      run: task docker:build
+
   format:
     runs-on: ubuntu-latest
     steps:

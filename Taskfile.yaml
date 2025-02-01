@@ -7,6 +7,7 @@ includes:
     k8s: ./tasks/k8s.yaml
     argocd: ./tasks/argocd.yaml
     ts: ./tasks/ts.yaml
+    docker: ./tasks/docker.yaml
 
 dotenv: [.env]
 

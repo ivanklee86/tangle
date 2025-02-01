@@ -24,37 +24,37 @@ func assembleManifests(manifests []string) (*string, error) {
 	return &output, nil
 }
 
-func diffManifests(currentManifest string, compareManifest string) (*string, error) {
+func diffManifests(liveManifest string, targetManifest string) (*string, error) {
 	tempDir, err := os.MkdirTemp("", "tangle")
 	if err != nil {
 		return nil, err
 	}
 
-	currentFileName := fmt.Sprintf("current_%s.yaml", uuid.New().String())
-	compareFileName := fmt.Sprintf("compare_%s.yaml", uuid.New().String())
+	liveFileName := fmt.Sprintf("live_%s.yaml", uuid.New().String())
+	targetFileName := fmt.Sprintf("target_%s.yaml", uuid.New().String())
 
-	currrentFile := path.Join(tempDir, currentFileName)
-	currentData, err := yaml.Marshal(currentManifest)
+	liveFile := path.Join(tempDir, liveFileName)
+	liveData, err := yaml.Marshal(liveManifest)
 	if err != nil {
 		return nil, err
 	}
-	err = os.WriteFile(currrentFile, currentData, 0644)
+	err = os.WriteFile(liveFile, liveData, 0644)
 	if err != nil {
 		return nil, err
 	}
 
-	compareFile := path.Join(tempDir, compareFileName)
-	compareData, err := yaml.Marshal(compareManifest)
+	targetFile := path.Join(tempDir, targetFileName)
+	targetData, err := yaml.Marshal(targetManifest)
 	if err != nil {
 		return nil, err
 	}
-	err = os.WriteFile(compareFile, compareData, 0644)
+	err = os.WriteFile(targetFile, targetData, 0644)
 	if err != nil {
 		return nil, err
 	}
 
 	diffBinary := "diff"
-	args := []string{"-uNar", currrentFile, compareFile}
+	args := []string{"-uNar", liveFile, targetFile}
 
 	cmd := exec.Command(diffBinary, args...)
 	// TODO: Diffs = 1

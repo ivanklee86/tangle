@@ -73,7 +73,7 @@ func TestHandlers(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			tangle := New(&config)
+			tangle := New(&config, "testing")
 
 			req, _ := http.NewRequest("GET", test.url, nil)
 
@@ -138,7 +138,7 @@ func TestHandlersError(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			tangle := New(&config)
+			tangle := New(&config, "testing")
 
 			req, _ := http.NewRequest("GET", test.url, nil)
 
@@ -201,7 +201,7 @@ func TestDiffs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			tangle := New(&config)
+			tangle := New(&config, "testing")
 
 			body, _ := json.Marshal(test.requestBody)
 			req, _ := http.NewRequest("POST", test.url, bytes.NewBuffer(body))

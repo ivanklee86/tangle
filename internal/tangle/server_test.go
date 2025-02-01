@@ -15,7 +15,7 @@ func TestServer(t *testing.T) {
 	}
 
 	t.Run("Basic test", func(t *testing.T) {
-		tangle := New(&config)
+		tangle := New(&config, "test")
 
 		assert.NotNil(t, tangle.ArgoCDs)
 	})
