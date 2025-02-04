@@ -6,7 +6,7 @@ require (
 	github.com/alitto/pond/v2 v2.1.6
 	github.com/argoproj/argo-cd/v2 v2.13.4
 	github.com/flowchartsman/swaggerui v0.0.0-20221017034628-909ed4f3701b
-	github.com/go-chi/chi/v5 v5.2.0
+	github.com/go-chi/chi/v5 v5.2.1
 	github.com/go-chi/cors v1.2.1
 	github.com/go-chi/httplog/v2 v2.1.1
 	github.com/gofiber/fiber/v2 v2.52.6
