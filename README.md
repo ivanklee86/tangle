@@ -6,4 +6,4 @@
 
 **tangle** (_noun_): A theoretical name for a group of octopuses since in the wild they are solitary creatures.
 
-A tool (format tbd, but will probably be API + Website) to make working with multiple ArgoCDs in a [hub and spoke](https://codefresh.io/learn/argo-cd/a-comprehensive-overview-of-argo-cd-architectures-2024/#post-24596-_1k4hvnsqwl60) architecture.
+Tangle makes using with multiple ArgoCDs in a [hub and spoke](https://codefresh.io/learn/argo-cd/a-comprehensive-overview-of-argo-cd-architectures-2024/#post-24596-_1k4hvnsqwl60) architecture fun (🎉) and easy (😅).  Its features work equally well for your CI/CD tooling (i.e. available as JSON APIs with Swagger documentation for testing) fand for your humans (via an embedded website).

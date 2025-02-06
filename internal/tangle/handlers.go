@@ -80,7 +80,11 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 		rawLabels := strings.Split(query.Get("labels"), ",")
 		for idx := range rawLabels {
 			rawLabel := strings.Split(rawLabels[idx], ":")
-			labels[rawLabel[0]] = rawLabel[1]
+			if len(rawLabel) == 2 {
+				labels[rawLabel[0]] = rawLabel[1]
+			} else {
+				t.Log.Error("Invalid label format", "label", rawLabels[idx])
+			}
 		}
 	}
 
