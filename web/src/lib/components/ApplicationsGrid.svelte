@@ -61,7 +61,9 @@
 						<TableHeadCell sort={(a, b) => a.name.localeCompare(b.name)}>Applications</TableHeadCell
 						>
 						<TableHeadCell sort={(a, b) => a.health.localeCompare(b.health)}>Health</TableHeadCell>
-						<TableHeadCell sort={(a, b) => a.syncStatus .localeCompare(b.syncStatus)}>Sync Status</TableHeadCell>
+						<TableHeadCell sort={(a, b) => a.syncStatus.localeCompare(b.syncStatus)}
+							>Sync Status</TableHeadCell
+						>
 					</TableHead>
 					<TableBody tableBodyClass="divide-y">
 						<TableBodyRow slot="row" let:item>

@@ -69,6 +69,12 @@ func TestHandlers(t *testing.T) {
 			test_count: 0,
 			prod_count: 0,
 		},
+		{
+			name:       "invalid_tags",
+			url:        "/applications?labels=foobar",
+			test_count: 2,
+			prod_count: 1,
+		},
 	}
 
 	for _, test := range tests {
