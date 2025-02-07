@@ -5,6 +5,7 @@ metadata:
   labels:
     env: test
     foo: bar
+    bazz: buzz
 spec:
   project: default
   source:

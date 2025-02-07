@@ -88,6 +88,8 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	t.Log.Info("Listing applications by labels", "labels", labels)
+
 	apiResults := []ArgoCDApplicationResults{}
 	for name, argoCD := range t.ArgoCDs {
 		queryResults, err := argoCD.ListApplicationsByLabels(req.Context(), labels)

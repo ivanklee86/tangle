@@ -5,6 +5,7 @@ metadata:
   labels:
     env: preprod
     foo: bar
+    bazz: buzz
 spec:
   project: default
   source:

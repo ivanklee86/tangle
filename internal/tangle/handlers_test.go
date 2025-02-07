@@ -75,6 +75,12 @@ func TestHandlers(t *testing.T) {
 			test_count: 2,
 			prod_count: 1,
 		},
+		{
+			name:       "multiple_tags",
+			url:        "/applications?labels=env:test,bazz:buzz",
+			test_count: 1,
+			prod_count: 0,
+		},
 	}
 
 	for _, test := range tests {
