@@ -6,9 +6,9 @@ argo-cd:
 
     rbac:
       policy.csv: |
-        p, role:automation, applications, *, default/*, allow
+        p, role:automation, applications, get, default/*, allow
         g, automation, role:automation
-        p, role:automationProd, applications, *, my-project/*, allow
+        p, role:automationProd, applications, get, my-project/*, allow
         g, automationProd, role:automationProd
 
     params:

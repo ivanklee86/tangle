@@ -15,6 +15,7 @@
 
 	import { onMount } from 'svelte';
 	import { apiData } from '$lib/data';
+	import { filterOutZeroResults } from '$lib/utils';
 	import { page } from '$app/stores';
 	import TangleAPIClient from '$lib/client';
 	import { ArgoCDHealthStatus, ArgoCDSyncStatus } from '$lib/components';
@@ -43,17 +44,17 @@
 		<br />
 		{$apiData.errorResponse?.error}
 	</Alert>
-{/if}
-
-{#if apiData}
+{:else if $apiData.loaded}
 	<Tabs tabStyle="underline" class="ml-5 mr-5">
-		{#each $apiData.response.results as argoCDApplications, index}
+		{#each filterOutZeroResults($apiData.response.results) as argoCDApplications, index}
 			<TabItem
 				title={argoCDApplications.name}
 				open={index === firstIndex}
 				disabled={argoCDApplications.applications.length === 0}
 			>
-				<span slot="title">{argoCDApplications.name}</span>
+				<span slot="title"
+					>{argoCDApplications.name} ({argoCDApplications.applications.length})</span
+				>
 				<Button href={argoCDApplications.link} target="_blank" class="mb-3">Take me there!</Button>
 				<br />
 				<Table hoverable={true} items={argoCDApplications.applications}>
@@ -79,5 +80,6 @@
 		{/each}
 	</Tabs>
 {:else}
-	<Spinner />
+	<br />
+	<div class="text-center"><Spinner /></div>
 {/if}

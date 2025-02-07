@@ -32,13 +32,15 @@ class TangleAPIClient {
 				store = {
 					response: { results: [] },
 					errorResponse: data as TangleError,
-					error: true
+					error: true,
+					loaded: true
 				};
 			} else {
 				store = {
 					response: data as ApplicationsResponse,
 					errorResponse: { error: '' },
-					error: false
+					error: false,
+					loaded: true
 				};
 			}
 
@@ -50,7 +52,8 @@ class TangleAPIClient {
 				errorResponse: {
 					error: error as string
 				},
-				error: true
+				error: true,
+				loaded: true
 			});
 		}
 	}
@@ -87,13 +90,15 @@ class TangleAPIClient {
 						manifestGenerationError: ''
 					},
 					errorResponse: data as TangleError,
-					error: true
+					error: true,
+					loaded: true
 				};
 			} else {
 				appDiffResp = {
 					response: data as ApplicationDiffResponse,
 					errorResponse: { error: '' },
-					error: false
+					error: false,
+					loaded: true
 				};
 			}
 
@@ -111,7 +116,8 @@ class TangleAPIClient {
 				errorResponse: {
 					error: error as string
 				},
-				error: true
+				error: true,
+				loaded: true
 			};
 
 			return errResp;
