@@ -26,6 +26,7 @@ interface ApplicationResponseStore {
 	response: ApplicationsResponse;
 	errorResponse: TangleError | null;
 	error: boolean;
+	loaded: boolean;
 }
 
 interface ApplicationDiffResponse {
@@ -39,18 +40,21 @@ interface ApplicationDiff {
 	response: ApplicationDiffResponse;
 	errorResponse: TangleError | null;
 	error: boolean;
+	loaded: boolean;
 }
 
 export const apiData = writable<ApplicationResponseStore>({
 	response: { results: [] },
 	errorResponse: { error: '' },
-	error: false
+	error: false,
+	loaded: false
 });
 
 export const diffData = writable<ApplicationDiff>({
 	response: { liveManifests: '', targetManifests: '', diffs: '', manifestGenerationError: '' },
 	errorResponse: { error: '' },
-	error: false
+	error: false,
+	loaded: false
 });
 
 export type {
@@ -58,5 +62,6 @@ export type {
 	ApplicationResponseStore,
 	ApplicationDiff,
 	ApplicationDiffResponse,
+	ArgoCDApplicationResults,
 	TangleError
 };

@@ -1,10 +1,11 @@
-<script>
+<script lang="ts">
 	import { A, Alert, Heading, List, Li, P, Tabs, TabItem, Spinner } from 'flowbite-svelte';
 
 	import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
 
 	import { onMount } from 'svelte';
 	import { apiData } from '$lib/data';
+	import { filterOutZeroResults } from '$lib/utils';
 	import { page } from '$app/stores';
 	import TangleAPIClient from '$lib/client';
 	import { AppManifests, ArgoCDHealthStatus, ArgoCDSyncStatus } from '$lib/components';
@@ -36,9 +37,9 @@
 	</Alert>
 {/if}
 
-{#if apiData}
+{#if $apiData.loaded}
 	<Tabs tabStyle="underline" class="ml-5 mr-5">
-		{#each $apiData.response.results as argoCDApplications, index}
+		{#each filterOutZeroResults($apiData.response.results) as argoCDApplications, index}
 			<TabItem
 				title={argoCDApplications.name}
 				open={index === firstIndex}
@@ -78,5 +79,6 @@
 		{/each}
 	</Tabs>
 {:else}
-	<Spinner />
+	<br />
+	<div class="text-center"><Spinner /></div>
 {/if}

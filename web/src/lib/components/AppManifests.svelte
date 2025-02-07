@@ -26,30 +26,32 @@
 	});
 </script>
 
-{#if $diffData.response.manifestGenerationError.length > 0}
-	<Card class="m-auto dark:bg-red-400" size="xl">
-		<Alert>
-			<div class="flex items-center gap-3">
-				<InfoCircleSolid class="w-5 h-5" />
-				<span class="text-lg font-medium">Error generating manifests!</span>
-			</div>
-			<p class="mt-2 mb-4 text-sm">{$diffData.response.manifestGenerationError}</p>
-		</Alert>
-	</Card>
-{:else if $diffData.response}
-	<Accordion>
-		<AccordionItem open={$diffData.response.diffs.length > 0}>
-			<span slot="header" class="text-base flex gap-2">
-				<FileLinesSolid class="w-5 h-5" />
-				<span>Diffs</span>
-			</span>
-			<CodeBlock language="diff" code={$diffData.response.diffs} showLineNumbers={false} />
-		</AccordionItem>
-		<AccordionItem>
-			<span slot="header">Manifests</span>
-			<CodeBlock language="yaml" code={$diffData.response.targetManifests} />
-		</AccordionItem>
-	</Accordion>
+{#if $diffData.loaded}
+	{#if $diffData.response.manifestGenerationError.length > 0}
+		<Card class="m-auto dark:bg-red-400" size="xl">
+			<Alert>
+				<div class="flex items-center gap-3">
+					<InfoCircleSolid class="w-5 h-5" />
+					<span class="text-lg font-medium">Error generating manifests!</span>
+				</div>
+				<p class="mt-2 mb-4 text-sm">{$diffData.response.manifestGenerationError}</p>
+			</Alert>
+		</Card>
+	{:else if $diffData.loaded}
+		<Accordion>
+			<AccordionItem open={$diffData.response.diffs.length > 0}>
+				<span slot="header" class="text-base flex gap-2">
+					<FileLinesSolid class="w-5 h-5" />
+					<span>Diffs</span>
+				</span>
+				<CodeBlock language="diff" code={$diffData.response.diffs} showLineNumbers={false} />
+			</AccordionItem>
+			<AccordionItem>
+				<span slot="header">Manifests</span>
+				<CodeBlock language="yaml" code={$diffData.response.targetManifests} />
+			</AccordionItem>
+		</Accordion>
+	{/if}
 {:else}
-	<Spinner />
+	<div class="text-center"><Spinner /></div>
 {/if}
