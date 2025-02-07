@@ -2,6 +2,7 @@ package argocd
 
 import (
 	"context"
+	"strings"
 
 	"github.com/alitto/pond/v2"
 	"github.com/argoproj/argo-cd/v2/pkg/apiclient/application"
@@ -65,13 +66,12 @@ func New(client IArgoCDClient, argoCDName string, options *ArgoCDWrapperOptions)
 func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map[string]string) ([]ListApplicationsResult, error) {
 	group := a.ListWorkerPool.NewGroup()
 	k8sLabel := ""
+	labelsSlice := []string{}
 	for key, value := range labels {
-		if len(k8sLabel) == 0 {
-			k8sLabel = k8sLabel + key + "=" + value
-		} else {
-			k8sLabel = k8sLabel + key + "=" + value + ","
-		}
+		labelsSlice = append(labelsSlice, key+"="+value)
 	}
+
+	k8sLabel = strings.Join(labelsSlice, ",")
 
 	group.SubmitErr(func() ([]ListApplicationsResult, error) {
 		var query *application.ApplicationQuery
