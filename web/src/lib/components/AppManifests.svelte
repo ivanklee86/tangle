@@ -5,7 +5,8 @@
 	import 'highlight.js/styles/an-old-hope.css';
 
 	import { onMount } from 'svelte';
-	import { diffData } from '$lib/data';
+	import { writable } from 'svelte/store';
+	import { type ApplicationDiff } from '$lib/data';
 	import TangleAPIClient from '$lib/client';
 
 	interface Props {
@@ -16,6 +17,13 @@
 	}
 
 	let { argocd, appName, liveRef, targetRef }: Props = $props();
+
+	const diffData = writable<ApplicationDiff>({
+		response: { liveManifests: '', targetManifests: '', diffs: '', manifestGenerationError: '' },
+		errorResponse: { error: '' },
+		error: false,
+		loaded: false
+	});
 
 	var client = new TangleAPIClient();
 

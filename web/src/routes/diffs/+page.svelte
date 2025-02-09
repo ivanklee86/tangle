@@ -4,7 +4,8 @@
 	import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
 
 	import { onMount } from 'svelte';
-	import { apiData } from '$lib/data';
+	import { writable } from 'svelte/store';
+	import { type ApplicationResponseStore } from '$lib/data';
 	import { filterOutZeroResults } from '$lib/utils';
 	import { page } from '$app/stores';
 	import TangleAPIClient from '$lib/client';
@@ -14,12 +15,21 @@
 	const targetRef = $page.url.searchParams.get('targetRef');
 	var client = new TangleAPIClient();
 
+	const applicationsData = writable<ApplicationResponseStore>({
+		response: { results: [] },
+		errorResponse: { error: '' },
+		error: false,
+		loaded: false
+	});
+
 	let firstIndex = 0;
 	onMount(() => {
-		client.getApplications(labels).then(() => {
-			if (!$apiData.error && $apiData.response.results.length > 0) {
-				for (let i = 0; i < $apiData.response.results.length; i++) {
-					if ($apiData.response.results[i].applications.length > 0) {
+		client.getApplications(labels).then((result) => {
+			applicationsData.set(result);
+
+			if (!$applicationsData.error && $applicationsData.response.results.length > 0) {
+				for (let i = 0; i < $applicationsData.response.results.length; i++) {
+					if ($applicationsData.response.results[i].applications.length > 0) {
 						firstIndex = i;
 						break;
 					}
@@ -29,17 +39,17 @@
 	});
 </script>
 
-{#if $apiData.error}
+{#if $applicationsData.error}
 	<Alert color="none" class="bg-red-500 text-white">
 		<span class="font-medium">System error!</span>
 		<br />
-		{$apiData.errorResponse?.error}
+		{$applicationsData.errorResponse?.error}
 	</Alert>
 {/if}
 
-{#if $apiData.loaded}
+{#if $applicationsData.loaded}
 	<Tabs tabStyle="underline" class="ml-5 mr-5">
-		{#each filterOutZeroResults($apiData.response.results) as argoCDApplications, index}
+		{#each filterOutZeroResults($applicationsData.response.results) as argoCDApplications, index}
 			<TabItem
 				title={argoCDApplications.name}
 				open={index === firstIndex}

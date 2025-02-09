@@ -61,6 +61,7 @@ export type {
 	ApplicationsResponse,
 	ApplicationResponseStore,
 	ApplicationDiff,
+	ApplicationLinks,
 	ApplicationDiffResponse,
 	ArgoCDApplicationResults,
 	TangleError

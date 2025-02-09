@@ -5,7 +5,6 @@ import {
 	type ApplicationDiffResponse,
 	type TangleError
 } from '$lib/data';
-import { apiData } from '$lib/data';
 import { PUBLIC_BASE_URL } from '$env/static/public';
 
 const PATH_APPLICATIONS: string = '/api/applications';
@@ -17,7 +16,7 @@ class TangleAPIClient {
 		this.baseUrl = PUBLIC_BASE_URL;
 	}
 
-	async getApplications(labels: string | null): Promise<void> {
+	async getApplications(labels: string | null): Promise<ApplicationResponseStore> {
 		const url = labels
 			? `${this.baseUrl}${PATH_APPLICATIONS}?labels=${labels}`
 			: `${this.baseUrl}${PATH_APPLICATIONS}`;
@@ -28,6 +27,7 @@ class TangleAPIClient {
 			const response = await fetch(url);
 			const data = await response.json();
 
+			let store: ApplicationResponseStore;
 			if (response.status !== 200) {
 				store = {
 					response: { results: [] },
@@ -43,18 +43,18 @@ class TangleAPIClient {
 					loaded: true
 				};
 			}
-
-			apiData.set(store);
+			return store;
 		} catch (error) {
 			console.error('Failed to fetch applications:', error);
-			apiData.set({
+			store = {
 				response: { results: [] },
 				errorResponse: {
 					error: error as string
 				},
 				error: true,
 				loaded: true
-			});
+			};
+			return store;
 		}
 	}
 
