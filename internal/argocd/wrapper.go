@@ -75,7 +75,7 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map
 
 	group.SubmitErr(func() ([]ListApplicationsResult, error) {
 		var query *application.ApplicationQuery
-		if len(k8sLabel) > 0 {
+		if len(labels) > 0 {
 			query = &application.ApplicationQuery{
 				Selector: &k8sLabel,
 			}

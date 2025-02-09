@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { Navbar, NavBrand, DarkMode } from 'flowbite-svelte';
 </script>
 
