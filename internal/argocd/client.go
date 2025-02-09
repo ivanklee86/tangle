@@ -16,6 +16,7 @@ type IArgoCDClient interface {
 	// List returns all ArgoCD applications
 	List(ctx context.Context, in *application.ApplicationQuery) (*v1alpha1.ApplicationList, error)
 	GetApplicationManifests(ctx context.Context, in *application.ApplicationManifestQuery) (*repoServerApiClient.ManifestResponse, error)
+	Get(ctx context.Context, in *application.ApplicationQuery) (*v1alpha1.Application, error)
 	GetUrl() string
 }
 
@@ -69,6 +70,15 @@ func (c *ArgoCDClient) GetApplicationManifests(ctx context.Context, query *appli
 	}
 
 	return manifests, nil
+}
+
+func (c *ArgoCDClient) Get(ctx context.Context, query *application.ApplicationQuery) (*v1alpha1.Application, error) {
+	app, err := c.applicationsClient.Get(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return app, nil
 }
 
 func (c *ArgoCDClient) GetUrl() string {

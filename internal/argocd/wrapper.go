@@ -134,6 +134,12 @@ func (a *ArgoCDWrapper) GetManifests(ctx context.Context, applicationName string
 				Revision: &ref,
 			}
 
+			refresh := "hard"
+			_, err := a.ApplicationClient.Get(ctx, &application.ApplicationQuery{Name: &applicationName, Refresh: &refresh})
+			if err != nil {
+				return nil, err
+			}
+
 			manifestsResp, err := a.ApplicationClient.GetApplicationManifests(ctx, manifestsQuery)
 			if err != nil {
 				return nil, err
