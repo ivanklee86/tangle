@@ -107,13 +107,20 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map
 				project = "default"
 			}
 
+			var liveRevision string
+			if app.Spec.Source != nil {
+				liveRevision = app.Spec.Source.TargetRevision
+			} else {
+				liveRevision = ""
+			}
+
 			results = append(results, ListApplicationsResult{
 				Name:         app.Name,
 				Project:      project,
 				Namespace:    app.Namespace,
 				Health:       app.Status.Health,
 				SyncStatus:   app.Status.Sync,
-				LiveRevision: app.Spec.Source.TargetRevision,
+				LiveRevision: liveRevision,
 			})
 		}
 
