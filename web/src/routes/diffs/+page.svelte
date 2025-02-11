@@ -22,19 +22,9 @@
 		loaded: false
 	});
 
-	let firstIndex = 0;
 	onMount(() => {
 		client.getApplications(labels).then((result) => {
 			applicationsData.set(result);
-
-			if (!$applicationsData.error && $applicationsData.response.results.length > 0) {
-				for (let i = 0; i < $applicationsData.response.results.length; i++) {
-					if ($applicationsData.response.results[i].applications.length > 0) {
-						firstIndex = i;
-						break;
-					}
-				}
-			}
 		});
 	});
 </script>
@@ -52,7 +42,7 @@
 		{#each filterOutZeroResults($applicationsData.response.results) as argoCDApplications, index}
 			<TabItem
 				title={argoCDApplications.name}
-				open={index === firstIndex}
+				open={index === 0}
 				disabled={argoCDApplications.applications.length === 0}
 			>
 				<Tabs>
