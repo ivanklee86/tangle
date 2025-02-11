@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	defaultListPoolWorkers      = 10
-	defaultManifestsPoolWorkers = 5
+	defaultListPoolWorkers        = 10
+	defaultManifestsPoolWorkers   = 5
+	defaultHardRefreshPoolWorkers = 5
 )
 
 type IArgoCDWrapper interface {
@@ -22,6 +23,7 @@ type IArgoCDWrapper interface {
 type ArgoCDWrapperOptions struct {
 	ListPoolWorkers        int
 	ManifestsPoolWorkers   int
+	HardRefreshPoolWorkers int
 	DoNotInstrumentWorkers bool
 }
 
@@ -29,6 +31,7 @@ type ArgoCDWrapper struct {
 	ArgoCDClientOptions *ArgoCDWrapperOptions
 	ListWorkerPool      pond.ResultPool[[]ListApplicationsResult]
 	ManifestsWorkerPool pond.ResultPool[[]string]
+	HardRefreshPool     pond.Pool
 	ApplicationClient   IArgoCDClient
 }
 
@@ -46,16 +49,22 @@ func New(client IArgoCDClient, argoCDName string, options *ArgoCDWrapperOptions)
 		options.ManifestsPoolWorkers = defaultManifestsPoolWorkers
 	}
 
+	if options.HardRefreshPoolWorkers == 0 {
+		options.HardRefreshPoolWorkers = defaultHardRefreshPoolWorkers
+	}
+
 	wrapper := ArgoCDWrapper{
 		ArgoCDClientOptions: options,
 	}
 
 	wrapper.ListWorkerPool = pond.NewResultPool[[]ListApplicationsResult](options.ListPoolWorkers)
 	wrapper.ManifestsWorkerPool = pond.NewResultPool[[]string](options.ManifestsPoolWorkers)
+	wrapper.HardRefreshPool = pond.NewPool(options.HardRefreshPoolWorkers)
 
 	if !options.DoNotInstrumentWorkers {
-		instrumentWorkers("list", argoCDName, wrapper.ListWorkerPool)
-		instrumentWorkers("diff", argoCDName, wrapper.ManifestsWorkerPool)
+		instrumentResultPool("list", argoCDName, wrapper.ListWorkerPool)
+		instrumentResultPool("diff", argoCDName, wrapper.ManifestsWorkerPool)
+		instrumentPool("hard-refresh", argoCDName, wrapper.HardRefreshPool)
 	}
 
 	wrapper.ApplicationClient = client
@@ -125,19 +134,23 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map
 }
 
 func (a *ArgoCDWrapper) GetManifests(ctx context.Context, applicationName string, liveRef string, targetRef string) (*GetManifestsResponse, error) {
-	group := a.ManifestsWorkerPool.NewGroup()
+	refreshGroup := a.HardRefreshPool.NewGroup()
+	refreshGroup.SubmitErr(func() error {
+		refresh := "hard"
+		_, err := a.ApplicationClient.Get(ctx, &application.ApplicationQuery{Name: &applicationName, Refresh: &refresh})
+		return err
+	})
+	err := refreshGroup.Wait()
+	if err != nil {
+		return nil, err
+	}
 
+	group := a.ManifestsWorkerPool.NewGroup()
 	for _, ref := range []string{liveRef, targetRef} {
 		group.SubmitErr(func() ([]string, error) {
 			manifestsQuery := &application.ApplicationManifestQuery{
 				Name:     &applicationName,
 				Revision: &ref,
-			}
-
-			refresh := "hard"
-			_, err := a.ApplicationClient.Get(ctx, &application.ApplicationQuery{Name: &applicationName, Refresh: &refresh})
-			if err != nil {
-				return nil, err
 			}
 
 			manifestsResp, err := a.ApplicationClient.GetApplicationManifests(ctx, manifestsQuery)
