@@ -21,6 +21,13 @@
 	import TangleAPIClient from '$lib/client';
 	import { ArgoCDHealthStatus, ArgoCDSyncStatus } from '$lib/components';
 
+	interface Props {
+		refresh: boolean;
+		refreshPeriod: number;
+	}
+
+	let { refresh = false, refreshPeriod = 5 }: Props = $props();
+
 	const labels = $page.url.searchParams.get('labels');
 
 	const applicationsData = writable<ApplicationResponseStore>({
@@ -32,12 +39,25 @@
 
 	var client = new TangleAPIClient();
 
-	let firstIndex = 0;
-	onMount(() => {
+	let firstIndex = $state(0);
+	async function loadApplications(calculateFirstIndex: boolean = true) {
+		// Reset the store
+		applicationsData.set({
+			response: { results: [] },
+			errorResponse: { error: '' },
+			error: false,
+			loaded: false
+		});
+
+		// Get/Refresh status
 		client.getApplications(labels).then((result) => {
 			applicationsData.set(result);
 
-			if (!$applicationsData.error && $applicationsData.response.results.length > 0) {
+			if (
+				calculateFirstIndex &&
+				!$applicationsData.error &&
+				$applicationsData.response.results.length > 0
+			) {
 				for (let i = 0; i < $applicationsData.response.results.length; i++) {
 					if ($applicationsData.response.results[i].applications.length > 0) {
 						firstIndex = i;
@@ -46,6 +66,29 @@
 				}
 			}
 		});
+	}
+
+	onMount(() => {
+		loadApplications(true);
+
+		let interval: number;
+
+		const startInterval = () => {
+			clearInterval(interval); // Clear any existing interval
+			interval = setInterval(() => {
+				if (refresh) {
+					loadApplications(false);
+				}
+			}, refreshPeriod * 1000);
+		};
+
+		startInterval(); // Start the interval initially
+
+		$effect(() => {
+			startInterval(); // Restart the interval whenever refreshPeriod changes
+		});
+
+		return () => clearInterval(interval);
 	});
 </script>
 
