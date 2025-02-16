@@ -79,6 +79,8 @@
 		{/each}
 	</Tabs>
 {:else}
-	<br />
+	<div class="flex justify-center m-2">
+		<P italic>Loading Applications...</P>
+	</div>
 	<div class="text-center"><Spinner /></div>
 {/if}
