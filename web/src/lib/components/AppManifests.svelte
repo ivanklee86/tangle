@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { AccordionItem, Accordion, Alert, Card, Spinner } from 'flowbite-svelte';
+	import { AccordionItem, Accordion, Alert, Card, Spinner, Heading, P } from 'flowbite-svelte';
 	import { InfoCircleSolid, FileLinesSolid } from 'flowbite-svelte-icons';
 	import { CodeBlock } from 'svhighlight';
 	import 'highlight.js/styles/an-old-hope.css';
 
-	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { type ApplicationDiff } from '$lib/data';
 	import TangleAPIClient from '$lib/client';
@@ -26,11 +25,9 @@
 	});
 
 	var client = new TangleAPIClient();
-
-	onMount(() => {
-		client.getApplicationDiff(argocd, appName, liveRef, targetRef).then((result) => {
-			diffData.set(result);
-		});
+	// Start generating diffs immediately b/c this can take a while.
+	client.getApplicationDiff(argocd, appName, liveRef, targetRef).then((result) => {
+		diffData.set(result);
 	});
 </script>
 
@@ -46,14 +43,14 @@
 			</Alert>
 		</Card>
 	{:else if $diffData.loaded}
+		<Heading tag="h4" class="flex items-center"><FileLinesSolid size="lg" />Diffs</Heading>
+		{#if $diffData.response.diffs.length === 0}
+			<P italic>No diffs found.</P>
+		{:else}
+			<CodeBlock language="diff" code={$diffData.response.diffs} showLineNumbers={false} />
+		{/if}
+		<br />
 		<Accordion>
-			<AccordionItem open={$diffData.response.diffs.length > 0}>
-				<span slot="header" class="text-base flex gap-2">
-					<FileLinesSolid class="w-5 h-5" />
-					<span>Diffs</span>
-				</span>
-				<CodeBlock language="diff" code={$diffData.response.diffs} showLineNumbers={false} />
-			</AccordionItem>
 			<AccordionItem>
 				<span slot="header">Manifests</span>
 				<CodeBlock language="yaml" code={$diffData.response.targetManifests} />
@@ -61,5 +58,8 @@
 		</Accordion>
 	{/if}
 {:else}
+	<div class="flex justify-center m-2">
+		<P italic>Loading manifests & diffs. Please be patient - this can take a bit!</P>
+	</div>
 	<div class="text-center"><Spinner /></div>
 {/if}
