@@ -5,6 +5,7 @@ before:
 builds:
   - id: "tangle-cli"
     binary: tangle-cli
+    main: ./cmd/tangle-cli
     ldflags:
       - -X main.version={{.Version}}
 changelog:
