@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	headerPrefix = "argonap"
+	headerPrefix = "tangle-cli"
 )
 
 // printToStream prints a generic message to a stream (stdout/stderror) in color.

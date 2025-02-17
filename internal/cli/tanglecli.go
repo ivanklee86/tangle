@@ -1,10 +1,15 @@
 package cli
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"strings"
+
+	"github.com/ivanklee86/tangle/internal/tangle"
 )
 
 type Config struct {
@@ -79,6 +84,39 @@ func NewWithConfig(config Config) *TangleCLI {
 	}
 }
 
-// func (t *TangleCLI) writeManifests() {
+func (t *TangleCLI) Configure() {
+	t.Labels = labelStringsToMap(t.LabelsAsStrings)
+}
 
-// }
+func (t *TangleCLI) GenerateManifests() {
+	labels := []string{}
+	for k, v := range t.Labels {
+		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	applicationsUrl := fmt.Sprintf("http://%s/api/applications?labels=%s", t.ServerAddr, strings.Join(labels, ","))
+
+	t.Output(fmt.Sprintf("Calling %s", applicationsUrl))
+	resp, err := http.Get(applicationsUrl)
+	if err != nil {
+		t.Error(fmt.Sprintf("Error calling %s: %s", applicationsUrl, err))
+		return
+	}
+	body, err := io.ReadAll(resp.Body)
+	t.Output(fmt.Sprintf("Response body: %s", body))
+	if err != nil {
+		t.Error(fmt.Sprintf("Error reading response body: %s", err))
+		return
+
+	}
+	defer resp.Body.Close()
+
+	var applications tangle.ApplicationsResponse
+	err = json.Unmarshal(body, &applications)
+	if err != nil {
+		t.Error(fmt.Sprintf("Error unmarshalling response body: %s", err))
+		return
+	}
+
+	t.Output(fmt.Sprintf("Found %d applications", len(applications.Results)))
+}

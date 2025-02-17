@@ -51,6 +51,23 @@ func NewRootCommand() *cobra.Command {
 
 	cmd.PersistentFlags().StringVar(&tanglecli.Config.ServerAddr, "server-address", "", "ArgoCD server address")
 	cmd.PersistentFlags().BoolVar(&tanglecli.Config.Insecure, "insecure", false, "Don't validate SSL certificate on client request")
+
+	cmd.AddCommand(NewGenerateManifests(tanglecli))
+
+	return cmd
+}
+
+func NewGenerateManifests(tanglecli *cli.TangleCLI) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "generate-manifests",
+		Short: "Generate manifests.",
+		Long:  "Generate manifests for ArgoCD applications.",
+		Run: func(cmd *cobra.Command, args []string) {
+			tanglecli.Configure()
+			tanglecli.GenerateManifests()
+		},
+	}
+
 	cmd.PersistentFlags().StringSliceVar(&tanglecli.Config.LabelsAsStrings, "label", []string{}, "Labels to filter projects on in format 'key=value'.  Can be used multiple times.")
 
 	return cmd
