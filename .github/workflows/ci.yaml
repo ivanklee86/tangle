@@ -39,10 +39,12 @@ jobs:
       run: task go:lint
     - name: Start ArgoCD
       run: task services
+    - name: Build Docker image
+      run: task docker:build
+    - name: Run service for integration tests
+      run: task docker:run:cicd
     - name: Run tests.
       run: task go:test-ci
-    - name: Compile code
-      run: task go:build
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always()
@@ -78,16 +80,6 @@ jobs:
       run: task ts:lint
     - name: Build website
       run: task ts:build
-
-  docker:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Install Task
-      uses: arduino/setup-task@v2
-    - name: Build Docker image
-      run: task docker:build
 
   format:
     runs-on: ubuntu-latest
