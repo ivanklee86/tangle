@@ -25,6 +25,7 @@ RUN addgroup -S tangle && adduser -S tangle -G tangle
 WORKDIR /app
 
 COPY --from=go --chown=tangle:tangle /app/tangle-server tangle-server
+COPY --from=go --chown=tangle:tangle /app/tangle-cli /usr/bin/tangle-cli
 COPY --from=node --chown=tangle:tangle /app/build ./build
 
 USER tangle
