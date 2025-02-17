@@ -1,6 +1,7 @@
 package client
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8,94 +9,132 @@ import (
 
 func TestGenerateApplicationsUrl(t *testing.T) {
 	tests := []struct {
-		domain   string
-		insecure bool
-		labels   map[string]string
-		expected string
+		name       string
+		domain     string
+		insecure   bool
+		labels     map[string]string
+		expected   string
+		multiLabel bool
 	}{
 		{
-			domain:   "test.domain",
-			insecure: true,
-			labels:   map[string]string{},
-			expected: "http://test.domain/api/applications",
+			name:       "local server",
+			domain:     "test.domain",
+			insecure:   true,
+			labels:     map[string]string{},
+			expected:   "http://test.domain/api/applications",
+			multiLabel: false,
 		},
 		{
-			domain:   "test.domain",
-			insecure: false,
-			labels:   map[string]string{},
-			expected: "https://test.domain/api/applications",
+			name:       "https",
+			domain:     "test.domain",
+			insecure:   false,
+			labels:     map[string]string{},
+			expected:   "https://test.domain/api/applications",
+			multiLabel: false,
 		},
 		{
+			name:     "one label",
 			domain:   "test.domain",
 			insecure: false,
 			labels: map[string]string{
 				"label1": "value1",
 			},
-			expected: "https://test.domain/api/applications?labels=label1:value1",
+			expected:   "https://test.domain/api/applications?labels=label1:value1",
+			multiLabel: false,
 		},
 		{
+			name:     "multiple labels",
 			domain:   "test.domain",
 			insecure: false,
 			labels: map[string]string{
 				"label1": "value1",
 				"label2": "value2",
 			},
-			expected: "https://test.domain/api/applications?labels=label1:value1,label2:value2",
+			expected:   "",
+			multiLabel: true,
 		},
 	}
 
 	for _, test := range tests {
-		actual := GenerateApplicationsUrl(test.domain, test.insecure, test.labels)
-		assert.Equal(t, test.expected, actual)
+		t.Run(test.name, func(t *testing.T) {
+			actual := GenerateApplicationsUrl(test.domain, test.insecure, test.labels)
+			if !test.multiLabel {
+				assert.Equal(t, test.expected, actual)
+			} else {
+				assert.True(t,
+					strings.Contains(actual, "?labels=label1:value1,label2:value2") || strings.Contains(actual, "?labels=label2:value2,label1:value1"),
+				)
+			}
+
+		})
 	}
 }
 
 func TestGenerateDiffUrl(t *testing.T) {
 	tests := []struct {
-		domain   string
-		insecure bool
-		labels   map[string]string
-		gitRef   string
-		expected string
+		name       string
+		domain     string
+		insecure   bool
+		labels     map[string]string
+		gitRef     string
+		expected   string
+		multiLabel bool
 	}{
 		{
-			domain:   "test.domain",
-			insecure: true,
-			labels:   map[string]string{},
-			gitRef:   "main",
-			expected: "http://test.domain/api/diffs?gitRef=main",
+			name:       "local server",
+			domain:     "test.domain",
+			insecure:   true,
+			labels:     map[string]string{},
+			gitRef:     "main",
+			expected:   "http://test.domain/api/diffs?gitRef=main",
+			multiLabel: false,
 		},
 		{
-			domain:   "test.domain",
-			insecure: false,
-			labels:   map[string]string{},
-			gitRef:   "main",
-			expected: "https://test.domain/api/diffs?gitRef=main",
+			name:       "https",
+			domain:     "test.domain",
+			insecure:   false,
+			labels:     map[string]string{},
+			gitRef:     "main",
+			expected:   "https://test.domain/api/diffs?gitRef=main",
+			multiLabel: false,
 		},
 		{
+			name:     "one label",
 			domain:   "test.domain",
 			insecure: false,
 			labels: map[string]string{
 				"label1": "value1",
 			},
-			gitRef:   "main",
-			expected: "https://test.domain/api/diffs?labels=label1:value1&gitRef=main",
+			gitRef:     "main",
+			expected:   "https://test.domain/api/diffs?labels=label1:value1&gitRef=main",
+			multiLabel: false,
 		},
 		{
+			name:     "multiple labels",
 			domain:   "test.domain",
 			insecure: false,
 			labels: map[string]string{
 				"label1": "value1",
 				"label2": "value2",
 			},
-			gitRef:   "main",
-			expected: "https://test.domain/api/diffs?labels=label1:value1,label2:value2&gitRef=main",
+			gitRef:     "main",
+			expected:   "",
+			multiLabel: true,
 		},
 	}
 
 	for _, test := range tests {
-		actual := GenerateDiffUrl(test.domain, test.insecure, test.labels, test.gitRef)
-		assert.Equal(t, test.expected, actual)
+		t.Run(test.name, func(t *testing.T) {
+			actual := GenerateDiffUrl(test.domain, test.insecure, test.labels, test.gitRef)
+			if !test.multiLabel {
+				assert.Equal(t, test.expected, actual)
+			} else {
+				assert.True(t,
+					strings.Contains(actual, "?labels=label1:value1,label2:value2") || strings.Contains(actual, "?labels=label2:value2,label1:value1"),
+				)
+			}
+
+		})
 	}
 }
 
