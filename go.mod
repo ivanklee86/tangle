@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
-	github.com/alitto/pond/v2 v2.1.6
+	github.com/alitto/pond/v2 v2.2.0
 	github.com/argoproj/argo-cd/v2 v2.14.2
 	github.com/flowchartsman/swaggerui v0.0.0-20221017034628-909ed4f3701b
 	github.com/go-chi/chi/v5 v5.2.1
