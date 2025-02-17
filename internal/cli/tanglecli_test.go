@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bytes"
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,6 +37,20 @@ func TestTangleCLIHappyPaths(t *testing.T) {
 	})
 
 	t.Run("tangle-cli happy path", func(t *testing.T) {
+		tempDir, err := os.MkdirTemp("", "tangle")
+		assert.NoError(t, err)
+
+		tangleCLI.Labels = make(map[string]string)
+		tangleCLI.Folder = tempDir
+		tangleCLI.TargetRef = "test_gitops"
 		tangleCLI.GenerateManifests()
+
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "diff-test-test-1.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "diff-test-test-2.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "diff-prod-test-3.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "manifests-test-test-1.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "manifests-test-test-2.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "manifests-prod-test-3.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "error-prod-test-3.txt"))
 	})
 }

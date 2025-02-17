@@ -3,10 +3,11 @@ package cli
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 
+	"github.com/alitto/pond/v2"
+	"github.com/ivanklee86/tangle/internal/tangle"
 	"github.com/ivanklee86/tangle/pkg/client"
 	"github.com/jedib0t/go-pretty/v6/table"
 )
@@ -28,11 +29,11 @@ type TangleCLI struct {
 	Err io.Writer
 }
 
-type ApplicationDiffDetails struct {
+type ApplicationDiffDetail struct {
 	ArgoCD      string
 	Application string
 	LiveRef     string
-	TargetRef   string
+	Response    tangle.DiffsResponse
 }
 
 func countCharacterOccurrences(s string, c rune) int {
@@ -61,15 +62,58 @@ func labelStringsToMap(labelsAsStrings []string) map[string]string {
 	return labels
 }
 
-func (t *TangleCLI) renderApplicationsTable(applications []ApplicationDiffDetails) {
+// Prints results in human readable format
+func (t *TangleCLI) renderApplicationsTable(applications []*ApplicationDiffDetail) {
 	applicationsTable := table.NewWriter()
 	applicationsTable.SetOutputMirror(t.Out)
 	applicationsTable.SetStyle(table.StyleColoredBright)
-	applicationsTable.AppendHeader(table.Row{"ArgoCD", "Application"})
+	applicationsTable.AppendHeader(table.Row{"ArgoCD", "Application", "Error"})
 	for _, application := range applications {
-		applicationsTable.AppendRow(table.Row{application.ArgoCD, application.Application})
+		manifestGenError := "False ✅"
+		if application.Response.ManifestGenerationError != "" {
+			manifestGenError = "True 🔥"
+		}
+
+		applicationsTable.AppendRow(table.Row{application.ArgoCD, application.Application, manifestGenError})
 	}
 	applicationsTable.Render()
+}
+
+func (t *TangleCLI) WriteFiles(applicationDiffsDetail *ApplicationDiffDetail) error {
+	diffFile, err := os.Create(fmt.Sprintf("%s/diff-%s-%s.yaml", t.Folder, applicationDiffsDetail.ArgoCD, applicationDiffsDetail.Application))
+	if err != nil {
+		return err
+	}
+	manifestsFile, err := os.Create(fmt.Sprintf("%s/manifests-%s-%s.yaml", t.Folder, applicationDiffsDetail.ArgoCD, applicationDiffsDetail.Application))
+	if err != nil {
+		return err
+	}
+
+	defer diffFile.Close()
+	defer manifestsFile.Close()
+
+	_, err = diffFile.WriteString(applicationDiffsDetail.Response.Diffs)
+	if err != nil {
+		return err
+	}
+	_, err = manifestsFile.WriteString(applicationDiffsDetail.Response.TargetManifests)
+	if err != nil {
+		return err
+	}
+
+	if applicationDiffsDetail.Response.ManifestGenerationError != "" {
+		errorFile, err := os.Create(fmt.Sprintf("%s/error-%s-%s.txt", t.Folder, applicationDiffsDetail.ArgoCD, applicationDiffsDetail.Application))
+		if err != nil {
+			return err
+		}
+		defer errorFile.Close()
+		_, err = errorFile.WriteString(applicationDiffsDetail.Response.ManifestGenerationError)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // New returns a new instance of TangleCLI.
@@ -80,7 +124,7 @@ func New() *TangleCLI {
 	if config.Folder == "" {
 		dir, err := os.Getwd()
 		if err != nil {
-			log.Fatal(err) // Handle the error appropriately
+			panic(err)
 		}
 		config.Folder = dir
 	}
@@ -94,6 +138,14 @@ func New() *TangleCLI {
 
 func NewWithConfig(config Config) *TangleCLI {
 	config.Labels = labelStringsToMap(config.LabelsAsStrings)
+
+	if config.Folder == "" {
+		dir, err := os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+		config.Folder = dir
+	}
 
 	return &TangleCLI{
 		Config: &config,
@@ -116,18 +168,49 @@ func (t *TangleCLI) GenerateManifests() {
 	}
 
 	// Parse out applications for all ArgoCDs.
-	applicationDiffsDetails := []ApplicationDiffDetails{}
+	applicationDiffsDetails := []ApplicationDiffDetail{}
 	for _, argocd := range applications.Results {
 		for _, application := range argocd.Applications {
-			applicationDiffsDetails = append(applicationDiffsDetails, ApplicationDiffDetails{
+			applicationDiffsDetails = append(applicationDiffsDetails, ApplicationDiffDetail{
 				ArgoCD:      argocd.Name,
 				Application: application.Name,
 				LiveRef:     application.LiveRef,
-				TargetRef:   t.TargetRef,
 			})
 		}
 	}
 
 	t.Output(fmt.Sprintf("Applications found: %d", len(applicationDiffsDetails)))
-	t.renderApplicationsTable(applicationDiffsDetails)
+
+	// Get diffs for each application
+	t.OutputHeading("🔍 Getting manifests and diffs!")
+	pool := pond.NewResultPool[*ApplicationDiffDetail](len(applicationDiffsDetails))
+	group := pool.NewGroup()
+	for _, diff := range applicationDiffsDetails {
+		group.SubmitErr(func() (*ApplicationDiffDetail, error) {
+			diffUrl := client.GenerateDiffUrl(t.ServerAddr, t.Insecure, diff.ArgoCD, diff.Application)
+			response, err := client.GetDiffs(diffUrl, diff.LiveRef, t.TargetRef)
+			if err != nil {
+				return nil, err
+			}
+
+			diff.Response = *response
+
+			return &diff, nil
+		})
+	}
+	results, err := group.Wait()
+	if err != nil {
+		t.Error(fmt.Sprintf("Error getting diffs: %s", err))
+	}
+
+	// Write files
+	for _, result := range results {
+		err := t.WriteFiles(result)
+		if err != nil {
+			t.Error(fmt.Sprintf("Error writing files: %s", err))
+		}
+	}
+
+	// Report results
+	t.renderApplicationsTable(results)
 }
