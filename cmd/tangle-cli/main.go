@@ -69,6 +69,7 @@ func NewGenerateManifests(tanglecli *cli.TangleCLI) *cobra.Command {
 	}
 
 	cmd.PersistentFlags().StringSliceVar(&tanglecli.Config.LabelsAsStrings, "label", []string{}, "Labels to filter projects on in format 'key=value'.  Can be used multiple times.")
+	cmd.PersistentFlags().StringVar(&tanglecli.Config.Folder, "folder", "", "Folder to generate manifests in.  Defaults to current folder.")
 	cmd.PersistentFlags().StringVar(&tanglecli.Config.TargetRef, "target-ref", "", "Git refernce to generate manifests.")
 	cmd.PersistentFlags().BoolVar(&tanglecli.Config.FailOnErrors, "fail-on-error", false, "Fail command if errors are found.")
 
