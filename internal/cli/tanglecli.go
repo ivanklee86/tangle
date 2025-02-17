@@ -19,6 +19,7 @@ type Config struct {
 	Labels          map[string]string
 	Folder          string
 	TargetRef       string
+	FailOnErrors    bool
 }
 
 type TangleCLI struct {
@@ -213,4 +214,16 @@ func (t *TangleCLI) GenerateManifests() {
 
 	// Report results
 	t.renderApplicationsTable(results)
+
+	// Fail if errors found
+	failures := false
+	for _, result := range results {
+		if result.Response.ManifestGenerationError != "" {
+			failures = true
+		}
+	}
+
+	if t.FailOnErrors && failures {
+		t.Error("Failures found in manifest generation!")
+	}
 }
