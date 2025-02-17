@@ -1,0 +1,20 @@
+version: 2
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - id: "tangle-cli"
+    binary: tangle-cli
+    ldflags:
+      - -X main.version={{.Version}}
+changelog:
+  disable: true
+brews:
+  - name: tangle-cli
+    homepage: "https://github.com/ivanklee86/tangle-cli"
+    description: "A CLI to configure/clear SyncWindows on ArgoCD projects."
+    directory: Formula
+    repository:
+      owner: ivanklee86
+      name: homebrew-tap
+      token: "{{ .Env.GITHUB_HOMBREW_AUTH_TOKEN }}"
