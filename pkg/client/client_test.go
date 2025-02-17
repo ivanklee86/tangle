@@ -72,68 +72,35 @@ func TestGenerateApplicationsUrl(t *testing.T) {
 
 func TestGenerateDiffUrl(t *testing.T) {
 	tests := []struct {
-		name       string
-		domain     string
-		insecure   bool
-		labels     map[string]string
-		gitRef     string
-		expected   string
-		multiLabel bool
+		name        string
+		domain      string
+		insecure    bool
+		argocd      string
+		application string
+		expected    string
 	}{
 		{
-			name:       "local server",
-			domain:     "test.domain",
-			insecure:   true,
-			labels:     map[string]string{},
-			gitRef:     "main",
-			expected:   "http://test.domain/api/diffs?gitRef=main",
-			multiLabel: false,
+			name:        "local server",
+			domain:      "test.domain",
+			insecure:    true,
+			argocd:      "test",
+			application: "test-1",
+			expected:    "http://test.domain/api/argocd/test/applications/test-1/diffs",
 		},
 		{
-			name:       "https",
-			domain:     "test.domain",
-			insecure:   false,
-			labels:     map[string]string{},
-			gitRef:     "main",
-			expected:   "https://test.domain/api/diffs?gitRef=main",
-			multiLabel: false,
-		},
-		{
-			name:     "one label",
-			domain:   "test.domain",
-			insecure: false,
-			labels: map[string]string{
-				"label1": "value1",
-			},
-			gitRef:     "main",
-			expected:   "https://test.domain/api/diffs?labels=label1:value1&gitRef=main",
-			multiLabel: false,
-		},
-		{
-			name:     "multiple labels",
-			domain:   "test.domain",
-			insecure: false,
-			labels: map[string]string{
-				"label1": "value1",
-				"label2": "value2",
-			},
-			gitRef:     "main",
-			expected:   "",
-			multiLabel: true,
+			name:        "actual domain",
+			domain:      "test.domain",
+			insecure:    false,
+			argocd:      "test",
+			application: "test-1",
+			expected:    "https://test.domain/api/argocd/test/applications/test-1/diffs",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			actual := GenerateDiffUrl(test.domain, test.insecure, test.labels, test.gitRef)
-			if !test.multiLabel {
-				assert.Equal(t, test.expected, actual)
-			} else {
-				assert.True(t,
-					strings.Contains(actual, "?labels=label1:value1,label2:value2") || strings.Contains(actual, "?labels=label2:value2,label1:value1"),
-				)
-			}
-
+			actual := GenerateDiffUrl(test.domain, test.insecure, test.argocd, test.application)
+			assert.Equal(t, test.expected, actual)
 		})
 	}
 }
@@ -192,6 +159,57 @@ func TestGetApplications(t *testing.T) {
 						assert.Len(t, result.Applications, test.lengthProd)
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestGetDiffs(t *testing.T) {
+	tests := []struct {
+		name        string
+		domain      string
+		insecure    bool
+		argocd      string
+		application string
+		liveRef     string
+		targetRef   string
+		argocdError bool
+		expectError bool
+	}{
+		{
+			name:        "get diff",
+			domain:      "localhost:8081",
+			insecure:    true,
+			argocd:      "test",
+			application: "test-1",
+			liveRef:     "main",
+			targetRef:   "test_gitops",
+			argocdError: false,
+			expectError: false,
+		},
+		{
+			name:        "get diff with outofsync app",
+			domain:      "localhost:8081",
+			insecure:    true,
+			argocd:      "test",
+			application: "test-2",
+			liveRef:     "main",
+			targetRef:   "test_gitops",
+			argocdError: false,
+			expectError: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual, err := GetDiffs(GenerateDiffUrl(test.domain, test.insecure, test.argocd, test.application), test.liveRef, test.targetRef)
+			if test.expectError {
+				assert.Error(t, err)
+			} else if test.argocdError {
+				assert.NotNil(t, actual.ManifestGenerationError)
+			} else {
+				assert.NotNil(t, actual.LiveManifests)
+				assert.NotNil(t, actual.Diffs)
 			}
 		})
 	}

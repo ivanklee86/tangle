@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 
 const (
 	APPLICATIONS_PATH = "api/applications"
-	DIFFS_PATH        = "api/diffs"
 )
 
 // GenerateApplicationsUrl generates the URL for the applications endpoint.
@@ -36,30 +36,12 @@ func GenerateApplicationsUrl(domain string, insecure bool, labels map[string]str
 }
 
 // GenerateDiffUrl generates the URL for the diffs endpoint.
-func GenerateDiffUrl(domain string, insecure bool, labels map[string]string, gitRef string) string {
+func GenerateDiffUrl(domain string, insecure bool, argocd string, application string) string {
 	protocol := "http"
 	if !insecure {
 		protocol = "https"
 	}
-
-	url := fmt.Sprintf("%s://%s/%s", protocol, domain, DIFFS_PATH)
-
-	labelsAsStrings := []string{}
-	if len(labels) > 0 {
-		for k, v := range labels {
-			labelsAsStrings = append(labelsAsStrings, fmt.Sprintf("%s:%s", k, v))
-		}
-
-		url += fmt.Sprintf("?labels=%s", strings.Join(labelsAsStrings, ","))
-	}
-
-	if len(labels) > 0 {
-		url += "&"
-	} else {
-		url += "?"
-	}
-
-	url += fmt.Sprintf("gitRef=%s", gitRef)
+	url := fmt.Sprintf("%s://%s/api/argocd/%s/applications/%s/diffs", protocol, domain, argocd, application)
 
 	return url
 }
@@ -83,4 +65,44 @@ func GetApplications(url string) (*tangle.ApplicationsResponse, error) {
 	}
 
 	return applications, nil
+}
+
+// GetDiffs retrieves the diffs for an ArgoCD Application.
+func GetDiffs(url string, liveRef string, targetRef string) (*tangle.DiffsResponse, error) {
+	// Build request
+	requestBody := tangle.DiffsRequest{
+		LiveRef:   liveRef,
+		TargetRef: targetRef,
+	}
+	requestJson, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, err
+	}
+
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(requestJson))
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Set("Content-Type", "application/json")
+
+	// Send request
+	client := &http.Client{}
+	resp, err := client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	// Parse response
+	diffs := &tangle.DiffsResponse{}
+	err = json.NewDecoder(resp.Body).Decode(diffs)
+	if err != nil {
+		return nil, err
+	}
+
+	return diffs, nil
 }
