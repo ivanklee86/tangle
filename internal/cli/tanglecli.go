@@ -1,15 +1,14 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"strings"
 
-	"github.com/ivanklee86/tangle/internal/tangle"
+	"github.com/ivanklee86/tangle/pkg/client"
+	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 type Config struct {
@@ -18,6 +17,7 @@ type Config struct {
 	LabelsAsStrings []string
 	Labels          map[string]string
 	Folder          string
+	TargetRef       string
 }
 
 type TangleCLI struct {
@@ -26,6 +26,13 @@ type TangleCLI struct {
 	// Allow swapping out stdout/stderr for testing.
 	Out io.Writer
 	Err io.Writer
+}
+
+type ApplicationDiffDetails struct {
+	ArgoCD      string
+	Application string
+	LiveRef     string
+	TargetRef   string
 }
 
 func countCharacterOccurrences(s string, c rune) int {
@@ -52,6 +59,17 @@ func labelStringsToMap(labelsAsStrings []string) map[string]string {
 	}
 
 	return labels
+}
+
+func (t *TangleCLI) renderApplicationsTable(applications []ApplicationDiffDetails) {
+	applicationsTable := table.NewWriter()
+	applicationsTable.SetOutputMirror(t.Out)
+	applicationsTable.SetStyle(table.StyleColoredBright)
+	applicationsTable.AppendHeader(table.Row{"ArgoCD", "Application"})
+	for _, application := range applications {
+		applicationsTable.AppendRow(table.Row{application.ArgoCD, application.Application})
+	}
+	applicationsTable.Render()
 }
 
 // New returns a new instance of TangleCLI.
@@ -89,34 +107,27 @@ func (t *TangleCLI) Configure() {
 }
 
 func (t *TangleCLI) GenerateManifests() {
-	labels := []string{}
-	for k, v := range t.Labels {
-		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
-	}
+	applicationsUrl := client.GenerateApplicationsUrl(t.ServerAddr, t.Insecure, t.Labels)
+	t.OutputHeading(fmt.Sprintf("📱 Calling %s", applicationsUrl))
 
-	applicationsUrl := fmt.Sprintf("http://%s/api/applications?labels=%s", t.ServerAddr, strings.Join(labels, ","))
-
-	t.Output(fmt.Sprintf("Calling %s", applicationsUrl))
-	resp, err := http.Get(applicationsUrl)
+	applications, err := client.GetApplications(applicationsUrl)
 	if err != nil {
-		t.Error(fmt.Sprintf("Error calling %s: %s", applicationsUrl, err))
-		return
-	}
-	body, err := io.ReadAll(resp.Body)
-	t.Output(fmt.Sprintf("Response body: %s", body))
-	if err != nil {
-		t.Error(fmt.Sprintf("Error reading response body: %s", err))
-		return
-
-	}
-	defer resp.Body.Close()
-
-	var applications tangle.ApplicationsResponse
-	err = json.Unmarshal(body, &applications)
-	if err != nil {
-		t.Error(fmt.Sprintf("Error unmarshalling response body: %s", err))
-		return
+		t.Error(fmt.Sprintf("Error getting applications: %s", err))
 	}
 
-	t.Output(fmt.Sprintf("Found %d applications", len(applications.Results)))
+	// Parse out applications for all ArgoCDs.
+	applicationDiffsDetails := []ApplicationDiffDetails{}
+	for _, argocd := range applications.Results {
+		for _, application := range argocd.Applications {
+			applicationDiffsDetails = append(applicationDiffsDetails, ApplicationDiffDetails{
+				ArgoCD:      argocd.Name,
+				Application: application.Name,
+				LiveRef:     application.LiveRef,
+				TargetRef:   t.TargetRef,
+			})
+		}
+	}
+
+	t.Output(fmt.Sprintf("Applications found: %d", len(applicationDiffsDetails)))
+	t.renderApplicationsTable(applicationDiffsDetails)
 }
