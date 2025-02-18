@@ -22,4 +22,4 @@ jobs:
       - name: Install dependencies
         run: task python:install
       - name: Deploy docs
-        run: task python:docs
+        run: task python:release
