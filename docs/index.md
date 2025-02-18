@@ -8,23 +8,21 @@ Tangle makes using with multiple ArgoCDs in a [hub and spoke](https://codefresh.
 
 - Showing `Applications` across multiple ArgoCD.
 - Showing manifest diffs for many `Applications` across multiple ArgoCD.
-- Working equally well for your CI/CD tooling (i.e. CLI tool or directly consuming JSON REST API) and for your humans (via a website that's easy to embed into existing tools).
+- Working equally well for your CI/CD tooling (i.e. available as JSON APIs to consume from your tools) and for your humans (via a website that's easy to embed into existing tools).
 - Does all those things with mechanisms (i.e. worker pools) to limit load on ArgoCD components
-
-For more information, check out our [documentation](https://ivanklee86.github.io/tangle/)!
 
 **Example: View all Applications with the `env:test` label**
 
 Visiting `/applications?labels=env:test`
 
-![Applications](./docs/images/TangleApplications.png)
+![Applications](./images/TangleApplications.png)
 
 **Example: View diffs of all Applications with the `env:test` label from the `test_gitops` branch**
 
 Visiting `/diffs?labels=env:test&targetRef=test_gitops`
 
-![Diffss](./docs/images/TangleDiffs.png)
+![Diffss](./images/TangleDiffs.png)
 
 **Example: Using `tangle-cli` from your CI/CD pipelines**
 
-![CLI](./docs/images/TangleCLI.png)
+![CLI](./images/TangleCLI.png)
