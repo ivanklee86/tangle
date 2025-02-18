@@ -94,3 +94,19 @@ jobs:
       run: gofmt -d .
     - name: Run format again (so job will error if format issues found).
       run: test -z $(gofmt -l .)
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Install Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+    - name: Install Task
+      uses: arduino/setup-task@v2
+    - name: Install dependencies
+      run: task python:install
+    - name: Test docs
+      run: task python:test

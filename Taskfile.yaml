@@ -8,6 +8,7 @@ includes:
     argocd: ./tasks/argocd.yaml
     ts: ./tasks/ts.yaml
     docker: ./tasks/docker.yaml
+    python: ./tasks/python.yaml
 
 dotenv: [.env]
 
