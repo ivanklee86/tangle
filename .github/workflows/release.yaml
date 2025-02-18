@@ -53,6 +53,8 @@ jobs:
         uses: actions/setup-go@v5
       - name: Install Task
         uses: arduino/setup-task@v2
+      - name: Install Go dependencies
+        run: task go:install-ci
       - name: Generate Swagger docs
         run: task go:generate
       - name: Run GoReleaser
