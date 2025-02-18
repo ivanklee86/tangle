@@ -8,6 +8,8 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+permissions: write-all
+
 jobs:
   docker:
     runs-on: ubuntu-latest
@@ -49,6 +51,10 @@ jobs:
           fetch-depth: 0
       - name: Set up Go
         uses: actions/setup-go@v5
+      - name: Install Task
+        uses: arduino/setup-task@v2
+      - name: Generate Swagger docs
+        run: task go:generate
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
