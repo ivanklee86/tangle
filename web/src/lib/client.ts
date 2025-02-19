@@ -89,6 +89,10 @@ class TangleAPIClient {
 						diffs: '',
 						manifestGenerationError: ''
 					},
+					requestDetails: {
+						argoCD: argoCD,
+						applicationName: applicationName
+					},
 					errorResponse: data as TangleError,
 					error: true,
 					loaded: true
@@ -97,6 +101,10 @@ class TangleAPIClient {
 				appDiffResp = {
 					response: data as ApplicationDiffResponse,
 					errorResponse: { error: '' },
+					requestDetails: {
+						argoCD: argoCD,
+						applicationName: applicationName
+					},
 					error: false,
 					loaded: true
 				};
@@ -115,6 +123,10 @@ class TangleAPIClient {
 				},
 				errorResponse: {
 					error: error as string
+				},
+				requestDetails: {
+					argoCD: argoCD,
+					applicationName: applicationName
 				},
 				error: true,
 				loaded: true

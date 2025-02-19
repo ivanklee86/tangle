@@ -39,8 +39,18 @@ interface ApplicationDiffResponse {
 interface ApplicationDiff {
 	response: ApplicationDiffResponse;
 	errorResponse: TangleError | null;
+	requestDetails: {
+		argoCD: string;
+		applicationName: string;
+	};
 	error: boolean;
 	loaded: boolean;
+}
+
+interface ApplicationsDiffsData {
+	[argoCDName: string]: {
+		[applicationName: string]: ApplicationDiff;
+	};
 }
 
 export const apiData = writable<ApplicationResponseStore>({
@@ -53,6 +63,7 @@ export const apiData = writable<ApplicationResponseStore>({
 export const diffData = writable<ApplicationDiff>({
 	response: { liveManifests: '', targetManifests: '', diffs: '', manifestGenerationError: '' },
 	errorResponse: { error: '' },
+	requestDetails: { argoCD: '', applicationName: '' },
 	error: false,
 	loaded: false
 });
@@ -61,6 +72,7 @@ export type {
 	ApplicationsResponse,
 	ApplicationResponseStore,
 	ApplicationDiff,
+	ApplicationsDiffsData as ApplicationsDiffData,
 	ApplicationLinks,
 	ApplicationDiffResponse,
 	ArgoCDApplicationResults,
