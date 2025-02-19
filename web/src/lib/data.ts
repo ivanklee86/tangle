@@ -72,7 +72,7 @@ export type {
 	ApplicationsResponse,
 	ApplicationResponseStore,
 	ApplicationDiff,
-	ApplicationsDiffsData as ApplicationsDiffData,
+	ApplicationsDiffsData,
 	ApplicationLinks,
 	ApplicationDiffResponse,
 	ArgoCDApplicationResults,

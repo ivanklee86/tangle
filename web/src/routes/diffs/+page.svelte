@@ -5,7 +5,7 @@
 
 	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
-	import { type ApplicationsDiffData, type ApplicationResponseStore } from '$lib/data';
+	import { type ApplicationsDiffsData, type ApplicationResponseStore } from '$lib/data';
 	import { filterOutZeroResults } from '$lib/utils';
 	import { page } from '$app/stores';
 	import TangleAPIClient from '$lib/client';
@@ -22,7 +22,7 @@
 		loaded: false
 	});
 
-	const diffData = writable<ApplicationsDiffData>({});
+	const diffData = writable<ApplicationsDiffsData>({});
 	let loaded = false;
 
 	onMount(() => {
@@ -44,7 +44,7 @@
 
 				const diffResults = await Promise.all(diffPromises);
 
-				const diffDataMap: ApplicationsDiffData = {};
+				const diffDataMap: ApplicationsDiffsData = {};
 				diffResults.forEach((result) => {
 					const argoCDName = result.requestDetails.argoCD;
 					const applicationName = result.requestDetails.applicationName;
