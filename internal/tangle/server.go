@@ -76,6 +76,9 @@ func New(config *TangleConfig, version string) *Tangle {
 
 		wrapper, _ := argocd.New(client, key, &argocd.ArgoCDWrapperOptions{
 			DoNotInstrumentWorkers: tangle.Config.DoNotInstrument,
+			ListPoolWorkers:        tangle.Config.ListWorkers,
+			ManifestsPoolWorkers:   tangle.Config.ManifestsWorkers,
+			HardRefreshPoolWorkers: tangle.Config.HardRefreshWorkers,
 		})
 
 		wrappers[key] = wrapper
