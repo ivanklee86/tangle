@@ -21,3 +21,6 @@ Additional configurations can be configured in the `tangle.yaml` or via environm
 | Configuration | Required? | Default Value | Description |
 |---------------|-----------|---------------|-------------|
 | timeout | No | 60 (seconds) | Timeout on ArgoCD queries |
+| listWorkers | No | 10 | Control `List` parallelism |
+| manifestWorkers | No | 5 | Controls `GetManifests` parallelism |
+| hardRefreshWorkers | no | 5 | Controls `Get` with hard refresh parallelism |
