@@ -37,6 +37,10 @@ nav:
     - Usage: 'usage.md'
     - CLI: 'cli.md'
     - Operations: 'operations.md'
+  - Development:
+    - Architecture: 'architecture.md'
+    - Contributing: 'contributing.md'
+
 
 markdown_extensions:
   - admonition
