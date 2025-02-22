@@ -2,6 +2,10 @@ name: "tangle"
 domain: "https://tangle.test.com"
 port: 8081
 
+listWorkers: 20
+manifestWorkers: 10
+hardRefreshWorkers: 10
+
 argocds:
   test:
     address: "localhost:8080"
