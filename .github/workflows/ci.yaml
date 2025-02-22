@@ -37,12 +37,8 @@ jobs:
       run: task go:generate
     - name: Lint code.
       run: task go:lint
-    - name: Start ArgoCD
-      run: task services
-    - name: Build Docker image
-      run: task docker:build
     - name: Run service for integration tests
-      run: task docker:run:cicd
+      run: task services:cicd
     - name: Run tests.
       run: task go:test-ci
     - name: Publish Unit Test Results

@@ -35,3 +35,11 @@ tasks:
         desc: Test devcontainer changes
         cmds:
             - docker build -t devcontainer -f ./.devcontainer/Dockerfile .
+
+    services:cicd:
+        desc: Run Docker container.
+        deps:
+        - services
+        - docker:build
+        cmds:
+        - docker run -d -v `pwd`/integration:/config -e TANGLE_CONFIG_PATH=/config/tangle.yaml --network=host --env-file .env --rm -p 8081:8081 tangle
