@@ -1,15 +1,5 @@
 <script lang="ts">
-	import {
-		A,
-		Alert,
-		Heading,
-		List,
-		Li,
-		P,
-		Tabs,
-		TabItem,
-		Progressbar
-	} from 'flowbite-svelte';
+	import { A, Alert, Heading, List, Li, P, Tabs, TabItem, Progressbar } from 'flowbite-svelte';
 
 	import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
 
