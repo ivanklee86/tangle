@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { A, Alert, Heading, List, Li, P, Tabs, TabItem, Spinner } from 'flowbite-svelte';
+	import { A, Alert, Heading, List, Li, P, Tabs, TabItem, Progressbar } from 'flowbite-svelte';
 
 	import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
 
@@ -22,8 +22,11 @@
 		loaded: false
 	});
 
+	let progress: number = $state(0);
+	let total: number = $state(0);
+
 	const diffData = writable<ApplicationsDiffsData>({});
-	let loaded = false;
+	let loaded: boolean = $state(false);
 
 	onMount(() => {
 		client
@@ -33,14 +36,20 @@
 
 				const diffPromises = result.response.results.flatMap((argoCD) =>
 					argoCD.applications.map((application) =>
-						client.getApplicationDiff(
-							argoCD.name,
-							application.name,
-							application.liveRef,
-							targetRef ? targetRef : application.liveRef
-						)
+						client
+							.getApplicationDiff(
+								argoCD.name,
+								application.name,
+								application.liveRef,
+								targetRef ? targetRef : application.liveRef
+							)
+							.then((result) => {
+								progress += 1;
+								return result;
+							})
 					)
 				);
+				total = diffPromises.length;
 
 				const diffResults = await Promise.all(diffPromises);
 
@@ -112,8 +121,15 @@
 		</Tabs>
 	{/if}
 {:else}
-	<div class="flex justify-center m-2">
+	<div class="flex justify-center m-10">
 		<P italic>Loading Applications...</P>
 	</div>
-	<div class="text-center"><Spinner /></div>
+	{#if total > 0}
+		<div class="justify-center w-1/2 m-auto">
+			<Progressbar
+				progress={Math.round((progress / total) * 100)}
+				labelOutside="Getting Application diffs & manifests"
+			/>
+		</div>
+	{/if}
 {/if}
