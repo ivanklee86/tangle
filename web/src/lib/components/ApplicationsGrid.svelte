@@ -39,8 +39,7 @@
 
 	var client = new TangleAPIClient();
 
-	let firstIndex = $state(0);
-	async function loadApplications(calculateFirstIndex: boolean = true) {
+	async function loadApplications() {
 		// Reset the store
 		applicationsData.set({
 			response: { results: [] },
@@ -52,24 +51,11 @@
 		// Get/Refresh status
 		client.getApplications(labels).then((result) => {
 			applicationsData.set(result);
-
-			if (
-				calculateFirstIndex &&
-				!$applicationsData.error &&
-				$applicationsData.response.results.length > 0
-			) {
-				for (let i = 0; i < $applicationsData.response.results.length; i++) {
-					if ($applicationsData.response.results[i].applications.length > 0) {
-						firstIndex = i;
-						break;
-					}
-				}
-			}
 		});
 	}
 
 	onMount(() => {
-		loadApplications(true);
+		loadApplications();
 
 		let interval: number;
 
@@ -77,7 +63,7 @@
 			clearInterval(interval); // Clear any existing interval
 			interval = setInterval(() => {
 				if (refresh) {
-					loadApplications(false);
+					loadApplications();
 				}
 			}, refreshPeriod * 1000);
 		};
@@ -103,7 +89,7 @@
 		{#each filterOutZeroResults($applicationsData.response.results) as argoCDApplications, index}
 			<TabItem
 				title={argoCDApplications.name}
-				open={index === firstIndex}
+				open={index === 0}
 				disabled={argoCDApplications.applications.length === 0}
 			>
 				<span slot="title"
