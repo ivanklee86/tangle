@@ -8,7 +8,6 @@
 		P,
 		Tabs,
 		TabItem,
-		Spinner,
 		Progressbar
 	} from 'flowbite-svelte';
 
