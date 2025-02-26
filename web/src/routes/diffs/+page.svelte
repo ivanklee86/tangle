@@ -151,7 +151,8 @@
 												application.name,
 												application.liveRef,
 												targetRef ? targetRef : application.liveRef
-											)}><RefreshOutline /></GradientButton>
+											)}><RefreshOutline /></GradientButton
+									>
 								</div>
 								<br />
 								<AppManifests diffData={$diffData[argoCDApplications.name]?.[application.name]} />
