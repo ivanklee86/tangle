@@ -1,7 +1,18 @@
 <script lang="ts">
-	import { A, Alert, Heading, List, Li, P, Tabs, TabItem, Progressbar } from 'flowbite-svelte';
+	import {
+		A,
+		Alert,
+		Heading,
+		List,
+		Li,
+		P,
+		Tabs,
+		TabItem,
+		Progressbar,
+		GradientButton
+	} from 'flowbite-svelte';
 
-	import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
+	import { ExclamationCircleSolid, RefreshOutline } from 'flowbite-svelte-icons';
 
 	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
@@ -72,6 +83,24 @@
 				loaded = true;
 			});
 	});
+
+	function reloadDiff(
+		argoCDName: string,
+		applicationName: string,
+		liveRef: string,
+		targetRef: string
+	) {
+		client
+			.getApplicationDiff(argoCDName, applicationName, liveRef, targetRef ? targetRef : liveRef)
+			.then((result) => {
+				diffData.update((data) => {
+					const newData = { ...data };
+
+					newData[argoCDName][applicationName] = result;
+					return newData;
+				});
+			});
+	}
 </script>
 
 {#if loaded}
@@ -110,7 +139,21 @@
 									</Li>
 								</List>
 								<br />
-								<P>(<A href={application.url} aClass="xs">More Info</A>)</P>
+								<div class="align-bottom">
+									<P>(<A href={application.url} target="_blank" aClass="xs">More Info</A>)</P>
+									<GradientButton
+										class="absolute right-5"
+										outline
+										color="pinkToOrange"
+										on:click={() =>
+											reloadDiff(
+												argoCDApplications.name,
+												application.name,
+												application.liveRef,
+												targetRef ? targetRef : application.liveRef
+											)}><RefreshOutline /></GradientButton
+									>
+								</div>
 								<br />
 								<AppManifests diffData={$diffData[argoCDApplications.name]?.[application.name]} />
 							</TabItem>
