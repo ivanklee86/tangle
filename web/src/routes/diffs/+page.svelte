@@ -139,7 +139,7 @@
 									</Li>
 								</List>
 								<br />
-								<div>
+								<div class="align-bottom">
 									<P>(<A href={application.url} target="_blank" aClass="xs">More Info</A>)</P>
 									<GradientButton
 										class="absolute right-5"
