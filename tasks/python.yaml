@@ -9,20 +9,19 @@ tasks:
   install:
     desc: Install Python dependencies
     cmds:
-      - pip install -U pip
-      - pip install -U -r requirements.txt
+      - uv pip install -r requirements.txt
 
   serve:
     desc: Run mkdocs
     cmds:
-      - mkdocs serve
+      - uv run mkdocs serve
 
   release:
     desc: Publish docs to Github Pages.
     cmds:
-      - mkdocs gh-deploy --force
+      - uv run mkdocs gh-deploy --force
 
   test:
     desc: Make sure docs build.
     cmds:
-      - mkdocs build --strict
+      - uv run mkdocs build --strict
