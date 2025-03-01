@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { A, Card, Label, Input, GradientButton, Toast } from 'flowbite-svelte';
+	import { Card, Label, Input, GradientButton, Toast } from 'flowbite-svelte';
 	import {
 		CodeBranchOutline,
 		ArrowRightOutline,
