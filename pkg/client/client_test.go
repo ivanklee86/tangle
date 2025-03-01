@@ -164,6 +164,72 @@ func TestGetApplications(t *testing.T) {
 	}
 }
 
+func TestGetApplicationsWithRetries(t *testing.T) {
+	tests := []struct {
+		name        string
+		domain      string
+		insecure    bool
+		options     *ClientOptions
+		expectError bool
+	}{
+		{
+			name:        "get all applications",
+			domain:      "localhost:8081",
+			insecure:    true,
+			options:     nil,
+			expectError: false,
+		},
+		{
+			name:     "with retries",
+			domain:   "localhost:8081",
+			insecure: true,
+			options: &ClientOptions{
+				Retries: 3,
+			},
+			expectError: false,
+		},
+		{
+			name:     "with custom period",
+			domain:   "localhost:8081",
+			insecure: true,
+			options: &ClientOptions{
+				Retries: 3,
+				Backoff: []int{1, 2, 3},
+			},
+			expectError: false,
+		},
+		{
+			name:     "with invalid retries",
+			domain:   "localhost:8081",
+			insecure: true,
+			options: &ClientOptions{
+				Retries: 6,
+			},
+			expectError: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			emptyLabels := map[string]string{}
+			resp, err := GetApplicationWithRetries(GenerateApplicationsUrl(test.domain, test.insecure, emptyLabels), test.options)
+
+			if !test.expectError {
+				assert.Nil(t, err)
+				for _, result := range resp.Results {
+					if result.Name == "test" {
+						assert.Len(t, result.Applications, 2)
+					} else if result.Name == "prod" {
+						assert.Len(t, result.Applications, 1)
+					}
+				}
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
 func TestGetDiffs(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -212,5 +278,130 @@ func TestGetDiffs(t *testing.T) {
 				assert.NotNil(t, actual.Diffs)
 			}
 		})
+	}
+}
+
+func TestGetDiffsWithRetries(t *testing.T) {
+	tests := []struct {
+		name        string
+		domain      string
+		insecure    bool
+		argocd      string
+		application string
+		liveRef     string
+		targetRef   string
+		options     *ClientOptions
+		argocdError bool
+		expectError bool
+	}{
+		{
+			name:        "no options",
+			domain:      "localhost:8081",
+			insecure:    true,
+			argocd:      "test",
+			application: "test-1",
+			liveRef:     "main",
+			targetRef:   "test_gitops",
+			options:     nil,
+			argocdError: false,
+			expectError: false,
+		},
+		{
+			name:        "retries",
+			domain:      "localhost:8081",
+			insecure:    true,
+			argocd:      "test",
+			application: "test-1",
+			liveRef:     "main",
+			targetRef:   "test_gitops",
+			options:     &ClientOptions{Retries: 3},
+			argocdError: false,
+			expectError: false,
+		},
+		{
+			name:        "retries and custom retries",
+			domain:      "localhost:8081",
+			insecure:    true,
+			argocd:      "test",
+			application: "test-1",
+			liveRef:     "main",
+			targetRef:   "test_gitops",
+			options:     &ClientOptions{Retries: 3, Backoff: []int{1, 2, 3}},
+			argocdError: false,
+			expectError: false,
+		},
+		{
+			name:        "invalid_config",
+			domain:      "localhost:8081",
+			insecure:    true,
+			argocd:      "test",
+			application: "test-1",
+			liveRef:     "main",
+			targetRef:   "test_gitops",
+			options:     &ClientOptions{Retries: 6},
+			argocdError: false,
+			expectError: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual, err := GetDiffsWithRetries(GenerateDiffUrl(test.domain, test.insecure, test.argocd, test.application), test.liveRef, test.targetRef, test.options)
+			if test.expectError {
+				assert.Error(t, err)
+			} else if test.argocdError {
+				assert.NotNil(t, actual.ManifestGenerationError)
+			} else {
+				assert.NotNil(t, actual.LiveManifests)
+				assert.NotNil(t, actual.Diffs)
+			}
+		})
+	}
+}
+
+func TestValidateOptions(t *testing.T) {
+	tests := []struct {
+		name        string
+		options     *ClientOptions
+		expectError bool
+	}{
+		{
+			name: "just retries",
+			options: &ClientOptions{
+				Retries: 3,
+			},
+			expectError: false,
+		},
+		{
+			name: "all options",
+			options: &ClientOptions{
+				Retries: 3,
+				Backoff: []int{1, 2, 3},
+			},
+			expectError: false,
+		},
+		{
+			name: "retry greater than default backoff periods",
+			options: &ClientOptions{
+				Retries: 6,
+			},
+			expectError: true,
+		},
+		{
+			name: "retry greater than custom backoff",
+			options: &ClientOptions{
+				Retries: 4,
+				Backoff: []int{1, 2, 3},
+			},
+			expectError: true,
+		},
+	}
+
+	for _, test := range tests {
+		if !test.expectError {
+			assert.Nil(t, validateClientOptions(*test.options))
+		} else {
+			assert.Error(t, validateClientOptions(*test.options))
+		}
 	}
 }
