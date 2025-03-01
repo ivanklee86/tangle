@@ -38,6 +38,7 @@ Flags:
       --folder string       Folder to generate manifests in.  Defaults to current folder.
   -h, --help                help for generate-manifests
       --label strings       Labels to filter projects on in format 'key=value'.  Can be used multiple times.
+      --retries int         Number of retried for failed calls.  Must be between 0 (no retries) and 5.
       --target-ref string   Git refernce to generate manifests.
 
 Global Flags:

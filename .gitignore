@@ -39,6 +39,7 @@ coverage.html
 tmp
 tangle-server
 build
+tmpdir
 
 ## Site
 site

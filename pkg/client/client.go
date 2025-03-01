@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ivanklee86/tangle/internal/tangle"
 )
@@ -13,6 +14,27 @@ import (
 const (
 	APPLICATIONS_PATH = "api/applications"
 )
+
+var DEFAULT_BACKOFF = []int{1, 5, 10, 20, 30}
+
+type ClientOptions struct {
+	Retries int
+	Backoff []int
+}
+
+// Validate option
+func validateClientOptions(options ClientOptions) error {
+	var backoffLen = len(DEFAULT_BACKOFF)
+	if len(options.Backoff) > 0 {
+		backoffLen = len(options.Backoff)
+	}
+
+	if options.Retries > backoffLen {
+		return fmt.Errorf("retries cannot be greater than # of backoff periods (%d)", backoffLen)
+	}
+
+	return nil
+}
 
 // GenerateApplicationsUrl generates the URL for the applications endpoint.
 func GenerateApplicationsUrl(domain string, insecure bool, labels map[string]string) string {
@@ -67,6 +89,34 @@ func GetApplications(url string) (*tangle.ApplicationsResponse, error) {
 	return applications, nil
 }
 
+func GetApplicationWithRetries(url string, options *ClientOptions) (*tangle.ApplicationsResponse, error) {
+	var retries = 0
+	var backoff = DEFAULT_BACKOFF
+	if options != nil {
+		err := validateClientOptions(*options)
+		if err != nil {
+			return nil, err
+		}
+		retries = options.Retries
+		if len(options.Backoff) > 0 {
+			backoff = options.Backoff
+		}
+	}
+
+	for i := 0; i <= retries; i++ {
+		applications, err := GetApplications(url)
+		if err == nil {
+			return applications, nil
+		} else if err != nil && i == retries {
+			return nil, err
+		} else if err != nil {
+			time.Sleep(time.Duration(backoff[i]) * time.Second)
+		}
+	}
+
+	return nil, nil
+}
+
 // GetDiffs retrieves the diffs for an ArgoCD Application.
 func GetDiffs(url string, liveRef string, targetRef string) (*tangle.DiffsResponse, error) {
 	// Build request
@@ -105,4 +155,32 @@ func GetDiffs(url string, liveRef string, targetRef string) (*tangle.DiffsRespon
 	}
 
 	return diffs, nil
+}
+
+func GetDiffsWithRetries(url string, liveRef string, targetRef string, options *ClientOptions) (*tangle.DiffsResponse, error) {
+	var retries = 0
+	var backoff = DEFAULT_BACKOFF
+	if options != nil {
+		err := validateClientOptions(*options)
+		if err != nil {
+			return nil, err
+		}
+		retries = options.Retries
+		if len(options.Backoff) > 0 {
+			backoff = options.Backoff
+		}
+	}
+
+	for i := 0; i <= retries; i++ {
+		diffs, err := GetDiffs(url, liveRef, targetRef)
+		if err == nil {
+			return diffs, nil
+		} else if err != nil && i == retries {
+			return nil, err
+		} else if err != nil {
+			time.Sleep(time.Duration(backoff[i]) * time.Second)
+		}
+	}
+
+	return nil, nil
 }

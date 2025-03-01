@@ -53,4 +53,23 @@ func TestTangleCLIHappyPaths(t *testing.T) {
 		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "manifests-prod-test-3.yaml"))
 		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "error-prod-test-3.txt"))
 	})
+
+	t.Run("tangle-cli happy path with retries", func(t *testing.T) {
+		tempDir, err := os.MkdirTemp("", "tangle")
+		assert.NoError(t, err)
+
+		tangleCLI.Labels = make(map[string]string)
+		tangleCLI.Folder = tempDir
+		tangleCLI.TargetRef = "test_gitops"
+		tangleCLI.Retries = 3
+		tangleCLI.GenerateManifests()
+
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "diff-test-test-1.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "diff-test-test-2.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "diff-prod-test-3.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "manifests-test-test-1.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "manifests-test-test-2.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "manifests-prod-test-3.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "error-prod-test-3.txt"))
+	})
 }

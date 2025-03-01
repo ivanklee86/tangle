@@ -20,6 +20,7 @@ type Config struct {
 	Folder          string
 	TargetRef       string
 	FailOnErrors    bool
+	Retries         int
 }
 
 type TangleCLI struct {
@@ -163,9 +164,21 @@ func (t *TangleCLI) GenerateManifests() {
 	applicationsUrl := client.GenerateApplicationsUrl(t.ServerAddr, t.Insecure, t.Labels)
 	t.OutputHeading(fmt.Sprintf("📱 Calling %s", applicationsUrl))
 
-	applications, err := client.GetApplications(applicationsUrl)
-	if err != nil {
-		t.Error(fmt.Sprintf("Error getting applications: %s", err))
+	var applications *tangle.ApplicationsResponse
+	var err error
+	if t.Config.Retries > 0 {
+		options := client.ClientOptions{
+			Retries: t.Config.Retries,
+		}
+		applications, err = client.GetApplicationWithRetries(applicationsUrl, &options)
+		if err != nil {
+			t.Error(fmt.Sprintf("Error getting applications: %s", err))
+		}
+	} else {
+		applications, err = client.GetApplications(applicationsUrl)
+		if err != nil {
+			t.Error(fmt.Sprintf("Error getting applications: %s", err))
+		}
 	}
 
 	// Parse out applications for all ArgoCDs.
@@ -189,9 +202,22 @@ func (t *TangleCLI) GenerateManifests() {
 	for _, diff := range applicationDiffsDetails {
 		group.SubmitErr(func() (*ApplicationDiffDetail, error) {
 			diffUrl := client.GenerateDiffUrl(t.ServerAddr, t.Insecure, diff.ArgoCD, diff.Application)
-			response, err := client.GetDiffs(diffUrl, diff.LiveRef, t.TargetRef)
-			if err != nil {
-				return nil, err
+
+			var response *tangle.DiffsResponse
+			var err error
+			if t.Config.Retries > 0 {
+				options := client.ClientOptions{
+					Retries: t.Config.Retries,
+				}
+				response, err = client.GetDiffsWithRetries(diffUrl, diff.LiveRef, t.TargetRef, &options)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				response, err = client.GetDiffs(diffUrl, diff.LiveRef, t.TargetRef)
+				if err != nil {
+					return nil, err
+				}
 			}
 
 			diff.Response = *response
