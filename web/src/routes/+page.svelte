@@ -1,11 +1,29 @@
 <script lang="ts">
-	import { A, Card, Label, Input, GradientButton } from 'flowbite-svelte';
-	import { CodeBranchOutline, ArrowRightOutline, LabelSolid } from 'flowbite-svelte-icons';
+	import { Card, Label, Input, GradientButton, Toast } from 'flowbite-svelte';
+	import {
+		CodeBranchOutline,
+		ArrowRightOutline,
+		LabelSolid,
+		ExclamationCircleSolid
+	} from 'flowbite-svelte-icons';
 
+	// User inputs
 	let labels: string = $state('');
 	let targetRef: string = $state('');
 
-	function generateApplicationsUrl(labels: string): string {
+	// Error flags
+	let noRefSpecified: boolean = $state(false);
+	let invalidLabels: boolean = $state(false);
+
+	// Other strings
+	const LABEL_CHECK: RegExp = /^[^:,]+:[^:,]+(,[^:,]+:[^:,]+)*$/;
+
+	function redirectToApplications(labels: string): void {
+		if (labels.length != 0 && !LABEL_CHECK.test(labels)) {
+			invalidLabels = true;
+			return;
+		}
+
 		const BASE_URL = '/applications';
 
 		let url: string = BASE_URL;
@@ -14,10 +32,20 @@
 			url += `?labels=${labels}`;
 		}
 
-		return url;
+		window.location.href = url;
 	}
 
-	function generateDiffUrl(targetRef: string, labels: string): string {
+	function redirectToDiff(targetRef: string, labels: string): void {
+		if (targetRef.length === 0) {
+			noRefSpecified = true;
+			return;
+		}
+
+		if (labels.length != 0 && !LABEL_CHECK.test(labels)) {
+			invalidLabels = true;
+			return;
+		}
+
 		const BASE_URL = '/diffs';
 
 		let url: string = BASE_URL;
@@ -30,9 +58,29 @@
 			url += `&labels=${labels}`;
 		}
 
-		return url;
+		window.location.href = url;
 	}
 </script>
+
+{#if noRefSpecified}
+	<Toast color="red" position="top-right" on:close={() => (noRefSpecified = false)}>
+		<svelte:fragment slot="icon">
+			<ExclamationCircleSolid class="w-5 h-5" />
+			<span class="sr-only">Warning icon</span>
+		</svelte:fragment>
+		You must provide a target git ref to generate a diff!
+	</Toast>
+{/if}
+
+{#if invalidLabels}
+	<Toast color="red" position="top-right" on:close={() => (invalidLabels = false)}>
+		<svelte:fragment slot="icon">
+			<ExclamationCircleSolid class="w-5 h-5" />
+			<span class="sr-only">Warning icon</span>
+		</svelte:fragment>
+		Invalid label! Labels must be in format "foo:bar" and separated with commas.
+	</Toast>
+{/if}
 
 <br />
 <Card class="m-auto justify-center">
@@ -46,11 +94,13 @@
 	</Label>
 
 	<br />
-	<A href={generateApplicationsUrl(labels)}>
-		<GradientButton color="pinkToOrange" class="w-fit">
-			See applications<ArrowRightOutline class="w-6 h-6 ms-2 text-white" />
-		</GradientButton>
-	</A>
+	<GradientButton
+		color="pinkToOrange"
+		class="w-fit"
+		on:click={() => redirectToApplications(labels)}
+	>
+		See applications<ArrowRightOutline class="w-6 h-6 ms-2 text-white" />
+	</GradientButton>
 </Card>
 
 <br />
@@ -72,10 +122,12 @@
 		</Input>
 	</Label>
 	<br />
-	<A href={generateDiffUrl(targetRef, labels)}>
-		<GradientButton color="pinkToOrange" class="w-fit">
-			See diffs<ArrowRightOutline class="w-6 h-6 ms-2 text-white" />
-		</GradientButton>
-	</A>
+	<GradientButton
+		color="pinkToOrange"
+		class="w-fit"
+		on:click={() => redirectToDiff(targetRef, labels)}
+	>
+		See diffs<ArrowRightOutline class="w-6 h-6 ms-2 text-white" />
+	</GradientButton>
 </Card>
 <br />
