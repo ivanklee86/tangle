@@ -1,9 +1,14 @@
 #!/bin/bash
 set -ex
 
-# Set up pre-commit
-pip install -r requirements.txt
-pre-commit install
+# Set up Python
+rm -rf /home/vscode/.uv_cache | true
+mkdir /home/vscode/.uv_cache | true
+uv venv
+
+# Install pre-commit hooks
+uv pip install -r requirements.txt
+uv run pre-commit install
 
 # Configure git
 if [ "$CODESPACES" != "true" ]; then
