@@ -86,7 +86,7 @@
 	</Alert>
 {:else if $applicationsData.loaded}
 	<Tabs tabStyle="underline" class="ml-5 mr-5">
-		{#each filterOutZeroResults($applicationsData.response.results) as argoCDApplications, index}
+		{#each filterOutZeroResults($applicationsData.response.results) as argoCDApplications, index (argoCDApplications.name)}
 			<TabItem
 				title={argoCDApplications.name}
 				open={index === 0}
