@@ -11,6 +11,11 @@ tasks:
     cmds:
       - uv pip install -r requirements.txt
 
+  install:ci:
+    desc: Install Python dependencies for CI
+    cmds:
+      - uv pip install -r requirements-ci.txt --system
+
   serve:
     desc: Run mkdocs
     cmds:

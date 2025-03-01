@@ -105,6 +105,6 @@ jobs:
     - name: Install Task
       uses: arduino/setup-task@v2
     - name: Install dependencies
-      run: task python:install
+      run: task python:install:ci
     - name: Test docs
       run: task python:test
