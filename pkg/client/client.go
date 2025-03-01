@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -31,7 +30,7 @@ func validateClientOptions(options ClientOptions) error {
 	}
 
 	if options.Retries > backoffLen {
-		return errors.New("retries cannot be greater than # of backoff periods")
+		return fmt.Errorf("retries cannot be greater than # of backoff periods (%d)", backoffLen)
 	}
 
 	return nil
