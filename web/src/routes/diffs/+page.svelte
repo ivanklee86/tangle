@@ -114,14 +114,14 @@
 
 	{#if $applicationsData.loaded}
 		<Tabs tabStyle="underline" class="ml-5 mr-5">
-			{#each filterOutZeroResults($applicationsData.response.results) as argoCDApplications, index}
+			{#each filterOutZeroResults($applicationsData.response.results) as argoCDApplications, index (argoCDApplications.name)}
 				<TabItem
 					title={argoCDApplications.name}
 					open={index === 0}
 					disabled={argoCDApplications.applications.length === 0}
 				>
 					<Tabs>
-						{#each argoCDApplications.applications as application, appIndex}
+						{#each argoCDApplications.applications as application, appIndex (application.name)}
 							<TabItem title={application.name} open={appIndex === 0}>
 								<div slot="title" class="flex items-center">
 									{#if application.syncStatus === 'Unknown' || $diffData[argoCDApplications.name]?.[application.name].error || $diffData[argoCDApplications.name]?.[application.name].response.manifestGenerationError.length > 0}<ExclamationCircleSolid
