@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: test-4
+  labels:
+    env: prod
+    foo: bar
+spec:
+  project: my-project
+  source:
+    repoURL: https://github.com/ivanklee86/tangle.git
+    path: integration/kubernetes/example/manifests/4
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
