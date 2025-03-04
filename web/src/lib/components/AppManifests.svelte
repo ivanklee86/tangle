@@ -19,7 +19,7 @@
 		{diffData.errorResponse?.error}
 	</Alert>
 {:else if diffData.response.manifestGenerationError.length > 0}
-	<Card class="m-auto dark:bg-red-400" size="xl">
+	<Card class="m-auto dark:bg-red-400 mt-10" size="xl">
 		<Alert>
 			<div class="flex items-center gap-3">
 				<InfoCircleSolid class="w-5 h-5" />

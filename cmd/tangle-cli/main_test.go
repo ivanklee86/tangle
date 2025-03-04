@@ -49,9 +49,11 @@ func TestCli(t *testing.T) {
 		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "diff-test-test-1.yaml"))
 		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "diff-test-test-2.yaml"))
 		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "diff-prod-test-3.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "diff-prod-test-4.yaml"))
 		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "manifests-test-test-1.yaml"))
 		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "manifests-test-test-2.yaml"))
 		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "manifests-prod-test-3.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "manifests-prod-test-4.yaml"))
 		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "error-prod-test-3.txt"))
 
 		out, err := io.ReadAll(b)

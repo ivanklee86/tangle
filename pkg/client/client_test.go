@@ -121,7 +121,7 @@ func TestGetApplications(t *testing.T) {
 			insecure:    true,
 			labels:      map[string]string{},
 			lengthTest:  2,
-			lengthProd:  1,
+			lengthProd:  2,
 			expectError: false,
 		},
 		{
@@ -220,7 +220,7 @@ func TestGetApplicationsWithRetries(t *testing.T) {
 					if result.Name == "test" {
 						assert.Len(t, result.Applications, 2)
 					} else if result.Name == "prod" {
-						assert.Len(t, result.Applications, 1)
+						assert.Len(t, result.Applications, 2)
 					}
 				}
 			} else {
