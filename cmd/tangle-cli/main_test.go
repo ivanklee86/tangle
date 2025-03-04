@@ -56,7 +56,7 @@ func TestCli(t *testing.T) {
 
 		out, err := io.ReadAll(b)
 		assert.NoError(t, err)
-		assert.Contains(t, string(out), "Applications found: 3")
+		assert.Contains(t, string(out), "Applications found: 4")
 		assert.Contains(t, string(out), "True")
 	})
 }

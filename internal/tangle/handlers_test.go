@@ -49,13 +49,13 @@ func TestHandlers(t *testing.T) {
 			name:       "no_tags",
 			url:        "/applications",
 			test_count: 2,
-			prod_count: 1,
+			prod_count: 2,
 		},
 		{
 			name:       "tags_match_all",
 			url:        "/applications?labels=foo:bar",
 			test_count: 2,
-			prod_count: 1,
+			prod_count: 2,
 		},
 		{
 			name:       "tags_match_one",
@@ -73,7 +73,7 @@ func TestHandlers(t *testing.T) {
 			name:       "invalid_tags",
 			url:        "/applications?labels=foobar",
 			test_count: 2,
-			prod_count: 1,
+			prod_count: 2,
 		},
 		{
 			name:       "multiple_tags",
