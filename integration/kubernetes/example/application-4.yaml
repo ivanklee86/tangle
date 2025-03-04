@@ -3,7 +3,7 @@ kind: Application
 metadata:
   name: test-4
   labels:
-    env: prod
+    env: infra
     foo: bar
 spec:
   project: my-project
