@@ -12,7 +12,7 @@
 		GradientButton
 	} from 'flowbite-svelte';
 
-	import { ExclamationCircleSolid, RefreshOutline } from 'flowbite-svelte-icons';
+	import { ExclamationCircleSolid, RefreshOutline, BellRingSolid } from 'flowbite-svelte-icons';
 
 	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
@@ -125,8 +125,11 @@
 							<TabItem title={application.name} open={appIndex === 0}>
 								<div slot="title" class="flex items-center">
 									{#if application.syncStatus === 'Unknown' || $diffData[argoCDApplications.name]?.[application.name].error || $diffData[argoCDApplications.name]?.[application.name].response.manifestGenerationError.length > 0}<ExclamationCircleSolid
-											class="w-5 h-5 me-2 text-amber-500 dark:text-amber-400"
-										/>{/if}
+											class="w-5 h-5 me-2 text-rose-500 dark:text-rose-400"
+										/>
+									{:else if $diffData[argoCDApplications.name]?.[application.name].response.diffs.length > 0}
+										<BellRingSolid class="w-5 h-5 me-2 text-amber-500 dark:text-amber-400" />
+									{/if}
 									{application.name}
 								</div>
 								<Heading tag="h3">Status</Heading>
