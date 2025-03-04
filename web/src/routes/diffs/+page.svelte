@@ -125,7 +125,7 @@
 						{#each argoCDApplications.applications as application, appIndex (application.name)}
 							<TabItem title={application.name} open={appIndex === 0}>
 								<div slot="title" class="flex items-center">
-									{#if alertStatuses.includes(application.syncStatus) || application.health !== "Healthy" || $diffData[argoCDApplications.name]?.[application.name].error || $diffData[argoCDApplications.name]?.[application.name].response.manifestGenerationError.length > 0}<ExclamationCircleSolid
+									{#if alertStatuses.includes(application.syncStatus) || application.health !== 'Healthy' || $diffData[argoCDApplications.name]?.[application.name].error || $diffData[argoCDApplications.name]?.[application.name].response.manifestGenerationError.length > 0}<ExclamationCircleSolid
 											class="w-5 h-5 me-2 text-rose-500 dark:text-rose-400"
 										/>
 									{:else if $diffData[argoCDApplications.name]?.[application.name].response.diffs.length > 0}
