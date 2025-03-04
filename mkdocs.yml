@@ -1,0 +1,53 @@
+site_name: Tangle
+repo_url: https://github.com/ivanklee86/tangle
+repo_name: ivanklee86/tangle
+theme:
+  name: material
+  features:
+    - header.autohide
+    - navigation.tabs
+    - navigation.path
+    - navigation.sections
+    - toc.follow
+    - search.suggest
+    - search.share
+  plugins:
+    - search
+    - social
+    - tags
+  palette:
+    # Toggles dark/light mode based on system preferences.
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+nav:
+  - Home: 'index.md'
+  - Usage Guide:
+    - Installation: 'Installation.md'
+    - Configuring ArgoCD: 'configuring_argocd.md'
+    - Configuration: 'configuration.md'
+    - Usage: 'usage.md'
+    - CLI: 'cli.md'
+    - Operations: 'operations.md'
+  - Development:
+    - Architecture: 'architecture.md'
+    - Contributing: 'contributing.md'
+
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences

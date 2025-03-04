@@ -55,7 +55,7 @@ tasks:
       - task: generate
       - go run cmd/tangle-server/main.go
 
-  run-reloading:
+  run:reloading:
     desc: Run server with hot reloading.
     cmds:
       - task: generate

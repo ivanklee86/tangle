@@ -8,14 +8,14 @@ import (
 
 func TestServer(t *testing.T) {
 	config := TangleConfig{
-		Name:                   "test-tangle",
-		Domain:                 "localhost",
-		Port:                   8081,
-		DoNotInstrumentWorkers: true,
+		Name:            "test-tangle",
+		Domain:          "localhost",
+		Port:            8081,
+		DoNotInstrument: true,
 	}
 
 	t.Run("Basic test", func(t *testing.T) {
-		tangle := New(&config)
+		tangle := New(&config, "test")
 
 		assert.NotNil(t, tangle.ArgoCDs)
 	})

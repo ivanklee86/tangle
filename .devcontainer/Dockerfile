@@ -23,15 +23,13 @@ RUN apt-get update && \
 
 USER vscode
 
-# Install Python
-RUN git clone --depth=1 https://github.com/pyenv/pyenv.git .pyenv
-ENV PYENV_ROOT="/home/vscode/.pyenv"
-ENV PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:${HOME}/.local/bin:${PATH}"
-RUN git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
-
-ARG PYTHON_VERSION="3.13"
-RUN pyenv install ${PYTHON_VERSION} && \
-    pyenv global ${PYTHON_VERSION}
+# Install and configure Python
+ENV UV_CACHE_DIR="/home/vscode/.uv_cache"
+COPY --from=ghcr.io/astral-sh/uv:debian /usr/local/bin/uv /usr/local/bin
+COPY --from=ghcr.io/astral-sh/uv:debian /usr/local/bin/uvx /usr/local/bin
+ARG PYTHON_VERSION=3.13
+RUN uv python install ${PYTHON_VERSION}
+ENV UV_LINK_MODE=copy
 
 # Install tools
 # - Tools

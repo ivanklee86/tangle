@@ -1,0 +1,32 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  CLUSTER_NAME: local
+
+tasks:
+  install:
+    desc: Install Python dependencies
+    cmds:
+      - uv pip install -r requirements.txt
+
+  install:ci:
+    desc: Install Python dependencies for CI
+    cmds:
+      - uv pip install -r requirements.txt --system
+
+  serve:
+    desc: Run mkdocs
+    cmds:
+      - uv run mkdocs serve
+
+  release:
+    desc: Publish docs to Github Pages.
+    cmds:
+      - uv run mkdocs gh-deploy --force
+
+  test:
+    desc: Make sure docs build.
+    cmds:
+      - uv run mkdocs build --strict

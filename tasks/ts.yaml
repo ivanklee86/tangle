@@ -6,6 +6,13 @@ vars:
   STATIC_DIR: build
 
 tasks:
+  default:
+    desc: Run all tasks
+    cmds:
+      - task: fmt
+      - task: lint
+      - task: build
+
   build:
     desc: Build the project
     dir: web

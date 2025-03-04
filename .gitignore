@@ -25,7 +25,7 @@ go.work.sum
 .env
 
 # Helm
-charts
+integration/**/charts
 manifest*.yaml
 .task
 
@@ -39,3 +39,7 @@ coverage.html
 tmp
 tangle-server
 build
+tmpdir
+
+## Site
+site

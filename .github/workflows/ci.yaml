@@ -37,12 +37,10 @@ jobs:
       run: task go:generate
     - name: Lint code.
       run: task go:lint
-    - name: Start ArgoCD
-      run: task services
+    - name: Run service for integration tests
+      run: task services:cicd
     - name: Run tests.
       run: task go:test-ci
-    - name: Compile code
-      run: task go:build
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always()
@@ -92,3 +90,21 @@ jobs:
       run: gofmt -d .
     - name: Run format again (so job will error if format issues found).
       run: test -z $(gofmt -l .)
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Install Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+    - name: Install Task
+      uses: arduino/setup-task@v2
+    - name: Install dependencies
+      run: task python:install:ci
+    - name: Test docs
+      run: task python:test

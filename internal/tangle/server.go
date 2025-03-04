@@ -15,6 +15,7 @@ import (
 	"github.com/flowchartsman/swaggerui"
 	"github.com/hellofresh/health-go/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/yarlson/chiprom"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -31,10 +32,14 @@ type Tangle struct {
 	Log     *httplog.Logger
 }
 
-//go:embed swagger.json
-var spec []byte
+var (
+	// Injected at build time.
+	version = "package_default" //nolint:unused
+	//go:embed swagger.json
+	spec []byte
+)
 
-func New(config *TangleConfig) *Tangle {
+func New(config *TangleConfig, version string) *Tangle {
 	tangle := Tangle{}
 	tangle.Config = config
 
@@ -47,8 +52,8 @@ func New(config *TangleConfig) *Tangle {
 		MessageFieldName: "message",
 		// TimeFieldFormat: time.RFC850,
 		Tags: map[string]string{
-			"version": "v1.0-81aa4244d9fc8076a",
-			"env":     "dev",
+			"version": version,
+			"env":     config.Env,
 		},
 		QuietDownRoutes: []string{
 			"/",
@@ -70,7 +75,10 @@ func New(config *TangleConfig) *Tangle {
 		})
 
 		wrapper, _ := argocd.New(client, key, &argocd.ArgoCDWrapperOptions{
-			DoNotInstrumentWorkers: tangle.Config.DoNotInstrumentWorkers,
+			DoNotInstrumentWorkers: tangle.Config.DoNotInstrument,
+			ListPoolWorkers:        tangle.Config.ListWorkers,
+			ManifestsPoolWorkers:   tangle.Config.ManifestsWorkers,
+			HardRefreshPoolWorkers: tangle.Config.HardRefreshWorkers,
 		})
 
 		wrappers[key] = wrapper
@@ -91,6 +99,9 @@ func New(config *TangleConfig) *Tangle {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(time.Duration(config.Timeout) * time.Second))
+	if !config.DoNotInstrument {
+		router.Use(chiprom.NewPatternMiddleware("tangle"))
+	}
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST"},
@@ -106,6 +117,7 @@ func New(config *TangleConfig) *Tangle {
 	// Application routes
 	router.Route("/api", func(r chi.Router) {
 		r.Get("/applications", tangle.applicationsHandler)
+		r.Post("/argocd/{argocd}/applications/{name}/diffs", tangle.applicationManifestsHandler)
 	})
 
 	router.Mount("/swagger", http.StripPrefix("/swagger", swaggerui.Handler(spec)))
@@ -114,7 +126,7 @@ func New(config *TangleConfig) *Tangle {
 	h, _ := health.New(health.WithComponent(
 		health.Component{
 			Name:    "tangle",
-			Version: "v1.0",
+			Version: version,
 		},
 	))
 	router.Handle("/health", h.Handler())

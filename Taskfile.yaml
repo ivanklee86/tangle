@@ -7,16 +7,21 @@ includes:
     k8s: ./tasks/k8s.yaml
     argocd: ./tasks/argocd.yaml
     ts: ./tasks/ts.yaml
+    docker: ./tasks/docker.yaml
+    python: ./tasks/python.yaml
 
 dotenv: [.env]
 
 tasks:
     default:
         cmds:
+            - task: go:generate
             - task: go:fmt
             - task: go:lint
             - task: go:build
             - task: go:test
+            - task: ts:lint
+            - task: ts:build
 
     services:
         desc: Set up services (aka ArgoCD) to use for tests.
@@ -30,3 +35,11 @@ tasks:
         desc: Test devcontainer changes
         cmds:
             - docker build -t devcontainer -f ./.devcontainer/Dockerfile .
+
+    services:cicd:
+        desc: Run Docker container.
+        deps:
+        - services
+        - docker:build
+        cmds:
+        - docker run -d -v `pwd`/integration:/config -e TANGLE_CONFIG_PATH=/config/tangle.yaml --network=host --env-file .env --rm -p 8081:8081 tangle
