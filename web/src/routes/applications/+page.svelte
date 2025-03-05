@@ -17,6 +17,10 @@
 	];
 </script>
 
+<svelte:head>
+	<title>Tangle - Applications</title>
+</svelte:head>
+
 <br />
 
 <div class="flex justify-end gap-2">
