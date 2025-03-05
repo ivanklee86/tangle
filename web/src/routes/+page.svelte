@@ -62,6 +62,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Tangle - Home</title>
+</svelte:head>
+
 {#if noRefSpecified}
 	<Toast color="red" position="top-right" on:close={() => (noRefSpecified = false)}>
 		<svelte:fragment slot="icon">

@@ -104,6 +104,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Tangle - Diffs</title>
+</svelte:head>
+
 {#if loaded}
 	{#if $applicationsData.error}
 		<Alert color="none" class="bg-red-500 text-white">
