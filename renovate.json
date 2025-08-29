@@ -2,5 +2,20 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "schedule": [
+    "every 2 weeks on friday"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["gomod"],
+      "groupName": "go.mod dependencies"
+    },
+    {
+      "matchManagers": ["devcontainer"],
+      "groupName": "devcontainer dependencies",
+      "automerge": true,
+      "platformAutomerge": true,
+    }
   ]
 }
