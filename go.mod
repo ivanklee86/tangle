@@ -5,20 +5,20 @@ go 1.23.2
 require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/alitto/pond/v2 v2.3.2
-	github.com/argoproj/argo-cd/v2 v2.14.3
+	github.com/argoproj/argo-cd/v3 v3.1.4
 	github.com/flowchartsman/swaggerui v0.0.0-20221017034628-909ed4f3701b
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/go-chi/cors v1.2.1
-	github.com/go-chi/httplog/v2 v2.1.1
+	github.com/go-chi/httplog/v3 v3.2.2
 	github.com/gofiber/fiber/v2 v2.52.6
 	github.com/google/uuid v1.6.0
 	github.com/hellofresh/health-go/v5 v5.5.3
 	github.com/jedib0t/go-pretty/v6 v6.6.7
 	github.com/joho/godotenv v1.5.1
-	github.com/knadh/koanf/parsers/yaml v0.1.0
-	github.com/knadh/koanf/providers/env v1.0.0
+	github.com/knadh/koanf/parsers/yaml v1.1.0
+	github.com/knadh/koanf/providers/env/v2 v2.0.0
 	github.com/knadh/koanf/providers/file v1.1.2
-	github.com/knadh/koanf/providers/structs v0.1.0
+	github.com/knadh/koanf/providers/structs v1.0.0
 	github.com/knadh/koanf/v2 v2.1.2
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/cobra v1.9.1
