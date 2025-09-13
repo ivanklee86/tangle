@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/alitto/pond/v2"
-	"github.com/argoproj/argo-cd/v2/pkg/apiclient/application"
+	"github.com/argoproj/argo-cd/v3/pkg/apiclient/application"
 )
 
 const (

@@ -1,11 +1,11 @@
 # See here for image contents: https://github.com/microsoft/vscode-dev-containers/blob/main/containers/go/.devcontainer/Dockerfile
-ARG VARIANT="1"
-FROM mcr.microsoft.com/devcontainers/go:1-${VARIANT}
+ARG BASE="debian-12"
+FROM mcr.microsoft.com/devcontainers/base:${BASE}
 
-# Install dependencies.
-# [Choice] Node.js version: none, lts/*, 16, 14, 12, 10
-ARG NODE_VERSION="22"
-RUN if [ "${NODE_VERSION}" != "none" ]; then su vscode -c "umask 0002 && . /usr/local/share/nvm/nvm.sh && nvm install ${NODE_VERSION} 2>&1"; fi
+# # Install dependencies.
+# # [Choice] Node.js version: none, lts/*, 16, 14, 12, 10
+# ARG NODE_VERSION="22"
+# RUN if [ "${NODE_VERSION}" != "none" ]; then su vscode -c "umask 0002 && . /usr/local/share/nvm/nvm.sh && nvm install ${NODE_VERSION} 2>&1"; fi
 
 # Setup
 ENV GOTOOLCHAIN=auto
@@ -19,9 +19,25 @@ RUN apt-get update && \
     apt-get install -y \
         # Python
         libsasl2-dev libldap2-dev libssl-dev libsnmp-dev libffi-dev \
-        libncurses-dev libsqlite3-dev libbz2-dev libreadline-dev liblzma-dev tzdata tk-dev graphviz;
+        libncurses-dev libsqlite3-dev libbz2-dev libreadline-dev liblzma-dev tzdata tk-dev graphviz \
+        # NVM
+        wget nano git xdg-utils build-essential;
+
+# Install and configure nvm (as user vscode)
+# Install Node.js from official image
+ARG NODE_VERSION="22"
+RUN if [ "${NODE_VERSION}" != "none" ]; then \
+    curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
+    apt-get install -y nodejs; \
+    fi
 
 USER vscode
+
+# Install Go
+COPY --from=golang:1.24.7 /usr/local/go/ /usr/local/go/
+
+ENV GOPATH=/home/vscode/go
+ENV PATH=/usr/local/go/bin:$GOPATH/bin:/home/vscode/.local/bin:$PATH
 
 # Install and configure Python
 ENV UV_CACHE_DIR="/home/vscode/.uv_cache"
@@ -50,11 +66,3 @@ RUN curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
 COPY --from=bitnami/kubectl /opt/bitnami/kubectl/bin/kubectl /usr/local/bin
 COPY --from=alpine/helm /usr/bin/helm /usr/local/bin
 COPY --from=derailed/k9s /bin/k9s /usr/local/bin
-
-# Modify dotfile
-RUN echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
-RUN echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zshrc
-RUN echo 'export PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
-RUN echo 'export PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc
-RUN echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
-RUN echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.zshrc

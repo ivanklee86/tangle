@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/argoproj/argo-cd/v2/pkg/apiclient"
-	"github.com/argoproj/argo-cd/v2/pkg/apiclient/application"
-	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
-	repoServerApiClient "github.com/argoproj/argo-cd/v2/reposerver/apiclient"
+	"github.com/argoproj/argo-cd/v3/pkg/apiclient"
+	"github.com/argoproj/argo-cd/v3/pkg/apiclient/application"
+	"github.com/argoproj/argo-cd/v3/pkg/apis/application/v1alpha1"
+	repoServerApiClient "github.com/argoproj/argo-cd/v3/reposerver/apiclient"
 )
 
 // ArgoCDClient defines the interface for interacting with ArgoCD
