@@ -4,7 +4,7 @@ set -ex
 # Set up Python
 rm -rf /home/vscode/.uv_cache | true
 mkdir /home/vscode/.uv_cache | true
-uv venv
+uv venv --clear
 
 # Install pre-commit hooks
 uv pip install -r requirements.txt
