@@ -19,7 +19,7 @@ jobs:
     - name: Install Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.24
+        go-version: 1.25
     - name: Install Task
       uses: arduino/setup-task@v2
     - name: Set up Docker
@@ -83,7 +83,7 @@ jobs:
     - name: Install Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.24.x
+        go-version: 1.25.x
     - name: Checkout code
       uses: actions/checkout@v4
     - name: Generate format report.
