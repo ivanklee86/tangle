@@ -1,5 +1,5 @@
 # Stage 1: Build Go server
-FROM golang:1.23-alpine AS go
+FROM golang:1.24-alpine AS go
 
 WORKDIR /app
 COPY go.mod go.sum ./

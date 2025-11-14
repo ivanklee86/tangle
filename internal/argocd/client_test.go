@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/argoproj/argo-cd/v2/pkg/apiclient/application"
+	"github.com/argoproj/argo-cd/v3/pkg/apiclient/application"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
