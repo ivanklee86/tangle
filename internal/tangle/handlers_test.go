@@ -81,6 +81,12 @@ func TestHandlers(t *testing.T) {
 			test_count: 1,
 			prod_count: 0,
 		},
+		{
+			name:       "exclude",
+			url:        "/applications?labels=foo:bar&excludeLabels=env:test",
+			test_count: 1,
+			prod_count: 2,
+		},
 	}
 
 	for _, test := range tests {

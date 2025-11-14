@@ -25,11 +25,36 @@ func TestArgoCDWrapper(t *testing.T) {
 
 		labels := make(map[string]string)
 		labels["env"] = "test"
+		excludeLabels := make(map[string]string)
 
-		results, err := wrapper.ListApplicationsByLabels(context.Background(), labels)
+		results, err := wrapper.ListApplicationsByLabels(context.Background(), labels, excludeLabels)
 		assert.Nil(t, err)
 		assert.Len(t, results, 1)
 		assert.Equal(t, "test-1", results[0].Name)
+	})
+
+	t.Run("exclude", func(t *testing.T) {
+		client, err := NewArgoCDClient(&ArgoCDClientOptions{
+			Address:         "localhost:8080",
+			Insecure:        true,
+			AuthTokenEnvVar: "ARGOCD_TOKEN",
+		})
+		assert.Nil(t, err)
+
+		wrapper, err := New(client, "test", &ArgoCDWrapperOptions{
+			DoNotInstrumentWorkers: true,
+		})
+		assert.Nil(t, err)
+
+		labels := make(map[string]string)
+		labels["foo"] = "bar"
+		excludeLabels := make(map[string]string)
+		excludeLabels["env"] = "test"
+
+		results, err := wrapper.ListApplicationsByLabels(context.Background(), labels, excludeLabels)
+		assert.Nil(t, err)
+		assert.Len(t, results, 1)
+		assert.Equal(t, "test-2", results[0].Name)
 	})
 
 	t.Run("error", func(t *testing.T) {
@@ -47,8 +72,9 @@ func TestArgoCDWrapper(t *testing.T) {
 
 		labels := make(map[string]string)
 		labels["env"] = "test"
+		excludeLabels := make(map[string]string)
 
-		_, err = wrapper.ListApplicationsByLabels(context.Background(), labels)
+		_, err = wrapper.ListApplicationsByLabels(context.Background(), labels, excludeLabels)
 		assert.NotNil(t, err)
 	})
 

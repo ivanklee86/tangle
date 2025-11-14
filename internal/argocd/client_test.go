@@ -60,7 +60,8 @@ func TestNewArgoCDClient(t *testing.T) {
 func TestArgoCDClient_List(t *testing.T) {
 	setup(t)
 
-	labelQuery := "env=test"
+	labelQueryInclude := "foo=bar"
+	labelQueryExclude := "foo=bar,env!=test"
 
 	tests := []struct {
 		name          string
@@ -77,7 +78,20 @@ func TestArgoCDClient_List(t *testing.T) {
 				AuthTokenEnvVar: "ARGOCD_TOKEN",
 			},
 			query: &application.ApplicationQuery{
-				Selector: &labelQuery,
+				Selector: &labelQueryInclude,
+			},
+			resultsLength: 2,
+			wantErr:       false,
+		},
+		{
+			name: "lists applications with exclude labels",
+			options: &ArgoCDClientOptions{
+				Address:         "localhost:8080",
+				Insecure:        true,
+				AuthTokenEnvVar: "ARGOCD_TOKEN",
+			},
+			query: &application.ApplicationQuery{
+				Selector: &labelQueryExclude,
 			},
 			resultsLength: 1,
 			wantErr:       false,

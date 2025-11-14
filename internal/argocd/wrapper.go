@@ -15,7 +15,7 @@ const (
 )
 
 type IArgoCDWrapper interface {
-	ListApplicationsByLabels(ctx context.Context, labels map[string]string) ([]ListApplicationsResult, error)
+	ListApplicationsByLabels(ctx context.Context, labels map[string]string, excludeLabels map[string]string) ([]ListApplicationsResult, error)
 	GetManifests(ctx context.Context, applicationName string, liveRef string, targetRef string) (*GetManifestsResponse, error)
 	GetUrl() string
 }
@@ -72,12 +72,15 @@ func New(client IArgoCDClient, argoCDName string, options *ArgoCDWrapperOptions)
 	return &wrapper, nil
 }
 
-func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map[string]string) ([]ListApplicationsResult, error) {
+func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map[string]string, excludeLabels map[string]string) ([]ListApplicationsResult, error) {
 	group := a.ListWorkerPool.NewGroup()
 	k8sLabel := ""
 	labelsSlice := []string{}
 	for key, value := range labels {
 		labelsSlice = append(labelsSlice, key+"="+value)
+	}
+	for key, value := range excludeLabels {
+		labelsSlice = append(labelsSlice, key+"!="+value)
 	}
 
 	k8sLabel = strings.Join(labelsSlice, ",")
