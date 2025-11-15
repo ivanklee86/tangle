@@ -13,14 +13,16 @@ import (
 )
 
 type Config struct {
-	ServerAddr      string
-	Insecure        bool
-	LabelsAsStrings []string
-	Labels          map[string]string
-	Folder          string
-	TargetRef       string
-	FailOnErrors    bool
-	Retries         int
+	ServerAddr             string
+	Insecure               bool
+	LabelsAsStrings        []string
+	ExcludeLabelsAsStrings []string
+	Labels                 map[string]string
+	ExcludeLabels          map[string]string
+	Folder                 string
+	TargetRef              string
+	FailOnErrors           bool
+	Retries                int
 }
 
 type TangleCLI struct {
@@ -122,6 +124,7 @@ func (t *TangleCLI) WriteFiles(applicationDiffsDetail *ApplicationDiffDetail) er
 func New() *TangleCLI {
 	config := Config{}
 	config.Labels = labelStringsToMap(config.LabelsAsStrings)
+	config.ExcludeLabels = labelStringsToMap(config.ExcludeLabelsAsStrings)
 
 	if config.Folder == "" {
 		dir, err := os.Getwd()
@@ -140,6 +143,7 @@ func New() *TangleCLI {
 
 func NewWithConfig(config Config) *TangleCLI {
 	config.Labels = labelStringsToMap(config.LabelsAsStrings)
+	config.ExcludeLabels = labelStringsToMap(config.ExcludeLabelsAsStrings)
 
 	if config.Folder == "" {
 		dir, err := os.Getwd()
@@ -158,10 +162,14 @@ func NewWithConfig(config Config) *TangleCLI {
 
 func (t *TangleCLI) Configure() {
 	t.Labels = labelStringsToMap(t.LabelsAsStrings)
+	t.ExcludeLabels = labelStringsToMap(t.ExcludeLabelsAsStrings)
 }
 
 func (t *TangleCLI) GenerateManifests() {
-	applicationsUrl := client.GenerateApplicationsUrl(t.ServerAddr, t.Insecure, t.Labels)
+	applicationsUrl := client.GenerateApplicationsUrlWithOptions(t.ServerAddr, t.Insecure, &client.ApplicationsUrlOptions{
+		Labels:        t.Labels,
+		ExcludeLabels: t.ExcludeLabels,
+	})
 	t.OutputHeading(fmt.Sprintf("📱 Calling %s", applicationsUrl))
 
 	var applications *tangle.ApplicationsResponse
