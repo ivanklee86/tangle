@@ -29,6 +29,7 @@
 	let { refresh = false, refreshPeriod = 5 }: Props = $props();
 
 	const labels = $page.url.searchParams.get('labels');
+	const excludeLabels = $page.url.searchParams.get('excludeLabels');
 
 	const applicationsData = writable<ApplicationResponseStore>({
 		response: { results: [] },
@@ -49,7 +50,7 @@
 		});
 
 		// Get/Refresh status
-		client.getApplications(labels).then((result) => {
+		client.getApplications(labels, excludeLabels).then((result) => {
 			applicationsData.set(result);
 		});
 	}

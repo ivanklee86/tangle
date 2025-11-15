@@ -9,6 +9,7 @@
 
 	// User inputs
 	let labels: string = $state('');
+	let excludeLabels: string = $state('');
 	let targetRef: string = $state('');
 
 	// Error flags
@@ -18,7 +19,7 @@
 	// Other strings
 	const LABEL_CHECK: RegExp = /^[^:,]+:[^:,]+(,[^:,]+:[^:,]+)*$/;
 
-	function redirectToApplications(labels: string): void {
+	function redirectToApplications(labels: string, excludeLabels: string): void {
 		if (labels.length != 0 && !LABEL_CHECK.test(labels)) {
 			invalidLabels = true;
 			return;
@@ -32,10 +33,15 @@
 			url += `?labels=${labels}`;
 		}
 
+		if (excludeLabels.length > 0) {
+			const separator = url.includes('?') ? '&' : '?';
+			url += `${separator}excludeLabels=${excludeLabels}`;
+		}
+
 		window.location.href = url;
 	}
 
-	function redirectToDiff(targetRef: string, labels: string): void {
+	function redirectToDiff(targetRef: string, labels: string, excludeLabels: string): void {
 		if (targetRef.length === 0) {
 			noRefSpecified = true;
 			return;
@@ -55,7 +61,13 @@
 		}
 
 		if (labels.length > 0) {
-			url += `&labels=${labels}`;
+			const separator = url.includes('?') ? '&' : '?';
+			url += `${separator}labels=${labels}`;
+		}
+
+		if (excludeLabels.length > 0) {
+			const separator = url.includes('?') ? '&' : '?';
+			url += `${separator}excludeLabels=${excludeLabels}`;
 		}
 
 		window.location.href = url;
@@ -98,10 +110,25 @@
 	</Label>
 
 	<br />
+
+	<Label class="space-y-2">
+		<span>Exclude Labels</span>
+		<Input
+			type="text"
+			placeholder="Labels to exclude in format 'key:value'"
+			bind:value={excludeLabels}
+			size="lg"
+		>
+			<LabelSolid slot="left" class="w-6 h-6" />
+		</Input>
+	</Label>
+
+	<br />
+
 	<GradientButton
 		color="pinkToOrange"
 		class="w-fit"
-		on:click={() => redirectToApplications(labels)}
+		on:click={() => redirectToApplications(labels, excludeLabels)}
 	>
 		See applications<ArrowRightOutline class="w-6 h-6 ms-2 text-white" />
 	</GradientButton>
@@ -118,6 +145,20 @@
 			<LabelSolid slot="left" class="w-6 h-6" />
 		</Input>
 	</Label>
+	<br />
+
+	<Label class="space-y-2">
+		<span>Exclude Labels</span>
+		<Input
+			type="text"
+			placeholder="Labels to exclude in format 'key:value'"
+			bind:value={excludeLabels}
+			size="lg"
+		>
+			<LabelSolid slot="left" class="w-6 h-6" />
+		</Input>
+	</Label>
+	<br />
 
 	<Label class="space-y-2">
 		<span>Target Ref</span>
@@ -129,7 +170,7 @@
 	<GradientButton
 		color="pinkToOrange"
 		class="w-fit"
-		on:click={() => redirectToDiff(targetRef, labels)}
+		on:click={() => redirectToDiff(targetRef, labels, excludeLabels)}
 	>
 		See diffs<ArrowRightOutline class="w-6 h-6 ms-2 text-white" />
 	</GradientButton>

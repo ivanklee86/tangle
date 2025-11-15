@@ -16,10 +16,18 @@ class TangleAPIClient {
 		this.baseUrl = PUBLIC_BASE_URL;
 	}
 
-	async getApplications(labels: string | null): Promise<ApplicationResponseStore> {
-		const url = labels
+	async getApplications(
+		labels: string | null,
+		excludeLabels: string | null
+	): Promise<ApplicationResponseStore> {
+		let url = labels
 			? `${this.baseUrl}${PATH_APPLICATIONS}?labels=${labels}`
 			: `${this.baseUrl}${PATH_APPLICATIONS}`;
+
+		if (excludeLabels) {
+			const separator = url.includes('?') ? '&' : '?';
+			url += `${separator}excludeLabels=${excludeLabels}`;
+		}
 
 		let store: ApplicationResponseStore;
 
