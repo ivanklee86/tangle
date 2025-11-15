@@ -23,6 +23,7 @@
 	import { AppManifests, ArgoCDHealthStatus, ArgoCDSyncStatus } from '$lib/components';
 
 	const labels = $page.url.searchParams.get('labels');
+	const excludeLabels = $page.url.searchParams.get('excludeLabels');
 	const targetRef = $page.url.searchParams.get('targetRef');
 	var client = new TangleAPIClient();
 
@@ -42,7 +43,7 @@
 
 	onMount(() => {
 		client
-			.getApplications(labels)
+			.getApplications(labels, excludeLabels)
 			.then(async (result) => {
 				applicationsData.set(result);
 

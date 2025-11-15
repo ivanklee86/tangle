@@ -70,6 +70,104 @@ func TestGenerateApplicationsUrl(t *testing.T) {
 	}
 }
 
+func TestGenerateApplicationsUrlWithOptions(t *testing.T) {
+	tests := []struct {
+		name       string
+		domain     string
+		insecure   bool
+		options    *ApplicationsUrlOptions
+		expected   string
+		multiLabel bool
+	}{
+		{
+			name:     "local server",
+			domain:   "test.domain",
+			insecure: true,
+			options: &ApplicationsUrlOptions{
+				Labels: map[string]string{},
+			},
+			expected:   "http://test.domain/api/applications",
+			multiLabel: false,
+		},
+		{
+			name:     "https",
+			domain:   "test.domain",
+			insecure: false,
+			options: &ApplicationsUrlOptions{
+				Labels: map[string]string{},
+			},
+			expected:   "https://test.domain/api/applications",
+			multiLabel: false,
+		},
+		{
+			name:     "one label",
+			domain:   "test.domain",
+			insecure: false,
+			options: &ApplicationsUrlOptions{
+				Labels: map[string]string{
+					"label1": "value1",
+				},
+			},
+			expected:   "https://test.domain/api/applications?labels=label1:value1",
+			multiLabel: false,
+		},
+		{
+			name:     "one exclude label",
+			domain:   "test.domain",
+			insecure: false,
+			options: &ApplicationsUrlOptions{
+				ExcludeLabels: map[string]string{
+					"label1": "value1",
+				},
+			},
+			expected:   "https://test.domain/api/applications?excludeLabels=label1:value1",
+			multiLabel: false,
+		},
+		{
+			name:     "one include and one exclude label",
+			domain:   "test.domain",
+			insecure: false,
+			options: &ApplicationsUrlOptions{
+				Labels: map[string]string{
+					"label1": "value1",
+				},
+				ExcludeLabels: map[string]string{
+					"label2": "value2",
+				},
+			},
+			expected:   "https://test.domain/api/applications?labels=label1:value1&excludeLabels=label2:value2",
+			multiLabel: false,
+		},
+		{
+			name:     "multiple labels",
+			domain:   "test.domain",
+			insecure: false,
+			options: &ApplicationsUrlOptions{
+				Labels: map[string]string{
+					"label1": "value1",
+					"label2": "value2",
+				},
+			},
+			expected:   "",
+			multiLabel: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual := GenerateApplicationsUrlWithOptions(test.domain, test.insecure, test.options)
+			if !test.multiLabel {
+				assert.Equal(t, test.expected, actual)
+			} else {
+				assert.True(t,
+					strings.Contains(actual, "?labels=label1:value1,label2:value2") || strings.Contains(actual, "?labels=label2:value2,label1:value1"),
+				)
+			}
+
+		})
+	}
+}
+
 func TestGenerateDiffUrl(t *testing.T) {
 	tests := []struct {
 		name        string

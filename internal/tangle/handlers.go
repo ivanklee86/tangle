@@ -88,11 +88,24 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	t.Log.Info("Listing applications by labels", "labels", labels)
+	excludeLabels := make(map[string]string)
+	if len(query.Get("excludeLabels")) > 0 {
+		rawLabels := strings.Split(query.Get("excludeLabels"), ",")
+		for idx := range rawLabels {
+			rawLabel := strings.Split(rawLabels[idx], ":")
+			if len(rawLabel) == 2 {
+				excludeLabels[rawLabel[0]] = rawLabel[1]
+			} else {
+				t.Log.Error("Invalid exclude label format", "label", rawLabels[idx])
+			}
+		}
+	}
+
+	t.Log.Info("Listing applications by labels", "labels", labels, "excludeLabels", excludeLabels)
 
 	apiResults := []ArgoCDApplicationResults{}
 	for name, argoCD := range t.ArgoCDs {
-		queryResults, err := argoCD.ListApplicationsByLabels(req.Context(), labels)
+		queryResults, err := argoCD.ListApplicationsByLabels(req.Context(), labels, excludeLabels)
 		if err != nil {
 			t.Log.Error("Failed to list applications by labels", "argocd", name, "error", err)
 			w.WriteHeader(http.StatusInternalServerError)

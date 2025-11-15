@@ -25,6 +25,11 @@ type applicationsQueryParams struct {
 	// required: false
 	Labels string `json:"labels"`
 
+	// Labels to exclude
+	// in: query
+	// required: false
+	ExcludeLabels string `json:"excludeLabels"`
+
 	// Name of the ArgoCD instance
 	// in: query
 	// required: false

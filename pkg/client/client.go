@@ -22,6 +22,13 @@ type ClientOptions struct {
 	Backoff []int
 }
 
+type ApplicationsUrlOptions struct {
+	Domain        string
+	Insecure      bool
+	Labels        map[string]string
+	ExcludeLabels map[string]string
+}
+
 // Validate option
 func validateClientOptions(options ClientOptions) error {
 	var backoffLen = len(DEFAULT_BACKOFF)
@@ -52,6 +59,40 @@ func GenerateApplicationsUrl(domain string, insecure bool, labels map[string]str
 		}
 
 		url += fmt.Sprintf("?labels=%s", strings.Join(labelsAsStrings, ","))
+	}
+
+	return url
+}
+
+func GenerateApplicationsUrlWithOptions(domain string, insecure bool, options *ApplicationsUrlOptions) string {
+	protocol := "http"
+	if !insecure {
+		protocol = "https"
+	}
+
+	url := fmt.Sprintf("%s://%s/%s", protocol, domain, APPLICATIONS_PATH)
+
+	labelsAsStrings := []string{}
+	if options != nil && len(options.Labels) > 0 {
+		for k, v := range options.Labels {
+			labelsAsStrings = append(labelsAsStrings, fmt.Sprintf("%s:%s", k, v))
+		}
+
+		url += fmt.Sprintf("?labels=%s", strings.Join(labelsAsStrings, ","))
+	}
+
+	excludeLabelsAsStrings := []string{}
+	if options != nil && len(options.ExcludeLabels) > 0 {
+		for k, v := range options.ExcludeLabels {
+			excludeLabelsAsStrings = append(excludeLabelsAsStrings, fmt.Sprintf("%s:%s", k, v))
+		}
+
+		if strings.Contains(url, "?") {
+			url += "&"
+		} else {
+			url += "?"
+		}
+		url += fmt.Sprintf("excludeLabels=%s", strings.Join(excludeLabelsAsStrings, ","))
 	}
 
 	return url
