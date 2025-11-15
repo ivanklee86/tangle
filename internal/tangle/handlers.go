@@ -101,7 +101,7 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	t.Log.Info("Listing applications by labels", "labels", labels)
+	t.Log.Info("Listing applications by labels", "labels", labels, "excludeLabels", excludeLabels)
 
 	apiResults := []ArgoCDApplicationResults{}
 	for name, argoCD := range t.ArgoCDs {
