@@ -34,12 +34,13 @@ Usage:
   tangle-cli generate-manifests [flags]
 
 Flags:
-      --fail-on-error       Fail command if errors are found.
-      --folder string       Folder to generate manifests in.  Defaults to current folder.
-  -h, --help                help for generate-manifests
-      --label strings       Labels to filter projects on in format 'key=value'.  Can be used multiple times.
-      --retries int         Number of retried for failed calls.  Must be between 0 (no retries) and 5.
-      --target-ref string   Git refernce to generate manifests.
+      --exclude-label strings   Labels to exclude projects on in format 'key=value'.  Can be used multiple times.
+      --fail-on-error           Fail command if errors are found.
+      --folder string           Folder to generate manifests in.  Defaults to current folder.
+  -h, --help                    help for generate-manifests
+      --label strings           Labels to filter projects on in format 'key=value'.  Can be used multiple times.
+      --retries int             Number of retried for failed calls.  Must be between 0 (no retries) and 5.
+      --target-ref string       Git refernce to generate manifests.
 
 Global Flags:
       --insecure                Don't validate SSL certificate on client request

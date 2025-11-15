@@ -7,7 +7,7 @@ Tangle consists of two components:
     - It uses the [chi](https://github.com/go-chi/chi) router since it offers useful, clearly beneficial features (route groups/middleware support) while being lightweight and using standard http handlers.
     - It uses the [ArgoCD SDK](https://pkg.go.dev/github.com/argoproj/argo-cd@v1.8.7/pkg/apiclient) to talk to ArgoCD servers.
     - Each ArgoCD API has a [`alitto/pond`](https://github.com/alitto/pond) worker pool that allows us to balance concurrency against putting excess demand on the `repo` microservice..
-    - Endpoints are documented with [OpenAPI](https://prometheus.io/) and server includes an [embedded Swagger UI](https://github.com/swaggest/swgui) in the `/swagger` endpoint.
+    - Endpoints are documented with [OpenAPI](https://prometheus.io/) and server includes an [embedded Swagger UI](https://github.com/swaggest/swgui) in the `/swagger/` endpoint.
     - It uses standard observability tools like:
         - [hellofresh/health-go](https://prometheus.io/) `/health` endpoints.
         - [Prometheus](https://prometheus.io/) `/metrics` endpoint.
