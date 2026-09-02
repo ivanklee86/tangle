@@ -2,31 +2,31 @@ module github.com/ivanklee86/tangle
 
 go 1.24.6
 
-toolchain go1.24.7
+toolchain go1.27.1
 
 require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
-	github.com/alitto/pond/v2 v2.5.0
-	github.com/argoproj/argo-cd/v3 v3.1.7
+	github.com/alitto/pond/v2 v2.7.1
+	github.com/argoproj/argo-cd/v3 v3.5.2
 	github.com/flowchartsman/swaggerui v0.0.0-20221017034628-909ed4f3701b
-	github.com/go-chi/chi/v5 v5.2.3
+	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-chi/cors v1.2.2
 	github.com/go-chi/httplog/v2 v2.1.1
-	github.com/gofiber/fiber/v2 v2.52.9
+	github.com/gofiber/fiber/v2 v2.52.15
 	github.com/google/uuid v1.6.1-0.20241114170450-2d3c2a9cc518
 	github.com/hellofresh/health-go/v5 v5.5.5
-	github.com/jedib0t/go-pretty/v6 v6.6.8
+	github.com/jedib0t/go-pretty/v6 v6.8.3
 	github.com/joho/godotenv v1.5.1
-	github.com/knadh/koanf/parsers/yaml v1.1.0
+	github.com/knadh/koanf/parsers/yaml v1.1.1
 	github.com/knadh/koanf/providers/env v1.1.0
-	github.com/knadh/koanf/providers/file v1.2.0
-	github.com/knadh/koanf/providers/structs v1.0.0
-	github.com/knadh/koanf/v2 v2.3.0
-	github.com/prometheus/client_golang v1.23.2
-	github.com/spf13/cobra v1.10.1
+	github.com/knadh/koanf/providers/file v1.2.1
+	github.com/knadh/koanf/providers/structs v1.0.1
+	github.com/knadh/koanf/v2 v2.3.6
+	github.com/prometheus/client_golang v1.24.1
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 	github.com/yarlson/chiprom v0.1.0
 	sigs.k8s.io/yaml v1.6.0
 )
