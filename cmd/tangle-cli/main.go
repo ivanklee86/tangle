@@ -44,10 +44,10 @@ func NewRootCommand() *cobra.Command {
 
 			return initializeConfig(cmd)
 		},
-		Run: func(cmd *cobra.Command, args []string) {
-			if _, err := fmt.Fprint(tanglecli.Out, cmd.UsageString()); err != nil {
-				fmt.Fprintln(os.Stderr, err)
-			}
+		RunE: func(cmd *cobra.Command, args []string) error {
+			_, err := fmt.Fprint(tanglecli.Out, cmd.UsageString())
+
+			return err
 		},
 	}
 
