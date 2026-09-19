@@ -56,7 +56,8 @@ flowchart LR
 
 - **`GET /api/applications?labels=k:v&excludeLabels=k:v`** — fans out over every configured ArgoCD,
   translating labels into a single Kubernetes selector (`k=v,k!=v`), and returns per-instance results
-  ordered by `sortOrder`. Deep links back into each ArgoCD UI are synthesized from the instance address.
+  ordered by `sortOrder`. Deep links back into each ArgoCD UI are synthesized from the instance
+  address and scheme (`http`/`https`, from that instance's `plainText`/`insecure` config).
 - **`POST /api/argocd/{argocd}/applications/{name}/diffs`** — submits a `refresh=hard` `Get` on the
   hard-refresh pool, then generates manifests for `liveRef` and `targetRef` concurrently on the
   manifests pool, converts each to YAML, and shells out to `diff -uNar` over two tempfiles.

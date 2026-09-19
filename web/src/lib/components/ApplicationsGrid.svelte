@@ -28,6 +28,43 @@
 
 	let { refresh = false, refreshPeriod = 5 }: Props = $props();
 
+	// flowbite-svelte 1.x dropped TableHeadCell's built-in `sort` prop/context, so
+	// column sorting is reimplemented here (one independent sort state per tab).
+	type SortKey = 'name' | 'health' | 'syncStatus';
+	type SortState = { key: SortKey; direction: 'asc' | 'desc' };
+
+	let sortState: Record<string, SortState | undefined> = $state({});
+
+	function toggleSort(tabName: string, key: SortKey) {
+		const current = sortState[tabName];
+		sortState[tabName] =
+			current?.key === key
+				? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+				: { key, direction: 'asc' };
+	}
+
+	function sortIndicator(tabName: string, key: SortKey): string {
+		const current = sortState[tabName];
+		if (current?.key !== key) return '';
+		return current.direction === 'asc' ? ' ▲' : ' ▼';
+	}
+
+	function ariaSort(tabName: string, key: SortKey): 'ascending' | 'descending' | 'none' {
+		const current = sortState[tabName];
+		if (current?.key !== key) return 'none';
+		return current.direction === 'asc' ? 'ascending' : 'descending';
+	}
+
+	function sortedApplications(
+		tabName: string,
+		applications: ApplicationLinks[]
+	): ApplicationLinks[] {
+		const state = sortState[tabName];
+		if (!state) return applications;
+		const sorted = [...applications].sort((a, b) => a[state.key].localeCompare(b[state.key]));
+		return state.direction === 'asc' ? sorted : sorted.reverse();
+	}
+
 	const labels = $page.url.searchParams.get('labels');
 	const excludeLabels = $page.url.searchParams.get('excludeLabels');
 
@@ -80,7 +117,7 @@
 </script>
 
 {#if $applicationsData.error}
-	<Alert color="none" class="bg-red-500 text-white">
+	<Alert color="red" class="bg-red-500 text-white">
 		<span class="font-medium">System error!</span>
 		<br />
 		{$applicationsData.errorResponse?.error}
@@ -88,42 +125,51 @@
 {:else if $applicationsData.loaded}
 	<Tabs tabStyle="underline" class="ml-5 mr-5">
 		{#each filterOutZeroResults($applicationsData.response.results) as argoCDApplications, index (argoCDApplications.name)}
-			<TabItem
-				title={argoCDApplications.name}
-				open={index === 0}
-				disabled={argoCDApplications.applications.length === 0}
-			>
-				<span slot="title"
-					>{argoCDApplications.name} ({argoCDApplications.applications.length})</span
-				>
+			<TabItem open={index === 0} disabled={argoCDApplications.applications.length === 0}>
+				{#snippet titleSlot()}
+					{argoCDApplications.name} ({argoCDApplications.applications.length})
+				{/snippet}
 				<Button href={argoCDApplications.link} target="_blank" class="mb-3">Take me there!</Button>
 				<br />
-				<Table hoverable={true} items={argoCDApplications.applications}>
+				<Table hoverable={true}>
 					<TableHead>
-						<TableHeadCell
-							sort={(a: ApplicationLinks, b: ApplicationLinks) => a.name.localeCompare(b.name)}
-							>Applications</TableHeadCell
-						>
-						<TableHeadCell
-							sort={(a: ApplicationLinks, b: ApplicationLinks) => a.health.localeCompare(b.health)}
-							>Health</TableHeadCell
-						>
-						<TableHeadCell
-							sort={(a: ApplicationLinks, b: ApplicationLinks) =>
-								a.syncStatus.localeCompare(b.syncStatus)}>Sync Status</TableHeadCell
-						>
+						<TableHeadCell aria-sort={ariaSort(argoCDApplications.name, 'name')}>
+							<button
+								type="button"
+								class="cursor-pointer select-none"
+								onclick={() => toggleSort(argoCDApplications.name, 'name')}
+								>Applications{sortIndicator(argoCDApplications.name, 'name')}</button
+							>
+						</TableHeadCell>
+						<TableHeadCell aria-sort={ariaSort(argoCDApplications.name, 'health')}>
+							<button
+								type="button"
+								class="cursor-pointer select-none"
+								onclick={() => toggleSort(argoCDApplications.name, 'health')}
+								>Health{sortIndicator(argoCDApplications.name, 'health')}</button
+							>
+						</TableHeadCell>
+						<TableHeadCell aria-sort={ariaSort(argoCDApplications.name, 'syncStatus')}>
+							<button
+								type="button"
+								class="cursor-pointer select-none"
+								onclick={() => toggleSort(argoCDApplications.name, 'syncStatus')}
+								>Sync Status{sortIndicator(argoCDApplications.name, 'syncStatus')}</button
+							>
+						</TableHeadCell>
 					</TableHead>
-					<TableBody tableBodyClass="divide-y">
-						<TableBodyRow slot="row" let:item>
-							<TableBodyCell>
-								{/* @ts-expect-error: Svelte doesn't correctly impute type of item and you can't set it. */ null}
-								<a href={item.url} target="_blank" class="link-underline-primary">{item.name}</a>
-							</TableBodyCell>
-							{/* @ts-expect-error: See ^ */ null}
-							<TableBodyCell><ArgoCDHealthStatus healthStatus={item.health} /></TableBodyCell>
-							{/* @ts-expect-error: See % */ null}
-							<TableBodyCell><ArgoCDSyncStatus syncStatus={item.syncStatus} /></TableBodyCell>
-						</TableBodyRow>
+					<TableBody class="divide-y">
+						{#each sortedApplications(argoCDApplications.name, argoCDApplications.applications) as item (item.name)}
+							<TableBodyRow>
+								<TableBodyCell>
+									<a href={item.url} target="_blank" rel="external" class="link-underline-primary"
+										>{item.name}</a
+									>
+								</TableBodyCell>
+								<TableBodyCell><ArgoCDHealthStatus healthStatus={item.health} /></TableBodyCell>
+								<TableBodyCell><ArgoCDSyncStatus syncStatus={item.syncStatus} /></TableBodyCell>
+							</TableBodyRow>
+						{/each}
 					</TableBody>
 				</Table>
 			</TabItem>

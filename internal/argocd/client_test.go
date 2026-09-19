@@ -28,7 +28,7 @@ func TestNewArgoCDClient(t *testing.T) {
 			name: "creates client with valid options",
 			options: &ArgoCDClientOptions{
 				Address:         "localhost:8080",
-				Insecure:        true,
+				PlainText:       true,
 				AuthTokenEnvVar: "ARGOCD_TOKEN",
 			},
 			wantErr: false,
@@ -37,7 +37,7 @@ func TestNewArgoCDClient(t *testing.T) {
 			name: "creates client with invalid options",
 			options: &ArgoCDClientOptions{
 				Address:         "https://localhost:8080",
-				Insecure:        true,
+				PlainText:       true,
 				AuthTokenEnvVar: "ARGOCD_TOKEN1",
 			},
 			wantErr: true,
@@ -74,7 +74,7 @@ func TestArgoCDClient_List(t *testing.T) {
 			name: "lists applications successfully",
 			options: &ArgoCDClientOptions{
 				Address:         "localhost:8080",
-				Insecure:        true,
+				PlainText:       true,
 				AuthTokenEnvVar: "ARGOCD_TOKEN",
 			},
 			query: &application.ApplicationQuery{
@@ -87,7 +87,7 @@ func TestArgoCDClient_List(t *testing.T) {
 			name: "lists applications with exclude labels",
 			options: &ArgoCDClientOptions{
 				Address:         "localhost:8080",
-				Insecure:        true,
+				PlainText:       true,
 				AuthTokenEnvVar: "ARGOCD_TOKEN",
 			},
 			query: &application.ApplicationQuery{
@@ -131,7 +131,7 @@ func TestArgoCDClient_GetApplicationManifests(t *testing.T) {
 			name: "gets application manifests successfully",
 			options: &ArgoCDClientOptions{
 				Address:         "localhost:8080",
-				Insecure:        true,
+				PlainText:       true,
 				AuthTokenEnvVar: "ARGOCD_TOKEN",
 			},
 			query: &application.ApplicationManifestQuery{
@@ -172,7 +172,7 @@ func TestArgoCDClient_Get(t *testing.T) {
 			name: "gets application successfully",
 			options: &ArgoCDClientOptions{
 				Address:         "localhost:8080",
-				Insecure:        true,
+				PlainText:       true,
 				AuthTokenEnvVar: "ARGOCD_TOKEN",
 			},
 			query: &application.ApplicationQuery{

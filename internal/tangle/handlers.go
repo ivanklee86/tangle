@@ -113,7 +113,7 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		baseLink := fmt.Sprintf("https://%s/applications", argoCD.GetUrl())
+		baseLink := fmt.Sprintf("%s://%s/applications", argoCD.GetScheme(), argoCD.GetUrl())
 		if len(labels) > 0 {
 			mergedLabels := []string{}
 			for key, value := range labels {
@@ -134,7 +134,7 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 		for _, queryResult := range queryResults {
 			argoCDApplicationResult.Applications = append(argoCDApplicationResult.Applications, ApplicationLinks{
 				Name:       queryResult.Name,
-				URL:        fmt.Sprintf("https://%s/applications/%s/%s", argoCD.GetUrl(), queryResult.Namespace, queryResult.Name),
+				URL:        fmt.Sprintf("%s://%s/applications/%s/%s", argoCD.GetScheme(), argoCD.GetUrl(), queryResult.Namespace, queryResult.Name),
 				Health:     string(queryResult.Health.Status),
 				SyncStatus: string(queryResult.SyncStatus.Status),
 				LiveRef:    queryResult.LiveRevision,

@@ -15,7 +15,7 @@
       "matchManagers": ["devcontainer"],
       "groupName": "devcontainer dependencies",
       "automerge": true,
-      "platformAutomerge": true,
+      "platformAutomerge": true
     }
   ]
 }

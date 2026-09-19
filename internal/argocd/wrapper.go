@@ -18,6 +18,7 @@ type IArgoCDWrapper interface {
 	ListApplicationsByLabels(ctx context.Context, labels map[string]string, excludeLabels map[string]string) ([]ListApplicationsResult, error)
 	GetManifests(ctx context.Context, applicationName string, liveRef string, targetRef string) (*GetManifestsResponse, error)
 	GetUrl() string
+	GetScheme() string
 }
 
 type ArgoCDWrapperOptions struct {
@@ -184,4 +185,8 @@ func (a *ArgoCDWrapper) GetManifests(ctx context.Context, applicationName string
 
 func (a *ArgoCDWrapper) GetUrl() string {
 	return a.ApplicationClient.GetUrl()
+}
+
+func (a *ArgoCDWrapper) GetScheme() string {
+	return a.ApplicationClient.GetScheme()
 }

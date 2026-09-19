@@ -71,6 +71,7 @@ func New(config *TangleConfig, version string) *Tangle {
 		client, _ := argocd.NewArgoCDClient(&argocd.ArgoCDClientOptions{
 			Address:         value.Address,
 			Insecure:        value.Insecure,
+			PlainText:       value.PlainText,
 			AuthTokenEnvVar: value.AuthTokenEnvVar,
 		})
 
@@ -96,7 +97,12 @@ func New(config *TangleConfig, version string) *Tangle {
 	// Middlewares
 	router.Use(httplog.RequestLogger(logger))
 	router.Use(middleware.RequestID)
-	router.Use(middleware.RealIP)
+	// middleware.RealIP is deprecated (IP-spoofable); resolve the client IP with the
+	// rightmost X-Forwarded-For entry (safe for exactly one trusted hop, e.g. an
+	// ingress/reverse proxy immediately in front of this server) and copy it into
+	// RemoteAddr so it still shows up in httplog's "remoteIP" field.
+	router.Use(middleware.ClientIPFromXFF())
+	router.Use(setRemoteAddrFromClientIP)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(time.Duration(config.Timeout) * time.Second))
 	if !config.DoNotInstrument {
@@ -135,6 +141,18 @@ func New(config *TangleConfig, version string) *Tangle {
 	router.Handle("/*", http.FileServer(fileDir))
 
 	return &tangle
+}
+
+// setRemoteAddrFromClientIP copies the client IP resolved by one of chi's
+// middleware.ClientIPFrom* middlewares into r.RemoteAddr, so it's visible in
+// httplog's "remoteIP" field. Leaves RemoteAddr untouched if none was resolved.
+func setRemoteAddrFromClientIP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if ip := middleware.GetClientIP(r.Context()); ip != "" {
+			r.RemoteAddr = ip
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (t *Tangle) Start() {

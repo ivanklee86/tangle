@@ -19,16 +19,18 @@ jobs:
     - name: Install Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.24
+        go-version: 1.27
     - name: Install Task
       uses: arduino/setup-task@v2
     - name: Set up Docker
       uses: crazy-max/ghaction-setup-docker@v4
     - name: Install k3d
-      run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+      # Keep in sync with K3D_VERSION in .devcontainer/Dockerfile.
+      run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.9.0 bash
     - name: Install argocd
+      # Keep in sync with the argocd CLI version in .devcontainer/Dockerfile.
       run: |
-        curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+        curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v3.5.3/argocd-linux-amd64
         sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
         rm argocd-linux-amd64
     - name: Install all dependencies
@@ -67,7 +69,7 @@ jobs:
     - name: Install Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '22'
+        node-version: '24'
     - name: Install Task
       uses: arduino/setup-task@v2
     - name: Install packages
@@ -83,7 +85,7 @@ jobs:
     - name: Install Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.24.x
+        go-version: 1.27.x
     - name: Checkout code
       uses: actions/checkout@v4
     - name: Generate format report.

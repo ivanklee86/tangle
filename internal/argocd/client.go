@@ -18,11 +18,15 @@ type IArgoCDClient interface {
 	GetApplicationManifests(ctx context.Context, in *application.ApplicationManifestQuery) (*repoServerApiClient.ManifestResponse, error)
 	Get(ctx context.Context, in *application.ApplicationQuery) (*v1alpha1.Application, error)
 	GetUrl() string
+	// GetScheme returns the URL scheme ("http" or "https") this client's ArgoCD instance is
+	// reachable on, for building deep links back into its UI.
+	GetScheme() string
 }
 
 type ArgoCDClientOptions struct {
 	Address         string
 	Insecure        bool
+	PlainText       bool
 	AuthTokenEnvVar string
 }
 
@@ -45,6 +49,7 @@ func NewArgoCDClient(options *ArgoCDClientOptions) (IArgoCDClient, error) {
 	argocdClient := apiclient.NewClientOrDie(&apiclient.ClientOptions{
 		ServerAddr: client.Options.Address,
 		Insecure:   client.Options.Insecure,
+		PlainText:  client.Options.PlainText,
 		AuthToken:  authToken,
 		GRPCWeb:    true,
 	})
@@ -83,4 +88,12 @@ func (c *ArgoCDClient) Get(ctx context.Context, query *application.ApplicationQu
 
 func (c *ArgoCDClient) GetUrl() string {
 	return c.Options.Address
+}
+
+func (c *ArgoCDClient) GetScheme() string {
+	if c.Options.PlainText {
+		return "http"
+	}
+
+	return "https"
 }

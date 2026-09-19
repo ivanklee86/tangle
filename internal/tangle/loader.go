@@ -46,8 +46,8 @@ func LoadConfig(config *koanf.Koanf, options LoadConfigOptions) (*TangleConfig, 
 	}
 
 	err = config.Load(env.Provider(EnvVarPrefix, ".", func(s string) string {
-		return strings.Replace(strings.ToLower(
-			strings.TrimPrefix(s, EnvVarPrefix)), "_", ".", -1)
+		return strings.ReplaceAll(strings.ToLower(
+			strings.TrimPrefix(s, EnvVarPrefix)), "_", ".")
 	}), nil)
 	if err != nil {
 		return nil, err

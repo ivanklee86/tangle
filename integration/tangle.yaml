@@ -9,11 +9,11 @@ hardRefreshWorkers: 10
 argocds:
   test:
     address: "localhost:8080"
-    insecure: true
+    plainText: true
     authTokenEnvVar: "ARGOCD_TOKEN"
   prod:
     address: "localhost:8080"
-    insecure: true
+    plainText: true
     authTokenEnvVar: "ARGOCD_PROD_TOKEN"
 
 sortOrder:

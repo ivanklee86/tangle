@@ -39,7 +39,7 @@
 
 	const diffData = writable<ApplicationsDiffsData>({});
 	let loaded: boolean = $state(false);
-	let alertStatuses: List[string] = ['OutOfSync', 'Unknown'];
+	let alertStatuses: string[] = ['OutOfSync', 'Unknown'];
 
 	onMount(() => {
 		client
@@ -111,7 +111,7 @@
 
 {#if loaded}
 	{#if $applicationsData.error}
-		<Alert color="none" class="bg-red-500 text-white">
+		<Alert color="red" class="bg-red-500 text-white">
 			<span class="font-medium">System error!</span>
 			<br />
 			{$applicationsData.errorResponse?.error}
@@ -121,25 +121,26 @@
 	{#if $applicationsData.loaded}
 		<Tabs tabStyle="underline" class="ml-5 mr-5">
 			{#each filterOutZeroResults($applicationsData.response.results) as argoCDApplications, index (argoCDApplications.name)}
-				<TabItem
-					title={argoCDApplications.name}
-					open={index === 0}
-					disabled={argoCDApplications.applications.length === 0}
-				>
+				<TabItem open={index === 0} disabled={argoCDApplications.applications.length === 0}>
+					{#snippet titleSlot()}
+						{argoCDApplications.name}
+					{/snippet}
 					<Tabs>
 						{#each argoCDApplications.applications as application, appIndex (application.name)}
-							<TabItem title={application.name} open={appIndex === 0}>
-								<div slot="title" class="flex items-center">
-									{#if alertStatuses.includes(application.syncStatus) || application.health !== 'Healthy' || $diffData[argoCDApplications.name]?.[application.name].error || $diffData[argoCDApplications.name]?.[application.name].response.manifestGenerationError.length > 0}<ExclamationCircleSolid
-											class="w-5 h-5 me-2 text-rose-500 dark:text-rose-400"
-										/>
-									{:else if $diffData[argoCDApplications.name]?.[application.name].response.diffs.length > 0}
-										<BellRingSolid class="w-5 h-5 me-2 text-amber-500 dark:text-amber-400" />
-									{/if}
-									{application.name}
-								</div>
+							<TabItem open={appIndex === 0}>
+								{#snippet titleSlot()}
+									<div class="flex items-center">
+										{#if alertStatuses.includes(application.syncStatus) || application.health !== 'Healthy' || $diffData[argoCDApplications.name]?.[application.name].error || $diffData[argoCDApplications.name]?.[application.name].response.manifestGenerationError.length > 0}<ExclamationCircleSolid
+												class="w-5 h-5 me-2 text-rose-500 dark:text-rose-400"
+											/>
+										{:else if $diffData[argoCDApplications.name]?.[application.name].response.diffs.length > 0}
+											<BellRingSolid class="w-5 h-5 me-2 text-amber-500 dark:text-amber-400" />
+										{/if}
+										{application.name}
+									</div>
+								{/snippet}
 								<Heading tag="h3">Status</Heading>
-								<List tag="ul" class="space-y-1 text-gray-500 dark:text-gray-400" list="none">
+								<List tag="ul" class="list-none space-y-1 text-gray-500 dark:text-gray-400">
 									<Li icon>
 										<ArgoCDHealthStatus healthStatus={application.health} />
 									</Li>
@@ -149,12 +150,12 @@
 								</List>
 								<br />
 								<div class="align-bottom">
-									<P>(<A href={application.url} target="_blank" aClass="xs">More Info</A>)</P>
+									<P>(<A href={application.url} target="_blank" class="text-xs">More Info</A>)</P>
 									<GradientButton
 										class="absolute right-5"
 										outline
 										color="pinkToOrange"
-										on:click={() =>
+										onclick={() =>
 											reloadDiff(
 												argoCDApplications.name,
 												application.name,

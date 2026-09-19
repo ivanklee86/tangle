@@ -4,7 +4,8 @@ The `tangle.yaml` file is the primary configuration file and specifies how Tangl
 argocds: # This section defines ArgoCD instances.
   test:
     address: "localhost:8080" # Address of the ArgoCD instance.  Should NOT have https://
-    insecure: true # Optional, can omit if ArgoCD has a proper certification.
+    insecure: true # Optional, skips TLS certificate verification (e.g. a self-signed cert).
+    plainText: true # Optional, connects without TLS at all (e.g. ArgoCD behind a plain-HTTP Gateway/Ingress).
     authTokenEnvVar: "ARGOCD_TOKEN"  # Name of environment variable containing ArgoCD JWT.
   prod:
     address: "localhost:8080"

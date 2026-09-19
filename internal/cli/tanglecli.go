@@ -93,8 +93,8 @@ func (t *TangleCLI) WriteFiles(applicationDiffsDetail *ApplicationDiffDetail) er
 		return err
 	}
 
-	defer diffFile.Close()
-	defer manifestsFile.Close()
+	defer func() { _ = diffFile.Close() }()
+	defer func() { _ = manifestsFile.Close() }()
 
 	_, err = diffFile.WriteString(applicationDiffsDetail.Response.Diffs)
 	if err != nil {
@@ -110,7 +110,7 @@ func (t *TangleCLI) WriteFiles(applicationDiffsDetail *ApplicationDiffDetail) er
 		if err != nil {
 			return err
 		}
-		defer errorFile.Close()
+		defer func() { _ = errorFile.Close() }()
 		_, err = errorFile.WriteString(applicationDiffsDetail.Response.ManifestGenerationError)
 		if err != nil {
 			return err
@@ -174,9 +174,9 @@ func (t *TangleCLI) GenerateManifests() {
 
 	var applications *tangle.ApplicationsResponse
 	var err error
-	if t.Config.Retries > 0 {
+	if t.Retries > 0 {
 		options := client.ClientOptions{
-			Retries: t.Config.Retries,
+			Retries: t.Retries,
 		}
 		applications, err = client.GetApplicationWithRetries(applicationsUrl, &options)
 		if err != nil {
@@ -213,9 +213,9 @@ func (t *TangleCLI) GenerateManifests() {
 
 			var response *tangle.DiffsResponse
 			var err error
-			if t.Config.Retries > 0 {
+			if t.Retries > 0 {
 				options := client.ClientOptions{
-					Retries: t.Config.Retries,
+					Retries: t.Retries,
 				}
 				response, err = client.GetDiffsWithRetries(diffUrl, diff.LiveRef, t.TargetRef, &options)
 				if err != nil {
@@ -259,6 +259,5 @@ func (t *TangleCLI) GenerateManifests() {
 
 	if t.FailOnErrors && failures {
 		t.Error("Failures found in manifest generation!")
-		os.Exit(1)
 	}
 }

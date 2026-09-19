@@ -13,7 +13,7 @@
 </script>
 
 {#if diffData.error}
-	<Alert color="none" class="bg-red-500 text-white">
+	<Alert color="red" class="bg-red-500 text-white">
 		<span class="font-medium">System error!</span>
 		<br />
 		{diffData.errorResponse?.error}
@@ -38,7 +38,9 @@
 	<br />
 	<Accordion>
 		<AccordionItem>
-			<span slot="header">Manifests</span>
+			{#snippet header()}
+				Manifests
+			{/snippet}
 			<CodeBlock language="yaml" code={diffData.response.targetManifests} />
 		</AccordionItem>
 	</Accordion>
