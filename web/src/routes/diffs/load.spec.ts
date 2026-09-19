@@ -5,7 +5,7 @@ import { type ApplicationResponseStore } from '$lib/backend/data';
 function mockFetch(status: number, body: unknown) {
 	return vi.fn().mockResolvedValue({
 		status,
-		json: () => Promise.resolve(body)
+		text: () => Promise.resolve(JSON.stringify(body))
 	});
 }
 

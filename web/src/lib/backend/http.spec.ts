@@ -17,7 +17,7 @@ describe('fetchEnvelope', () => {
 			'fetch',
 			vi.fn().mockResolvedValue({
 				status: 200,
-				json: () => Promise.resolve({ name: 'foo' })
+				text: () => Promise.resolve(JSON.stringify({ name: 'foo' }))
 			})
 		);
 
@@ -36,7 +36,7 @@ describe('fetchEnvelope', () => {
 			'fetch',
 			vi.fn().mockResolvedValue({
 				status: 500,
-				json: () => Promise.resolve({ error: 'boom' })
+				text: () => Promise.resolve(JSON.stringify({ error: 'boom' }))
 			})
 		);
 
@@ -45,6 +45,25 @@ describe('fetchEnvelope', () => {
 		expect(result).toEqual({
 			response: emptyWidget,
 			errorResponse: { error: 'boom' },
+			error: true,
+			loaded: true
+		});
+	});
+
+	it('falls back to the raw body text as the error when a non-200 response is not JSON', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue({
+				status: 400,
+				text: () => Promise.resolve('invalid request body')
+			})
+		);
+
+		const result = await fetchEnvelope<Widget>('/widgets', emptyWidget);
+
+		expect(result).toEqual({
+			response: emptyWidget,
+			errorResponse: { error: 'invalid request body' },
 			error: true,
 			loaded: true
 		});
@@ -79,7 +98,7 @@ describe('fetchEnvelope', () => {
 		);
 		const injectedFetch = vi.fn().mockResolvedValue({
 			status: 200,
-			json: () => Promise.resolve({ name: 'bar' })
+			text: () => Promise.resolve(JSON.stringify({ name: 'bar' }))
 		});
 
 		const result = await fetchEnvelope<Widget>('/widgets', emptyWidget, undefined, injectedFetch);

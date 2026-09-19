@@ -4,7 +4,7 @@ import TangleAPIClient from '$lib/backend/client';
 function mockFetch(status: number, body: unknown) {
 	const fetchMock = vi.fn().mockResolvedValue({
 		status,
-		json: () => Promise.resolve(body)
+		text: () => Promise.resolve(JSON.stringify(body))
 	});
 	vi.stubGlobal('fetch', fetchMock);
 	return fetchMock;
@@ -53,7 +53,7 @@ describe('TangleAPIClient', () => {
 			mockFetch(500, { error: 'global fetch should not be called' });
 			const injectedFetch = vi.fn().mockResolvedValue({
 				status: 200,
-				json: () => Promise.resolve({ results: [] })
+				text: () => Promise.resolve(JSON.stringify({ results: [] }))
 			});
 			const client = new TangleAPIClient(injectedFetch);
 

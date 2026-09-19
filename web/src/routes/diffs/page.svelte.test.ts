@@ -15,13 +15,15 @@ function mockDiffFetch() {
 		'fetch',
 		vi.fn().mockResolvedValue({
 			status: 200,
-			json: () =>
-				Promise.resolve({
-					liveManifests: '',
-					targetManifests: '',
-					diffs: '',
-					manifestGenerationError: ''
-				})
+			text: () =>
+				Promise.resolve(
+					JSON.stringify({
+						liveManifests: '',
+						targetManifests: '',
+						diffs: '',
+						manifestGenerationError: ''
+					})
+				)
 		})
 	);
 }
@@ -84,5 +86,37 @@ describe('diffs +page.svelte', () => {
 
 		await expect.element(screen.getByText('alpha')).toBeVisible();
 		await expect.element(screen.getByText('Status')).toBeVisible();
+	});
+
+	test('refetches diffs when a new data.applications arrives via client-side navigation', async () => {
+		mockDiffFetch();
+
+		const { rerender, getByText } = await render(Page, {
+			params: {},
+			data: { applications: Promise.resolve(resolvedApplications) }
+		});
+
+		await expect.element(getByText('alpha')).toBeVisible();
+
+		const navigatedApplications: ApplicationResponseStore = {
+			response: {
+				results: [
+					{
+						name: 'test',
+						link: '',
+						applications: [
+							{ name: 'beta', url: '', health: 'Healthy', syncStatus: 'Synced', liveRef: 'main' }
+						]
+					}
+				]
+			},
+			errorResponse: { error: '' },
+			error: false,
+			loaded: true
+		};
+
+		await rerender({ data: { applications: Promise.resolve(navigatedApplications) } });
+
+		await expect.element(getByText('beta')).toBeVisible();
 	});
 });

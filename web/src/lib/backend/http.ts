@@ -15,18 +15,23 @@ async function fetchEnvelope<T>(
 ): Promise<Envelope<T>> {
 	try {
 		const response = await fetchImpl(url, options);
-		const data = await response.json();
+		const text = await response.text();
 
 		if (response.status !== 200) {
 			return {
 				response: emptyResponse,
-				errorResponse: data as TangleError,
+				errorResponse: parseErrorBody(text),
 				error: true,
 				loaded: true
 			};
 		}
 
-		return { response: data as T, errorResponse: { error: '' }, error: false, loaded: true };
+		return {
+			response: JSON.parse(text) as T,
+			errorResponse: { error: '' },
+			error: false,
+			loaded: true
+		};
 	} catch (error) {
 		return {
 			response: emptyResponse,
@@ -34,6 +39,14 @@ async function fetchEnvelope<T>(
 			error: true,
 			loaded: true
 		};
+	}
+}
+
+function parseErrorBody(text: string): TangleError {
+	try {
+		return JSON.parse(text) as TangleError;
+	} catch {
+		return { error: text };
 	}
 }
 

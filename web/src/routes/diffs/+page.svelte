@@ -14,7 +14,6 @@
 
 	import { ExclamationCircleSolid, RefreshOutline, BellRingSolid } from 'flowbite-svelte-icons';
 
-	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { type ApplicationsDiffsData, type ApplicationResponseStore } from '$lib/backend/data';
 	import { filterOutZeroResults } from '$lib/ui/utils';
@@ -26,7 +25,7 @@
 
 	let { data }: PageProps = $props();
 
-	const targetRef = $page.url.searchParams.get('targetRef');
+	let targetRef = $derived($page.url.searchParams.get('targetRef'));
 
 	// Separate from the client `+page.ts`'s load() uses — this one drives the
 	// diff fan-out and reloadDiff, which aren't part of the load() lifecycle.
@@ -40,27 +39,59 @@
 	const diffData = writable<ApplicationsDiffsData>({});
 	let alertStatuses: string[] = ['OutOfSync', 'Unknown'];
 
-	// The diff fan-out has to be triggered from an effect-like context (onMount),
-	// not from inside a template expression — calling it directly as an
+	// The diff fan-out has to be triggered from an effect-like context, not
+	// from inside a template expression — calling it directly as an
 	// {#await EXPR} expression mutates $state (via the onTotal/onProgress
 	// callbacks) synchronously while Svelte is evaluating that expression,
-	// which Svelte 5 forbids (`state_unsafe_mutation`).
-	onMount(() => {
-		data.applications.then(async (result) => {
+	// which Svelte 5 forbids (`state_unsafe_mutation`). $effect (rather than
+	// onMount) is required here specifically because SvelteKit can reuse this
+	// component across client-side navigations (e.g. a labels/excludeLabels
+	// or targetRef-only change) without remounting it — onMount would only
+	// ever see the first `data.applications` and the first `targetRef`. The
+	// `cancelled` guard in the cleanup function stops a still-in-flight fetch
+	// from a superseded navigation overwriting state from a newer one.
+	$effect(() => {
+		const currentApplications = data.applications;
+		const currentTargetRef = targetRef;
+		let cancelled = false;
+
+		applications = undefined;
+		diffsLoaded = false;
+		progress = 0;
+		total = 0;
+		diffData.set({});
+
+		currentApplications.then(async (result) => {
+			if (cancelled) {
+				return;
+			}
+
 			applications = result;
 
 			if (result.error) {
 				return;
 			}
 
-			const diffDataMap = await fetchDiffs(client, result.response.results, targetRef, {
-				onTotal: (n) => (total = n),
-				onProgress: () => (progress += 1)
+			const diffDataMap = await fetchDiffs(client, result.response.results, currentTargetRef, {
+				onTotal: (n) => {
+					if (!cancelled) total = n;
+				},
+				onProgress: () => {
+					if (!cancelled) progress += 1;
+				}
 			});
+
+			if (cancelled) {
+				return;
+			}
 
 			diffData.set(diffDataMap);
 			diffsLoaded = true;
 		});
+
+		return () => {
+			cancelled = true;
+		};
 	});
 
 	function reloadDiff(
