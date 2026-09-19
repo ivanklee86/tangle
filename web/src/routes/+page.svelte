@@ -79,21 +79,21 @@
 </svelte:head>
 
 {#if noRefSpecified}
-	<Toast color="red" position="top-right" on:close={() => (noRefSpecified = false)}>
-		<svelte:fragment slot="icon">
-			<ExclamationCircleSolid class="w-5 h-5" />
+	<Toast color="red" position="top-right" onclose={() => (noRefSpecified = false)}>
+		{#snippet icon()}
+			<ExclamationCircleSolid class="h-5 w-5" />
 			<span class="sr-only">Warning icon</span>
-		</svelte:fragment>
+		{/snippet}
 		You must provide a target git ref to generate a diff!
 	</Toast>
 {/if}
 
 {#if invalidLabels}
-	<Toast color="red" position="top-right" on:close={() => (invalidLabels = false)}>
-		<svelte:fragment slot="icon">
-			<ExclamationCircleSolid class="w-5 h-5" />
+	<Toast color="red" position="top-right" onclose={() => (invalidLabels = false)}>
+		{#snippet icon()}
+			<ExclamationCircleSolid class="h-5 w-5" />
 			<span class="sr-only">Warning icon</span>
-		</svelte:fragment>
+		{/snippet}
 		Invalid label! Labels must be in format "foo:bar" and separated with commas.
 	</Toast>
 {/if}
@@ -104,8 +104,16 @@
 
 	<Label class="space-y-2">
 		<span>Labels</span>
-		<Input type="text" placeholder="Labels in format 'key:value'" bind:value={labels} size="lg">
-			<LabelSolid slot="left" class="w-6 h-6" />
+		<Input
+			type="text"
+			placeholder="Labels in format 'key:value'"
+			bind:value={labels}
+			size="lg"
+			class="ps-11"
+		>
+			{#snippet left()}
+				<LabelSolid class="h-6 w-6" />
+			{/snippet}
 		</Input>
 	</Label>
 
@@ -118,8 +126,11 @@
 			placeholder="Labels to exclude in format 'key:value'"
 			bind:value={excludeLabels}
 			size="lg"
+			class="ps-11"
 		>
-			<LabelSolid slot="left" class="w-6 h-6" />
+			{#snippet left()}
+				<LabelSolid class="h-6 w-6" />
+			{/snippet}
 		</Input>
 	</Label>
 
@@ -128,7 +139,7 @@
 	<GradientButton
 		color="pinkToOrange"
 		class="w-fit"
-		on:click={() => redirectToApplications(labels, excludeLabels)}
+		onclick={() => redirectToApplications(labels, excludeLabels)}
 	>
 		See applications<ArrowRightOutline class="w-6 h-6 ms-2 text-white" />
 	</GradientButton>
@@ -141,8 +152,16 @@
 
 	<Label class="space-y-2">
 		<span>Labels</span>
-		<Input type="text" placeholder="Labels in format 'key:value'" bind:value={labels} size="lg">
-			<LabelSolid slot="left" class="w-6 h-6" />
+		<Input
+			type="text"
+			placeholder="Labels in format 'key:value'"
+			bind:value={labels}
+			size="lg"
+			class="ps-11"
+		>
+			{#snippet left()}
+				<LabelSolid class="h-6 w-6" />
+			{/snippet}
 		</Input>
 	</Label>
 	<br />
@@ -154,23 +173,28 @@
 			placeholder="Labels to exclude in format 'key:value'"
 			bind:value={excludeLabels}
 			size="lg"
+			class="ps-11"
 		>
-			<LabelSolid slot="left" class="w-6 h-6" />
+			{#snippet left()}
+				<LabelSolid class="h-6 w-6" />
+			{/snippet}
 		</Input>
 	</Label>
 	<br />
 
 	<Label class="space-y-2">
 		<span>Target Ref</span>
-		<Input type="text" placeholder="Git branch" bind:value={targetRef} size="lg">
-			<CodeBranchOutline slot="left" class="w-6 h-6" />
+		<Input type="text" placeholder="Git branch" bind:value={targetRef} size="lg" class="ps-11">
+			{#snippet left()}
+				<CodeBranchOutline class="h-6 w-6" />
+			{/snippet}
 		</Input>
 	</Label>
 	<br />
 	<GradientButton
 		color="pinkToOrange"
 		class="w-fit"
-		on:click={() => redirectToDiff(targetRef, labels, excludeLabels)}
+		onclick={() => redirectToDiff(targetRef, labels, excludeLabels)}
 	>
 		See diffs<ArrowRightOutline class="w-6 h-6 ms-2 text-white" />
 	</GradientButton>

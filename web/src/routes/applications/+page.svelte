@@ -28,7 +28,7 @@
 	<Button
 		class="mr-2"
 		color={refreshEnabled ? 'primary' : 'alternative'}
-		on:click={() => (refreshEnabled = !refreshEnabled)}><RefreshOutline /></Button
+		onclick={() => (refreshEnabled = !refreshEnabled)}><RefreshOutline /></Button
 	>
 </div>
 

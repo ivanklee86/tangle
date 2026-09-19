@@ -1,6 +1,6 @@
 # Svelte frontend upgrade
 
-Status: proposed · 2026-09-19
+Status: implemented · 2026-09-19
 
 Upgrade `web/` (the SvelteKit app `task ts:build` compiles into `build/`, embedded into the `tangle-server` image by `Dockerfile`'s stage 2) to the latest SvelteKit/Svelte, Tailwind CSS, and Flowbite Svelte, with no feature or functionality changes — only version currency and the mechanical API changes those versions require. See [ADR 0002](../../adrs/0002-upgrade-svelte-frontend-to-tailwind-v4-and-flowbite-svelte-v1.md) for why Tailwind v4 and `flowbite-svelte` 1.x are one coupled workstream rather than two.
 
@@ -34,10 +34,10 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
 
 | | Current | Target |
 |---|---|---|
-| `tailwindcss` | `^3` (resolved 3.4.17) | `4.x` latest (e.g. 4.3.3) |
-| `flowbite-svelte` | 0.47.4 | `1.x` latest (e.g. 1.33.1) |
-| `flowbite-svelte-icons` | 2.1.1 | `3.x` latest (e.g. 3.1.0) |
-| `flowbite` | 2.5.2 | Match whatever `flowbite-svelte` 1.x's own repo pins as its `flowbite` devDependency at implementation time (its `@plugin "flowbite/plugin"` CSS import needs a real `flowbite` package on disk; don't blindly take npm's absolute latest major without checking `flowbite-svelte` has been built/tested against it) |
+| `tailwindcss` | `^3` (resolved 3.4.17) | 4.3.3 |
+| `flowbite-svelte` | 0.47.4 | 1.33.1 |
+| `flowbite-svelte-icons` | 2.1.1 | 3.1.0 |
+| `flowbite` | 2.5.2 | 3.1.2 — matches what `flowbite-svelte` 1.33.1 itself pins as its own `flowbite` devDependency (`^3.1.2`); deliberately not npm's absolute latest major (4.0.2), which `flowbite-svelte` hasn't been built/tested against |
 | `autoprefixer` | 10.4.20 | removed — Tailwind v4's Lightning CSS engine handles vendor prefixing |
 | `@tailwindcss/vite` | — | new, `4.x` latest, matching the `tailwindcss` version |
 | `postcss.config.js` | present | deleted — replaced by the `@tailwindcss/vite` Vite plugin |
@@ -69,9 +69,9 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
 
    @custom-variant dark (&:where(.dark, .dark *));
 
-   @source '../node_modules/flowbite-svelte/**/*.{html,js,svelte,ts}';
-   @source '../node_modules/flowbite-svelte-icons/**/*.{html,js,svelte,ts}';
-   @source '../node_modules/svhighlight/**/*.svelte';
+   @source '../node_modules/flowbite-svelte';
+   @source '../node_modules/flowbite-svelte-icons';
+   @source '../node_modules/svhighlight';
 
    @theme {
    	--color-primary-50: #fff5f2;
@@ -93,6 +93,7 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
 
 `flowbite-svelte` 1.x replaces Svelte 4 slots with snippets and `on:event` forwarding with callback props (`onclick`, `onclose`, ...). Every `web/src/**/*.svelte` file that imports from `flowbite-svelte` needs one or both of these mechanical changes — verify each component's exact current prop/snippet names against its source or docs at implementation time (`flowbite-svelte`'s own site, or `node_modules/flowbite-svelte/dist/<component>/<Component>.svelte` after installing), since this list is based on the 1.33.1 source read during planning and prop names can shift between minors:
 
+- **Cross-cutting**: `Alert`'s `color="none"` (used in `ApplicationsGrid.svelte`, `AppManifests.svelte`, and `diffs/+page.svelte` to fully override styling via a `class="bg-red-500 text-white"` instead of picking a themed color) is not a valid `AlertProps.color` in 1.x — its color union no longer includes `"none"`. Change to `color="red"`; the explicit `class` override still wins over the theme's red styling either way, so this is a type-only fix with no visible change.
 - **`src/lib/components/Header.svelte`** — `Navbar`, `NavBrand`, `DarkMode` usage is prop-compatible as-is; verify `<Navbar color="form">` is still a valid `color` value in 1.x's navbar theme (its color palette may have changed).
 - **`src/lib/components/ApplicationsGrid.svelte`**:
   - `<TabItem title=... open=... disabled=...><span slot="title">...</span></TabItem>` → drop the now-redundant `title` prop and the `slot="title"` span, use the `titleSlot` snippet prop instead:
@@ -104,24 +105,9 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
     	...
     {/TabItem}
     ```
-  - `<Table hoverable={true} items={argoCDApplications.applications}>` + `<TableBodyRow slot="row" let:item>`: in `flowbite-svelte` 1.x, `Table`'s `items` prop makes it render an auto-generated head/body from the items and **ignore its children entirely** — it can no longer be combined with hand-written `TableHead`/`TableBody`/custom cell rendering the way 0.x allowed. Drop `items` from `<Table>` and replace the `slot="row" let:item` row with a plain `{#each}` inside `<TableBody>`:
-    ```svelte
-    <Table hoverable={true}>
-    	<TableHead>...</TableHead>
-    	<TableBody tableBodyClass="divide-y">
-    		{#each argoCDApplications.applications as item (item.name)}
-    			<TableBodyRow>
-    				<TableBodyCell>
-    					<a href={item.url} target="_blank" class="link-underline-primary">{item.name}</a>
-    				</TableBodyCell>
-    				<TableBodyCell><ArgoCDHealthStatus healthStatus={item.health} /></TableBodyCell>
-    				<TableBodyCell><ArgoCDSyncStatus syncStatus={item.syncStatus} /></TableBodyCell>
-    			</TableBodyRow>
-    		{/each}
-    	</TableBody>
-    </Table>
-    ```
-    This also removes the three `{/* @ts-expect-error */}` workarounds in this file — they existed only because 0.x's `let:item` slot prop couldn't be typed; a typed `{#each item of ...}` doesn't need them.
+  - `<Table hoverable={true} items={argoCDApplications.applications}>` + `<TableBodyRow slot="row" let:item>`: in `flowbite-svelte` 1.x, `Table`'s `items` prop makes it render an auto-generated head/body from the items and **ignore its children entirely** — it can no longer be combined with hand-written `TableHead`/`TableBody`/custom cell rendering the way 0.x allowed. Drop `items` from `<Table>` and replace the `slot="row" let:item` row with a plain `{#each}` inside `<TableBody>` (also `TableBody`'s `tableBodyClass` prop is gone in 1.x — use `class` instead). This also removes the three `{/* @ts-expect-error */}` workarounds in this file — they existed only because 0.x's `let:item` slot prop couldn't be typed; a typed `{#each item of ...}` doesn't need them.
+  - **`sort` is gone from `TableHeadCell` entirely in 1.x** — confirmed by reading both the 0.47.4 and 1.33.1 source: in 0.x, `Table`'s `items` prop plus a `sort` comparator on `TableHeadCell` wired into a shared Svelte context (`sorter`) that `TableBody` read to reorder rows and render a ▲/▼ indicator; in 1.x that whole context mechanism (and the `sort`/`defaultDirection`/`direction` props) was removed along with the `items`+custom-children combination, with no replacement. Since this app's column-sort was real, working functionality, it has to be reimplemented locally rather than dropped: track one `{ key, direction }` sort state per tab in a `$state` record, sort a copy of the tab's `applications` array before the `{#each}`, and make each `TableHeadCell` clickable (`onclick`) with an inline ▲/▼ indicator appended to its label. See the actual implementation in `ApplicationsGrid.svelte` for the exact shape.
+  - The raw `<a href={item.url} target="_blank">` (an external ArgoCD URL, not an internal SvelteKit route) trips `eslint-plugin-svelte`'s `svelte/no-navigation-without-resolve` rule once `eslint-plugin-svelte` is bumped (2c) — add `rel="external"` per that rule's own documented escape hatch for non-SvelteKit links, rather than wrapping it in `resolve()` (which is for internal routes only).
 - **`src/lib/components/AppManifests.svelte`** — `<AccordionItem><span slot="header">Manifests</span>...</AccordionItem>` → `header` snippet prop:
   ```svelte
   <AccordionItem>
@@ -152,6 +138,8 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
     </Input>
     ```
     (every `slot="left"` `Input` usage in this file — 5 occurrences: labels ×2, excludeLabels ×2, targetRef ×1; the `CodeBranchOutline slot="left"` on the targetRef `Input` follows the same pattern)
+
+    **Also add `class="ps-11"` to each of these `Input`s.** Confirmed visually (screenshot) that without it, the icon overlaps the placeholder/typed text: 0.x's `Input` automatically added left padding (`ps-9`/`ps-10`/`ps-11` for sm/md/lg) whenever a `left` slot was present; 1.x's `input` theme (`node_modules/flowbite-svelte/dist/forms/input-field/theme.ts`) does not — its padding is a fixed `px-3 py-3` for `lg` regardless of whether `left`/`right` are used, so the caller has to reserve the space itself. `size="lg"` here maps to 0.x's `ps-11`.
   - `<GradientButton ... on:click={...}>` → `onclick={...}` (both buttons in this file).
 - **`src/routes/applications/+page.svelte`** — `<Button ... on:click={...}>` → `onclick={...}`; `Select` usage (`items`, `bind:value`) is unchanged.
 - **`src/routes/diffs/+page.svelte`**:
@@ -167,9 +155,9 @@ Bump these devDependencies alongside `flowbite-svelte`/Tailwind so linting and f
 
 | | Current | Target |
 |---|---|---|
-| `eslint-plugin-svelte` | 3.0.2 | latest 3.x |
-| `prettier-plugin-svelte` | 3.3.3 | latest 3.x |
-| `prettier-plugin-tailwindcss` | 0.6.11 | latest 0.x (needed for Tailwind v4 class sorting) |
+| `eslint-plugin-svelte` | 3.0.2 | 3.23.0 |
+| `prettier-plugin-svelte` | 3.3.3 | 4.1.1 (peer: `prettier ^3.0.0`, `svelte ^5.0.0` — both already satisfied) |
+| `prettier-plugin-tailwindcss` | 0.6.11 | 0.8.1 (needed for Tailwind v4 class sorting) |
 
 **Steps**
 
@@ -177,7 +165,7 @@ Bump these devDependencies alongside `flowbite-svelte`/Tailwind so linting and f
 2. Rewrite every file listed in 2b.
 3. `npm run format && npm run lint && npm run check` until clean.
 4. `npm run test:unit && npm run test:e2e`.
-5. `npm run dev` and manually exercise all three routes (`/`, `/applications`, `/diffs`) in both light and dark mode (toggle via the `DarkMode` button in the header): confirm Tailwind styling renders (a wall of unstyled/default-browser-styled elements means a missing `@source` glob), confirm tabs/table sorting/toast dismissal/accordion expand/gradient buttons/dark-mode toggle all still work exactly as before.
+5. `npm run dev` and manually exercise all three routes (`/`, `/applications`, `/diffs`) in both light and dark mode (toggle via the `DarkMode` button in the header): confirm Tailwind styling renders (a wall of unstyled/default-browser-styled elements means a missing `@source` glob), confirm tabs/table sorting/toast dismissal/accordion expand/gradient buttons/dark-mode toggle all still work exactly as before. If doing this via Playwright (`npx playwright screenshot` or a driven `chromium.launch()`) in a minimal container, note two sandbox-only gotchas that are not app bugs: (a) `npx playwright install --with-deps` can fail on missing font packages (`ttf-ubuntu-font-family`/`ttf-unifont`) — the browser binary still installs fine, `sudo apt-get install -y fonts-liberation fonts-dejavu-core` separately is enough to get real text rendering (without any fonts, all text renders as zero-height/invisible while icons and colors still show, which looks like a CSS bug but isn't); (b) `npx playwright install --with-deps chromium`'s dependency validation can fail cleanly while the earlier browser download still succeeded — `sudo dpkg --configure -a` (to finish whatever apt left interrupted) followed by a plain `npx playwright install chromium` (no `--with-deps`) plus the runtime `.so` packages the error message lists is usually enough.
 6. `task ts:build` (equivalent to `npm run build` + copy into `../build`), then a full `docker build .` from the repo root to confirm the `Dockerfile` stage-2 `npm install && npm run build` still succeeds in a clean `node:22-alpine` environment (no local `node_modules` leaking in stale peer resolutions).
 7. Confirm CI (`.github/workflows/ci.yaml`'s `ts` job: `task ts:install`, `task ts:lint`, `task ts:build`) is green.
 
