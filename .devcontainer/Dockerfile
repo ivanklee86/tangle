@@ -1,4 +1,4 @@
-ARG NODE_VERSION=22
+ARG NODE_VERSION=24
 FROM node:${NODE_VERSION} AS node
 
 FROM ghcr.io/ivanklee86/devcontainer/go:1.27
@@ -18,7 +18,7 @@ RUN curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=$
 COPY --from=rancher/kubectl:v1.32.5 /bin/kubectl /usr/local/bin/kubectl
 COPY --from=alpine/helm /usr/bin/helm /usr/local/bin
 COPY --from=derailed/k9s /bin/k9s /usr/local/bin
-COPY --from=quay.io/argoproj/argocd /usr/local/bin/argocd /usr/local/bin
+COPY --from=quay.io/argoproj/argocd:v3.5.3 /usr/local/bin/argocd /usr/local/bin
 
 USER vscode
 

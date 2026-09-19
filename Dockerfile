@@ -1,5 +1,5 @@
 # Stage 1: Build Go server
-FROM golang:1.24-alpine AS go
+FROM golang:1.27-alpine AS go
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -10,7 +10,7 @@ RUN swagger generate spec -o ./internal/tangle/swagger.json --scan-models
 RUN go build -v -ldflags "-X main.version=docker" -o . ./...
 
 # Stage 2: Build web assets
-FROM node:22-alpine AS node
+FROM node:24-alpine AS node
 
 WORKDIR /app
 COPY ./web .
