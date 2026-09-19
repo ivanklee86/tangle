@@ -22,12 +22,12 @@ func TestHandlers(t *testing.T) {
 	argocdConfig := make(map[string]TangleArgoCDConfig)
 	argocdConfig["test"] = TangleArgoCDConfig{
 		Address:         "localhost:8080",
-		Insecure:        true,
+		PlainText:       true,
 		AuthTokenEnvVar: "ARGOCD_TOKEN",
 	}
 	argocdConfig["prod"] = TangleArgoCDConfig{
 		Address:         "localhost:8080",
-		Insecure:        true,
+		PlainText:       true,
 		AuthTokenEnvVar: "ARGOCD_PROD_TOKEN",
 	}
 
@@ -185,12 +185,12 @@ func TestDiffs(t *testing.T) {
 	argocdConfig := make(map[string]TangleArgoCDConfig)
 	argocdConfig["test"] = TangleArgoCDConfig{
 		Address:         "localhost:8080",
-		Insecure:        true,
+		PlainText:       true,
 		AuthTokenEnvVar: "ARGOCD_TOKEN",
 	}
 	argocdConfig["prod"] = TangleArgoCDConfig{
 		Address:         "localhost:8080",
-		Insecure:        true,
+		PlainText:       true,
 		AuthTokenEnvVar: "ARGOCD_PROD_TOKEN",
 	}
 

@@ -4,6 +4,7 @@ package tangle
 type TangleArgoCDConfig struct {
 	Address         string `koanf:"address"`
 	Insecure        bool   `koanf:"insecure"`
+	PlainText       bool   `koanf:"plainText"`
 	AuthTokenEnvVar string `koanf:"authTokenEnvVar"`
 }
 

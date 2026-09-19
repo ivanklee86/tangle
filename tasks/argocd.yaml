@@ -11,7 +11,7 @@ tasks:
   login:
     desc: "Log in to ArgoCD"
     cmds:
-      - argocd login localhost:8080 --username {{ .ARGOCD_USERNAME }} --password {{ .ARGOCD_PASSWORD }} --insecure --grpc-web
+      - argocd login localhost:8080 --username {{ .ARGOCD_USERNAME }} --password {{ .ARGOCD_PASSWORD }} --plaintext --grpc-web --skip-test-tls
     vars:
       ARGOCD_USERNAME: admin
       ARGOCD_PASSWORD:
@@ -21,7 +21,7 @@ tasks:
     desc: "Wait for servies to start"
     cmds:
       - kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=argocd-server
-      - kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=ingress-nginx
+      - kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=traefik
 
   token:
     desc: "Generate token for service account."

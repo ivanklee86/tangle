@@ -13,7 +13,7 @@ func TestArgoCDWrapper(t *testing.T) {
 	t.Run("pool", func(t *testing.T) {
 		client, err := NewArgoCDClient(&ArgoCDClientOptions{
 			Address:         "localhost:8080",
-			Insecure:        true,
+			PlainText:       true,
 			AuthTokenEnvVar: "ARGOCD_TOKEN",
 		})
 		assert.Nil(t, err)
@@ -36,7 +36,7 @@ func TestArgoCDWrapper(t *testing.T) {
 	t.Run("exclude", func(t *testing.T) {
 		client, err := NewArgoCDClient(&ArgoCDClientOptions{
 			Address:         "localhost:8080",
-			Insecure:        true,
+			PlainText:       true,
 			AuthTokenEnvVar: "ARGOCD_TOKEN",
 		})
 		assert.Nil(t, err)
@@ -60,7 +60,7 @@ func TestArgoCDWrapper(t *testing.T) {
 	t.Run("error", func(t *testing.T) {
 		client, err := NewArgoCDClient(&ArgoCDClientOptions{
 			Address:         "https://localhost:8080",
-			Insecure:        true,
+			PlainText:       true,
 			AuthTokenEnvVar: "ARGOCD_TOKEN",
 		})
 		assert.Nil(t, err)
@@ -81,7 +81,7 @@ func TestArgoCDWrapper(t *testing.T) {
 	t.Run("get manifests from pool", func(t *testing.T) {
 		client, err := NewArgoCDClient(&ArgoCDClientOptions{
 			Address:         "localhost:8080",
-			Insecure:        true,
+			PlainText:       true,
 			AuthTokenEnvVar: "ARGOCD_TOKEN",
 		})
 		assert.Nil(t, err)
@@ -99,7 +99,7 @@ func TestArgoCDWrapper(t *testing.T) {
 	t.Run("not found getting manifests", func(t *testing.T) {
 		client, err := NewArgoCDClient(&ArgoCDClientOptions{
 			Address:         "localhost:8080",
-			Insecure:        true,
+			PlainText:       true,
 			AuthTokenEnvVar: "ARGOCD_TOKEN",
 		})
 		assert.Nil(t, err)
