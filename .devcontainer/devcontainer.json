@@ -1,67 +1,49 @@
 {
-	"name": "fullstack",
-	"build": {
-		"dockerfile": "Dockerfile",
-		"context": "..",
-		"args": {
-			// Update 'VARIANT' to pick a Golang version
-			// Append -bullseye or -buster to pin to an OS version.
-			// Use -bullseye variants on local on arm64/Apple Silicon.
-			"VARIANT": "1.23",
-
-			// Choose node version or none to skip.
-			"NODE_VERSION": "22",
-
-			// Chose Python version.
-			"PYTHON_VERSION": "3.13"
-		}
-	},
-
-	// Configure tool-specific properties.
-	"customizations": {
-		// Configure properties specific to VS Code.
-		"vscode": {
-			// Set *default* container specific settings.json values on container create.
-			"settings": {
-				"yaml.schemas": {
-					"https://taskfile.dev/schema.json": [
-						"**/Taskfile.yml",
-						"tasks/**"
-					]
-				}
-			},
-
-			// Add the IDs of extensions you want installed when the container is created.
-			"extensions": [
-				"GitHub.copilot",
-				"github.vscode-github-actions",
-				"golang.go",
-                "ms-azuretools.vscode-docker",
-				"ms-vscode.vscode-typescript-next",
-				"redhat.vscode-yaml",
-				"ritwickdey.LiveServer",
-				"svelte.svelte-vscode",
-				"tamasfe.even-better-toml",
-				"task.vscode-task"
-			]
-		}
-	},
-
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
-
-	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "bash ./.devcontainer/post_install.sh",
-
-	"features": {
-		"ghcr.io/devcontainers/features/docker-in-docker:2": {
-			"dockerDashComposeVersion": "v2"
-		}
-	},
-
-	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
-	"remoteUser": "vscode",
-
-	// Forward pord
-	"forwardPorts": [8081]
+   "build": {
+      "args": { },
+      "context": ".",
+      "dockerfile": "Dockerfile"
+   },
+   "customizations": {
+      "vscode": {
+         "extensions": [
+            "anthropic.claude-code",
+            "GitHub.copilot",
+            "golang.go",
+            "ms-azuretools.vscode-docker",
+            "redhat.vscode-yaml",
+            "tamasfe.even-better-toml",
+            "task.vscode-task",
+            "github.vscode-github-actions",
+            "ritwickdey.LiveServer",
+            "svelte.svelte-vscode",
+            "ms-vscode.vscode-typescript-next"
+         ],
+         "settings": {
+            "yaml.schemas": {
+               "https://taskfile.dev/schema.json": [
+                  "**/Taskfile.yml",
+                  "tasks/**"
+               ]
+            }
+         }
+      }
+   },
+   "features": {
+      "ghcr.io/devcontainers/features/docker-in-docker:2": {
+         "moby": false
+      }
+   },
+   "forwardPorts": [
+      8081
+   ],
+   "mounts": [
+      "source=${localEnv:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached"
+   ],
+   "name": "fullstack",
+   "postCreateCommand": {
+      "install-prek": "prek install && prek run",
+      "tangle-post-install": "bash ./.devcontainer/post_install.sh"
+   },
+   "remoteUser": "vscode"
 }
