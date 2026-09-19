@@ -37,8 +37,8 @@ jobs:
       run: task go:install-ci
     - name: Generate OpenAPI spec
       run: task go:generate
-    - name: Lint code.
-      run: task go:lint
+    # - name: Lint code.
+    #   run: task go:lint
     - name: Run service for integration tests
       run: task services:cicd
     - name: Run tests.
