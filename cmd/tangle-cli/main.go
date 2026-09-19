@@ -45,12 +45,14 @@ func NewRootCommand() *cobra.Command {
 			return initializeConfig(cmd)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Fprint(tanglecli.Out, cmd.UsageString())
+			if _, err := fmt.Fprint(tanglecli.Out, cmd.UsageString()); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+			}
 		},
 	}
 
-	cmd.PersistentFlags().StringVar(&tanglecli.Config.ServerAddr, "server-address", "", "ArgoCD server address")
-	cmd.PersistentFlags().BoolVar(&tanglecli.Config.Insecure, "insecure", false, "Don't validate SSL certificate on client request")
+	cmd.PersistentFlags().StringVar(&tanglecli.ServerAddr, "server-address", "", "ArgoCD server address")
+	cmd.PersistentFlags().BoolVar(&tanglecli.Insecure, "insecure", false, "Don't validate SSL certificate on client request")
 
 	cmd.AddCommand(NewGenerateManifests(tanglecli))
 
@@ -68,12 +70,12 @@ func NewGenerateManifests(tanglecli *cli.TangleCLI) *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringSliceVar(&tanglecli.Config.LabelsAsStrings, "label", []string{}, "Labels to filter projects on in format 'key=value'.  Can be used multiple times.")
-	cmd.PersistentFlags().StringSliceVar(&tanglecli.Config.ExcludeLabelsAsStrings, "exclude-label", []string{}, "Labels to exclude projects on in format 'key=value'.  Can be used multiple times.")
-	cmd.PersistentFlags().StringVar(&tanglecli.Config.Folder, "folder", "", "Folder to generate manifests in.  Defaults to current folder.")
-	cmd.PersistentFlags().StringVar(&tanglecli.Config.TargetRef, "target-ref", "", "Git refernce to generate manifests.")
-	cmd.PersistentFlags().BoolVar(&tanglecli.Config.FailOnErrors, "fail-on-error", false, "Fail command if errors are found.")
-	cmd.PersistentFlags().IntVar(&tanglecli.Config.Retries, "retries", 0, "Number of retried for failed calls.  Must be between 0 (no retries) and 5.")
+	cmd.PersistentFlags().StringSliceVar(&tanglecli.LabelsAsStrings, "label", []string{}, "Labels to filter projects on in format 'key=value'.  Can be used multiple times.")
+	cmd.PersistentFlags().StringSliceVar(&tanglecli.ExcludeLabelsAsStrings, "exclude-label", []string{}, "Labels to exclude projects on in format 'key=value'.  Can be used multiple times.")
+	cmd.PersistentFlags().StringVar(&tanglecli.Folder, "folder", "", "Folder to generate manifests in.  Defaults to current folder.")
+	cmd.PersistentFlags().StringVar(&tanglecli.TargetRef, "target-ref", "", "Git refernce to generate manifests.")
+	cmd.PersistentFlags().BoolVar(&tanglecli.FailOnErrors, "fail-on-error", false, "Fail command if errors are found.")
+	cmd.PersistentFlags().IntVar(&tanglecli.Retries, "retries", 0, "Number of retried for failed calls.  Must be between 0 (no retries) and 5.")
 
 	return cmd
 }

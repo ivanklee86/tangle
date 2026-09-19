@@ -251,9 +251,10 @@ func TestGetApplications(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				for _, result := range resp.Results {
-					if result.Name == "test" {
+					switch result.Name {
+					case "test":
 						assert.Len(t, result.Applications, test.lengthTest)
-					} else if result.Name == "prod" {
+					case "prod":
 						assert.Len(t, result.Applications, test.lengthProd)
 					}
 				}
@@ -315,9 +316,10 @@ func TestGetApplicationsWithRetries(t *testing.T) {
 			if !test.expectError {
 				assert.Nil(t, err)
 				for _, result := range resp.Results {
-					if result.Name == "test" {
+					switch result.Name {
+					case "test":
 						assert.Len(t, result.Applications, 2)
-					} else if result.Name == "prod" {
+					case "prod":
 						assert.Len(t, result.Applications, 2)
 					}
 				}
