@@ -4,7 +4,7 @@ FROM golang:1.24-alpine AS go
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download -x
-RUN go install github.com/go-swagger/go-swagger/cmd/swagger@latest
+RUN go install github.com/go-swagger/go-swagger/cmd/swagger@v0.33.1
 COPY . .
 RUN swagger generate spec -o ./internal/tangle/swagger.json --scan-models
 RUN go build -v -ldflags "-X main.version=docker" -o . ./...
