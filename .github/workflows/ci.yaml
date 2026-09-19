@@ -75,8 +75,14 @@ jobs:
     - name: Install packages
       run: task ts:install
     - name: Install Playwright browser
-      # Keep this version in sync with playwright/@playwright/test in web/package.json.
-      run: npx --yes playwright@1.63.0 install --with-deps chromium chromium-headless-shell
+      # Invoke the locally installed `playwright` package directly rather
+      # than `npx playwright@<version>` — this project also depends on
+      # `@playwright/test`, which provides its own (older-pinned) `playwright`
+      # bin under the same name, and `npx` resolves to that one instead of
+      # the version requested, silently installing the wrong browser
+      # revision. `node node_modules/playwright/cli.js` bypasses the bin
+      # collision and always uses the exact version in web/package.json.
+      run: node node_modules/playwright/cli.js install --with-deps chromium chromium-headless-shell
       working-directory: web
     - name: Run unit tests
       run: task ts:test

@@ -122,12 +122,19 @@ Reuses the same user flows as workstream 1's mocked specs but with loose, struct
 1. In the `ts` job, after the existing `Build website` step, add Playwright browser install + the mocked suite:
    ```yaml
    - name: Install Playwright browser
-     run: npx --yes playwright@1.63.0 install --with-deps chromium
+     # Invoke the locally installed `playwright` package directly rather
+     # than `npx playwright@<version>` — this project also depends on
+     # `@playwright/test`, which provides its own (older-pinned) `playwright`
+     # bin under the same name, and `npx` resolves to that one instead of
+     # the version requested, silently installing the wrong browser
+     # revision. `node node_modules/playwright/cli.js` bypasses the bin
+     # collision and always uses the exact version in web/package.json.
+     run: node node_modules/playwright/cli.js install --with-deps chromium
      working-directory: web
    - name: Run e2e tests
      run: task ts:test:e2e
    ```
-   `ubuntu-latest` GitHub-hosted runners are on Playwright's officially supported list, so `--with-deps` (unlike the devcontainer's Debian base in workstream 2) should work as documented here — verify at implementation time rather than assuming, and fall back to the devcontainer's explicit package list if not. Keep the hardcoded `1.63.0` here in sync with `web/package.json`'s pin (workstream 1) and the devcontainer's `PLAYWRIGHT_VERSION` (workstream 2) — three places is one too many for comfort; consider at implementation time whether to instead read the version from `web/package.json` in this step (e.g. `node -p "require('./package.json').devDependencies['@playwright/test']"`) to collapse it to one source of truth.
+   `ubuntu-latest` GitHub-hosted runners are on Playwright's officially supported list, so `--with-deps` (unlike the devcontainer's Debian base in workstream 2) should work as documented here — verify at implementation time rather than assuming, and fall back to the devcontainer's explicit package list if not. This invokes `node_modules/playwright/cli.js` directly instead of `npx playwright@1.63.0` to avoid a bin-name collision with `@playwright/test`'s own `playwright` binary (see the identical fix and rationale in the `ts` job's own "Install Playwright browser" step in `.github/workflows/ci.yaml`); the version is read from `web/package.json` itself, so there's nothing here to keep in sync.
 2. Add a new, separate job for the live smoke suite, gated so it does **not** run on every push/PR (per [ADR 0003](../../adrs/0003-svelte-e2e-testing-strategy.md), this is opt-in, not a required check):
    ```yaml
    on:
@@ -162,7 +169,11 @@ Reuses the same user flows as workstream 1's mocked specs but with loose, struct
            sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
            rm argocd-linux-amd64
        - name: Install Playwright browser
-         run: npx --yes playwright@1.63.0 install --with-deps chromium
+         # See the `ts` job's own "Install Playwright browser" step above
+         # (and its counterpart in `.github/workflows/ci.yaml`) for why this
+         # invokes `node_modules/playwright/cli.js` directly instead of
+         # `npx playwright@<version>`.
+         run: node node_modules/playwright/cli.js install --with-deps chromium
          working-directory: web
        - name: Run live-stack e2e smoke suite
          run: task e2e:smoke

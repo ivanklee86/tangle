@@ -133,15 +133,16 @@ In order of complexity — start with pure prop-driven components with no extern
 
 **Steps**
 
-1. Add a Playwright browser install step before the test step (GitHub's `ubuntu-latest` runners are on Playwright's officially supported list, so `--with-deps` should work as documented, unlike the devcontainer's Debian base in workstream 2 — verify at implementation time per the same caveat ADR-0003's plan already noted for its own CI step):
+1. Add a Playwright browser install step before the test step, **after** `task ts:install` has already run `npm install` (so `web/node_modules/playwright` exists):
    ```yaml
    - name: Install Playwright browser
-     run: npx --yes playwright@1.63.0 install --with-deps chromium
+     run: node node_modules/playwright/cli.js install --with-deps chromium chromium-headless-shell
      working-directory: web
    - name: Run unit tests
      run: task ts:test
    ```
-   Keep `1.63.0` in sync with `web/package.json`'s `playwright`/`@playwright/test` pins (workstream 3) and the devcontainer's `PLAYWRIGHT_VERSION` (workstream 2) — three places, same caveat ADR-0003's plan already flagged for its own CI step; worth collapsing to one source of truth (e.g. reading the pin from `package.json`) if/when both this and ADR-0003's CI steps exist side by side.
+   **Corrected during implementation** (2026-09-19): the original `npx --yes playwright@1.63.0 install --with-deps chromium` failed CI with `browserType.launch: Executable doesn't exist at .../chromium_headless_shell-1243/...` — it silently downloaded revision **1161** instead of **1243**. Root cause: this project depends on both `playwright` (pinned `1.63.0`) and `@playwright/test` (pinned `^1.45.3`, resolving to `1.51.1`), and both packages provide a same-named `playwright` CLI binary; `npx playwright@1.63.0` resolved to whichever locally-installed bin won the naming collision (`@playwright/test`'s older one) instead of strictly fetching `1.63.0`, so it installed the browser revision that *older* version expects. Invoking `node node_modules/playwright/cli.js` directly bypasses bin resolution entirely and always uses the exact `playwright` version declared in `web/package.json`. This only works once a project checkout with `node_modules` exists — it's not usable for the devcontainer Dockerfile step (workstream 2), which has no checkout yet at that build stage; whether that step's plain `npx playwright@${VERSION} install` is reliably safe in a truly clean environment (no competing bin to collide with) was not independently verified — treat it as a real risk, not a settled fact, and re-check if the devcontainer's cached browser revision ever mismatches what a later `npm install` expects.
+   Keep `1.63.0` in sync with `web/package.json`'s `playwright`/`@playwright/test` pins (workstream 3) and the devcontainer's `PLAYWRIGHT_VERSION` (workstream 2).
 2. Insert this after `Install packages` and before `Lint code` (or after — order doesn't matter functionally, but running tests before lint gives a slightly faster failure signal for the more common failure mode).
 3. Push a branch and confirm the `ts` job's new step runs and passes.
 
