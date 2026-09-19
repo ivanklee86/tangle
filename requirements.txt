@@ -1,3 +1,2 @@
-pre-commit
 mkdocs
 mkdocs-material
