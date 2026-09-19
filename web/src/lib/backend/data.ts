@@ -1,5 +1,3 @@
-import { writable } from 'svelte/store';
-
 interface TangleError {
 	error: string;
 }
@@ -53,20 +51,16 @@ interface ApplicationsDiffsData {
 	};
 }
 
-export const apiData = writable<ApplicationResponseStore>({
-	response: { results: [] },
-	errorResponse: { error: '' },
-	error: false,
-	loaded: false
-});
+function emptyApplicationResponseStore(): ApplicationResponseStore {
+	return {
+		response: { results: [] },
+		errorResponse: { error: '' },
+		error: false,
+		loaded: false
+	};
+}
 
-export const diffData = writable<ApplicationDiff>({
-	response: { liveManifests: '', targetManifests: '', diffs: '', manifestGenerationError: '' },
-	errorResponse: { error: '' },
-	requestDetails: { argoCD: '', applicationName: '' },
-	error: false,
-	loaded: false
-});
+export { emptyApplicationResponseStore };
 
 export type {
 	ApplicationsResponse,

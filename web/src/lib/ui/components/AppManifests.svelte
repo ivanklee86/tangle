@@ -3,7 +3,7 @@
 	import { InfoCircleSolid, FileLinesSolid } from 'flowbite-svelte-icons';
 	import { CodeBlock } from 'svhighlight';
 	import 'highlight.js/styles/an-old-hope.css';
-	import { type ApplicationDiff } from '$lib/data';
+	import { type ApplicationDiff } from '$lib/backend/data';
 
 	interface Props {
 		diffData: ApplicationDiff;

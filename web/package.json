@@ -25,6 +25,8 @@
 		"@sveltejs/kit": "2.70.3",
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@tailwindcss/vite": "4.3.3",
+		"@vitest/browser": "5.0.1",
+		"@vitest/browser-playwright": "5.0.1",
 		"eslint": "^9.7.0",
 		"eslint-config-prettier": "^10.0.0",
 		"eslint-plugin-svelte": "3.23.0",
@@ -32,6 +34,7 @@
 		"flowbite-svelte": "1.33.1",
 		"flowbite-svelte-icons": "3.1.0",
 		"globals": "^16.0.0",
+		"playwright": "1.63.0",
 		"prettier": "^3.3.2",
 		"prettier-plugin-svelte": "4.1.1",
 		"prettier-plugin-tailwindcss": "0.8.1",
@@ -40,8 +43,9 @@
 		"tailwindcss": "4.3.3",
 		"typescript": "^5.0.0",
 		"typescript-eslint": "^8.0.0",
-		"vite": "^6.0.0",
-		"vitest": "^3.0.0"
+		"vite": "6.4.3",
+		"vitest": "5.0.1",
+		"vitest-browser-svelte": "3.1.0"
 	},
 	"dependencies": {
 		"@tailwindcss/forms": "^0.5.9",

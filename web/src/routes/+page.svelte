@@ -6,6 +6,8 @@
 		LabelSolid,
 		ExclamationCircleSolid
 	} from 'flowbite-svelte-icons';
+	import { buildQuery } from '$lib/backend/url';
+	import { isValidLabelFormat } from '$lib/ui/validation';
 
 	// User inputs
 	let labels: string = $state('');
@@ -16,29 +18,13 @@
 	let noRefSpecified: boolean = $state(false);
 	let invalidLabels: boolean = $state(false);
 
-	// Other strings
-	const LABEL_CHECK: RegExp = /^[^:,]+:[^:,]+(,[^:,]+:[^:,]+)*$/;
-
 	function redirectToApplications(labels: string, excludeLabels: string): void {
-		if (labels.length != 0 && !LABEL_CHECK.test(labels)) {
+		if (!isValidLabelFormat(labels)) {
 			invalidLabels = true;
 			return;
 		}
 
-		const BASE_URL = '/applications';
-
-		let url: string = BASE_URL;
-
-		if (labels.length > 0) {
-			url += `?labels=${labels}`;
-		}
-
-		if (excludeLabels.length > 0) {
-			const separator = url.includes('?') ? '&' : '?';
-			url += `${separator}excludeLabels=${excludeLabels}`;
-		}
-
-		window.location.href = url;
+		window.location.href = `/applications${buildQuery({ labels, excludeLabels })}`;
 	}
 
 	function redirectToDiff(targetRef: string, labels: string, excludeLabels: string): void {
@@ -47,30 +33,12 @@
 			return;
 		}
 
-		if (labels.length != 0 && !LABEL_CHECK.test(labels)) {
+		if (!isValidLabelFormat(labels)) {
 			invalidLabels = true;
 			return;
 		}
 
-		const BASE_URL = '/diffs';
-
-		let url: string = BASE_URL;
-
-		if (targetRef.length > 0) {
-			url += `?targetRef=${targetRef}`;
-		}
-
-		if (labels.length > 0) {
-			const separator = url.includes('?') ? '&' : '?';
-			url += `${separator}labels=${labels}`;
-		}
-
-		if (excludeLabels.length > 0) {
-			const separator = url.includes('?') ? '&' : '?';
-			url += `${separator}excludeLabels=${excludeLabels}`;
-		}
-
-		window.location.href = url;
+		window.location.href = `/diffs${buildQuery({ targetRef, labels, excludeLabels })}`;
 	}
 </script>
 

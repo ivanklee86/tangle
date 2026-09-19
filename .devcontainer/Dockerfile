@@ -20,6 +20,22 @@ COPY --from=alpine/helm /usr/bin/helm /usr/local/bin
 COPY --from=derailed/k9s /bin/k9s /usr/local/bin
 COPY --from=quay.io/argoproj/argocd:v3.5.3 /usr/local/bin/argocd /usr/local/bin
 
+# Playwright (for web/ e2e tests and vitest-browser-svelte component tests) —
+# keep the version in sync with playwright/@playwright/test in web/package.json.
+# Deliberately not `playwright install --with-deps` — that fails on this Debian
+# base (ttf-ubuntu-font-family/ttf-unifont aren't in its apt sources). Without a
+# font package installed, Chromium renders real content but all text is
+# genuinely zero-height/invisible — looks exactly like a CSS bug.
+ARG PLAYWRIGHT_VERSION=1.63.0
+RUN npx --yes playwright@${PLAYWRIGHT_VERSION} install chromium chromium-headless-shell && \
+    apt-get update && apt-get install -y --no-install-recommends \
+        libglib2.0-0 libnss3 libnspr4 libdbus-1-3 libatk1.0-0 \
+        libatk-bridge2.0-0 libatspi2.0-0 libx11-6 libxcomposite1 \
+        libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxcb1 \
+        libxkbcommon0 libasound2 libcups2 libpango-1.0-0 libcairo2 \
+        fonts-liberation fonts-dejavu-core && \
+    rm -rf /var/lib/apt/lists/*
+
 USER vscode
 
 # Python (kept for mkdocs local preview)

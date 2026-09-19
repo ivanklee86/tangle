@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '../app.css';
-	import { Header } from '$lib/components';
+	import { Header } from '$lib/ui/components';
 	let { children } = $props();
 </script>
 

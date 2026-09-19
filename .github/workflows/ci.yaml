@@ -74,6 +74,12 @@ jobs:
       uses: arduino/setup-task@v2
     - name: Install packages
       run: task ts:install
+    - name: Install Playwright browser
+      # Keep this version in sync with playwright/@playwright/test in web/package.json.
+      run: npx --yes playwright@1.63.0 install --with-deps chromium chromium-headless-shell
+      working-directory: web
+    - name: Run unit tests
+      run: task ts:test
     - name: Lint code
       run: task ts:lint
     - name: Build website

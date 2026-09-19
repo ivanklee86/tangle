@@ -9,6 +9,9 @@ node_modules
 /.svelte-kit
 /build
 
+# Vitest browser mode (failure screenshots, etc.)
+.vitest
+
 # OS
 .DS_Store
 Thumbs.db

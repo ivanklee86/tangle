@@ -1,8 +1,13 @@
 <script lang="ts">
-	import { Select, Button } from 'flowbite-svelte';
+	import { Select, Button, Spinner } from 'flowbite-svelte';
 	import { RefreshOutline } from 'flowbite-svelte-icons';
 	import { page } from '$app/stores';
-	import { ApplicationGrid } from '$lib/components';
+	import { invalidateAll } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import { ApplicationGrid } from '$lib/ui/components';
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
 
 	let selectedRefreshPeriod: number = $state(10);
 
@@ -15,6 +20,27 @@
 		{ value: 10, name: '10s' },
 		{ value: 15, name: '15s' }
 	];
+
+	onMount(() => {
+		let interval: number;
+
+		const startInterval = () => {
+			clearInterval(interval); // Clear any existing interval
+			interval = setInterval(() => {
+				if (refreshEnabled) {
+					invalidateAll();
+				}
+			}, selectedRefreshPeriod * 1000);
+		};
+
+		startInterval(); // Start the interval initially
+
+		$effect(() => {
+			startInterval(); // Restart the interval whenever refreshPeriod changes
+		});
+
+		return () => clearInterval(interval);
+	});
 </script>
 
 <svelte:head>
@@ -32,4 +58,9 @@
 	>
 </div>
 
-<ApplicationGrid refresh={refreshEnabled} refreshPeriod={selectedRefreshPeriod} />
+{#await data.applications}
+	<br />
+	<div class="text-center"><Spinner /></div>
+{:then applications}
+	<ApplicationGrid {applications} />
+{/await}
