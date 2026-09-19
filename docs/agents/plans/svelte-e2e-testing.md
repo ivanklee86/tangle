@@ -148,7 +148,7 @@ Reuses the same user flows as workstream 1's mocked specs but with loose, struct
            go-version: 1.27
        - uses: actions/setup-node@v4
          with:
-           node-version: '22'
+           node-version: '24'
        - uses: arduino/setup-task@v2
        - uses: crazy-max/ghaction-setup-docker@v4
        - name: Install k3d

@@ -49,6 +49,12 @@
 		return current.direction === 'asc' ? ' ▲' : ' ▼';
 	}
 
+	function ariaSort(tabName: string, key: SortKey): 'ascending' | 'descending' | 'none' {
+		const current = sortState[tabName];
+		if (current?.key !== key) return 'none';
+		return current.direction === 'asc' ? 'ascending' : 'descending';
+	}
+
 	function sortedApplications(
 		tabName: string,
 		applications: ApplicationLinks[]
@@ -127,21 +133,30 @@
 				<br />
 				<Table hoverable={true}>
 					<TableHead>
-						<TableHeadCell
-							class="cursor-pointer select-none"
-							onclick={() => toggleSort(argoCDApplications.name, 'name')}
-							>Applications{sortIndicator(argoCDApplications.name, 'name')}</TableHeadCell
-						>
-						<TableHeadCell
-							class="cursor-pointer select-none"
-							onclick={() => toggleSort(argoCDApplications.name, 'health')}
-							>Health{sortIndicator(argoCDApplications.name, 'health')}</TableHeadCell
-						>
-						<TableHeadCell
-							class="cursor-pointer select-none"
-							onclick={() => toggleSort(argoCDApplications.name, 'syncStatus')}
-							>Sync Status{sortIndicator(argoCDApplications.name, 'syncStatus')}</TableHeadCell
-						>
+						<TableHeadCell aria-sort={ariaSort(argoCDApplications.name, 'name')}>
+							<button
+								type="button"
+								class="cursor-pointer select-none"
+								onclick={() => toggleSort(argoCDApplications.name, 'name')}
+								>Applications{sortIndicator(argoCDApplications.name, 'name')}</button
+							>
+						</TableHeadCell>
+						<TableHeadCell aria-sort={ariaSort(argoCDApplications.name, 'health')}>
+							<button
+								type="button"
+								class="cursor-pointer select-none"
+								onclick={() => toggleSort(argoCDApplications.name, 'health')}
+								>Health{sortIndicator(argoCDApplications.name, 'health')}</button
+							>
+						</TableHeadCell>
+						<TableHeadCell aria-sort={ariaSort(argoCDApplications.name, 'syncStatus')}>
+							<button
+								type="button"
+								class="cursor-pointer select-none"
+								onclick={() => toggleSort(argoCDApplications.name, 'syncStatus')}
+								>Sync Status{sortIndicator(argoCDApplications.name, 'syncStatus')}</button
+							>
+						</TableHeadCell>
 					</TableHead>
 					<TableBody class="divide-y">
 						{#each sortedApplications(argoCDApplications.name, argoCDApplications.applications) as item (item.name)}
