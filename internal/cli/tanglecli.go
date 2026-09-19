@@ -259,6 +259,5 @@ func (t *TangleCLI) GenerateManifests() {
 
 	if t.FailOnErrors && failures {
 		t.Error("Failures found in manifest generation!")
-		os.Exit(1)
 	}
 }

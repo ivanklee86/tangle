@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/jedib0t/go-pretty/v6/text"
 )
@@ -40,4 +41,5 @@ func (t *TangleCLI) Output(msg interface{}) {
 // Error pritns an error to stderr and exits with error code 1.
 func (t *TangleCLI) Error(msg interface{}) {
 	printToStreamWithColor(t.Err, text.FgHiRed, fmt.Sprintf("Error: %v\n", msg))
+	os.Exit(1)
 }
