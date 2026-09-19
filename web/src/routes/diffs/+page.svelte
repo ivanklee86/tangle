@@ -14,76 +14,84 @@
 
 	import { ExclamationCircleSolid, RefreshOutline, BellRingSolid } from 'flowbite-svelte-icons';
 
-	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
-	import { type ApplicationsDiffsData, type ApplicationResponseStore } from '$lib/data';
-	import { filterOutZeroResults } from '$lib/utils';
+	import { type ApplicationsDiffsData, type ApplicationResponseStore } from '$lib/backend/data';
+	import { filterOutZeroResults } from '$lib/ui/utils';
+	import { fetchDiffs } from '$lib/backend/diffs';
 	import { page } from '$app/stores';
-	import TangleAPIClient from '$lib/client';
-	import { AppManifests, ArgoCDHealthStatus, ArgoCDSyncStatus } from '$lib/components';
+	import TangleAPIClient from '$lib/backend/client';
+	import { AppManifests, ArgoCDHealthStatus, ArgoCDSyncStatus } from '$lib/ui/components';
+	import type { PageProps } from './$types';
 
-	const labels = $page.url.searchParams.get('labels');
-	const excludeLabels = $page.url.searchParams.get('excludeLabels');
-	const targetRef = $page.url.searchParams.get('targetRef');
-	var client = new TangleAPIClient();
+	let { data }: PageProps = $props();
 
-	const applicationsData = writable<ApplicationResponseStore>({
-		response: { results: [] },
-		errorResponse: { error: '' },
-		error: false,
-		loaded: false
-	});
+	let targetRef = $derived($page.url.searchParams.get('targetRef'));
 
+	// Separate from the client `+page.ts`'s load() uses — this one drives the
+	// diff fan-out and reloadDiff, which aren't part of the load() lifecycle.
+	const client = new TangleAPIClient();
+
+	let applications: ApplicationResponseStore | undefined = $state();
 	let progress: number = $state(0);
 	let total: number = $state(0);
+	let diffsLoaded: boolean = $state(false);
 
 	const diffData = writable<ApplicationsDiffsData>({});
-	let loaded: boolean = $state(false);
 	let alertStatuses: string[] = ['OutOfSync', 'Unknown'];
 
-	onMount(() => {
-		client
-			.getApplications(labels, excludeLabels)
-			.then(async (result) => {
-				applicationsData.set(result);
+	// The diff fan-out has to be triggered from an effect-like context, not
+	// from inside a template expression — calling it directly as an
+	// {#await EXPR} expression mutates $state (via the onTotal/onProgress
+	// callbacks) synchronously while Svelte is evaluating that expression,
+	// which Svelte 5 forbids (`state_unsafe_mutation`). $effect (rather than
+	// onMount) is required here specifically because SvelteKit can reuse this
+	// component across client-side navigations (e.g. a labels/excludeLabels
+	// or targetRef-only change) without remounting it — onMount would only
+	// ever see the first `data.applications` and the first `targetRef`. The
+	// `cancelled` guard in the cleanup function stops a still-in-flight fetch
+	// from a superseded navigation overwriting state from a newer one.
+	$effect(() => {
+		const currentApplications = data.applications;
+		const currentTargetRef = targetRef;
+		let cancelled = false;
 
-				const diffPromises = result.response.results.flatMap((argoCD) =>
-					argoCD.applications.map((application) =>
-						client
-							.getApplicationDiff(
-								argoCD.name,
-								application.name,
-								application.liveRef,
-								targetRef ? targetRef : application.liveRef
-							)
-							.then((result) => {
-								progress += 1;
-								return result;
-							})
-					)
-				);
-				total = diffPromises.length;
+		applications = undefined;
+		diffsLoaded = false;
+		progress = 0;
+		total = 0;
+		diffData.set({});
 
-				const diffResults = await Promise.all(diffPromises);
+		currentApplications.then(async (result) => {
+			if (cancelled) {
+				return;
+			}
 
-				const diffDataMap: ApplicationsDiffsData = {};
-				diffResults.forEach((result) => {
-					const argoCDName = result.requestDetails.argoCD;
-					const applicationName = result.requestDetails.applicationName;
+			applications = result;
 
-					// Initialize the argoCDName object if it doesn't exist
-					if (!diffDataMap[argoCDName]) {
-						diffDataMap[argoCDName] = {};
-					}
+			if (result.error) {
+				return;
+			}
 
-					diffDataMap[argoCDName][applicationName] = result;
-				});
-
-				diffData.set(diffDataMap);
-			})
-			.finally(() => {
-				loaded = true;
+			const diffDataMap = await fetchDiffs(client, result.response.results, currentTargetRef, {
+				onTotal: (n) => {
+					if (!cancelled) total = n;
+				},
+				onProgress: () => {
+					if (!cancelled) progress += 1;
+				}
 			});
+
+			if (cancelled) {
+				return;
+			}
+
+			diffData.set(diffDataMap);
+			diffsLoaded = true;
+		});
+
+		return () => {
+			cancelled = true;
+		};
 	});
 
 	function reloadDiff(
@@ -109,71 +117,17 @@
 	<title>Tangle - Diffs</title>
 </svelte:head>
 
-{#if loaded}
-	{#if $applicationsData.error}
-		<Alert color="red" class="bg-red-500 text-white">
-			<span class="font-medium">System error!</span>
-			<br />
-			{$applicationsData.errorResponse?.error}
-		</Alert>
-	{/if}
-
-	{#if $applicationsData.loaded}
-		<Tabs tabStyle="underline" class="ml-5 mr-5">
-			{#each filterOutZeroResults($applicationsData.response.results) as argoCDApplications, index (argoCDApplications.name)}
-				<TabItem open={index === 0} disabled={argoCDApplications.applications.length === 0}>
-					{#snippet titleSlot()}
-						{argoCDApplications.name}
-					{/snippet}
-					<Tabs>
-						{#each argoCDApplications.applications as application, appIndex (application.name)}
-							<TabItem open={appIndex === 0}>
-								{#snippet titleSlot()}
-									<div class="flex items-center">
-										{#if alertStatuses.includes(application.syncStatus) || application.health !== 'Healthy' || $diffData[argoCDApplications.name]?.[application.name].error || $diffData[argoCDApplications.name]?.[application.name].response.manifestGenerationError.length > 0}<ExclamationCircleSolid
-												class="w-5 h-5 me-2 text-rose-500 dark:text-rose-400"
-											/>
-										{:else if $diffData[argoCDApplications.name]?.[application.name].response.diffs.length > 0}
-											<BellRingSolid class="w-5 h-5 me-2 text-amber-500 dark:text-amber-400" />
-										{/if}
-										{application.name}
-									</div>
-								{/snippet}
-								<Heading tag="h3">Status</Heading>
-								<List tag="ul" class="list-none space-y-1 text-gray-500 dark:text-gray-400">
-									<Li icon>
-										<ArgoCDHealthStatus healthStatus={application.health} />
-									</Li>
-									<Li icon>
-										<ArgoCDSyncStatus syncStatus={application.syncStatus} />
-									</Li>
-								</List>
-								<br />
-								<div class="align-bottom">
-									<P>(<A href={application.url} target="_blank" class="text-xs">More Info</A>)</P>
-									<GradientButton
-										class="absolute right-5"
-										outline
-										color="pinkToOrange"
-										onclick={() =>
-											reloadDiff(
-												argoCDApplications.name,
-												application.name,
-												application.liveRef,
-												targetRef ? targetRef : application.liveRef
-											)}><RefreshOutline /></GradientButton
-									>
-								</div>
-								<br />
-								<AppManifests diffData={$diffData[argoCDApplications.name]?.[application.name]} />
-							</TabItem>
-						{/each}
-					</Tabs>
-				</TabItem>
-			{/each}
-		</Tabs>
-	{/if}
-{:else}
+{#if !applications}
+	<div class="flex justify-center m-10">
+		<P italic>Loading Applications...</P>
+	</div>
+{:else if applications.error}
+	<Alert color="red" class="bg-red-500 text-white">
+		<span class="font-medium">System error!</span>
+		<br />
+		{applications.errorResponse?.error}
+	</Alert>
+{:else if !diffsLoaded}
 	<div class="flex justify-center m-10">
 		<P italic>Loading Applications...</P>
 	</div>
@@ -185,4 +139,58 @@
 			/>
 		</div>
 	{/if}
+{:else}
+	<Tabs tabStyle="underline" class="ml-5 mr-5">
+		{#each filterOutZeroResults(applications.response.results) as argoCDApplications, index (argoCDApplications.name)}
+			<TabItem open={index === 0} disabled={argoCDApplications.applications.length === 0}>
+				{#snippet titleSlot()}
+					{argoCDApplications.name}
+				{/snippet}
+				<Tabs>
+					{#each argoCDApplications.applications as application, appIndex (application.name)}
+						<TabItem open={appIndex === 0}>
+							{#snippet titleSlot()}
+								<div class="flex items-center">
+									{#if alertStatuses.includes(application.syncStatus) || application.health !== 'Healthy' || $diffData[argoCDApplications.name]?.[application.name].error || $diffData[argoCDApplications.name]?.[application.name].response.manifestGenerationError.length > 0}<ExclamationCircleSolid
+											class="w-5 h-5 me-2 text-rose-500 dark:text-rose-400"
+										/>
+									{:else if $diffData[argoCDApplications.name]?.[application.name].response.diffs.length > 0}
+										<BellRingSolid class="w-5 h-5 me-2 text-amber-500 dark:text-amber-400" />
+									{/if}
+									{application.name}
+								</div>
+							{/snippet}
+							<Heading tag="h3">Status</Heading>
+							<List tag="ul" class="list-none space-y-1 text-gray-500 dark:text-gray-400">
+								<Li icon>
+									<ArgoCDHealthStatus healthStatus={application.health} />
+								</Li>
+								<Li icon>
+									<ArgoCDSyncStatus syncStatus={application.syncStatus} />
+								</Li>
+							</List>
+							<br />
+							<div class="align-bottom">
+								<P>(<A href={application.url} target="_blank" class="text-xs">More Info</A>)</P>
+								<GradientButton
+									class="absolute right-5"
+									outline
+									color="pinkToOrange"
+									onclick={() =>
+										reloadDiff(
+											argoCDApplications.name,
+											application.name,
+											application.liveRef,
+											targetRef ? targetRef : application.liveRef
+										)}><RefreshOutline /></GradientButton
+								>
+							</div>
+							<br />
+							<AppManifests diffData={$diffData[argoCDApplications.name]?.[application.name]} />
+						</TabItem>
+					{/each}
+				</Tabs>
+			</TabItem>
+		{/each}
+	</Tabs>
 {/if}

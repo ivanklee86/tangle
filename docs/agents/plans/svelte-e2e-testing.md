@@ -47,15 +47,18 @@ Land the four workstreams below in order; each is independently useful and indep
    # Playwright (for web/ e2e tests) — keep the version in sync with
    # @playwright/test in web/package.json.
    ARG PLAYWRIGHT_VERSION=1.63.0
-   RUN npx --yes playwright@${PLAYWRIGHT_VERSION} install chromium && \
+   RUN npx --yes playwright@${PLAYWRIGHT_VERSION} install chromium chromium-headless-shell && \
        apt-get update && apt-get install -y --no-install-recommends \
            libglib2.0-0 libnss3 libnspr4 libdbus-1-3 libatk1.0-0 \
            libatk-bridge2.0-0 libatspi2.0-0 libx11-6 libxcomposite1 \
            libxdamage1 libxext6 libxfixes3 libxrandr2 libgbm1 libxcb1 \
-           libxkbcommon0 libasound2 fonts-liberation fonts-dejavu-core && \
+           libxkbcommon0 libasound2 libcups2 libpango-1.0-0 libcairo2 \
+           fonts-liberation fonts-dejavu-core && \
        rm -rf /var/lib/apt/lists/*
    ```
    Deliberately not `playwright install --with-deps` (that's what failed above) — install the browser binary and the runtime library/font list explicitly instead, confirmed working in this session (`sudo dpkg --configure -a` was needed once to recover from the failed `--with-deps` attempt's interrupted apt state; a clean image build shouldn't hit that).
+
+   **Corrected during implementation of [the component unit-tests plan](svelte-component-unit-tests.md)** (2026-09-19), which shares this exact devcontainer prerequisite: `chromium-headless-shell` is a separate download from `chromium` (needed by `@vitest/browser-playwright`, and Playwright's own e2e runner can use it too for faster headless runs), and `libcups2`/`libpango-1.0-0`/`libcairo2` were missing from the original researched list — only surfaced by Playwright's `Host system is missing dependencies` warning when actually launching a browser, not by an install-only check. If this workstream is implemented after that plan already landed the Dockerfile change, this step is already done — skip to confirming it, don't redo the research.
 2. Confirm `ARG PLAYWRIGHT_VERSION` matches the exact version pinned in `web/package.json` (workstream 1, step 4) — Playwright's browser binary and npm package versions must match exactly or the test run refuses to launch.
 3. `task devcontainer` (builds `.devcontainer/Dockerfile`) to confirm the image still builds.
 4. Inside a container built from the new image, `cd web && npm ci && npx playwright test` (the mocked suite from workstream 1) to confirm browsers launch and render text correctly without any manual apt steps.
@@ -119,12 +122,19 @@ Reuses the same user flows as workstream 1's mocked specs but with loose, struct
 1. In the `ts` job, after the existing `Build website` step, add Playwright browser install + the mocked suite:
    ```yaml
    - name: Install Playwright browser
-     run: npx --yes playwright@1.63.0 install --with-deps chromium
+     # Invoke the locally installed `playwright` package directly rather
+     # than `npx playwright@<version>` — this project also depends on
+     # `@playwright/test`, which provides its own (older-pinned) `playwright`
+     # bin under the same name, and `npx` resolves to that one instead of
+     # the version requested, silently installing the wrong browser
+     # revision. `node node_modules/playwright/cli.js` bypasses the bin
+     # collision and always uses the exact version in web/package.json.
+     run: node node_modules/playwright/cli.js install --with-deps chromium
      working-directory: web
    - name: Run e2e tests
      run: task ts:test:e2e
    ```
-   `ubuntu-latest` GitHub-hosted runners are on Playwright's officially supported list, so `--with-deps` (unlike the devcontainer's Debian base in workstream 2) should work as documented here — verify at implementation time rather than assuming, and fall back to the devcontainer's explicit package list if not. Keep the hardcoded `1.63.0` here in sync with `web/package.json`'s pin (workstream 1) and the devcontainer's `PLAYWRIGHT_VERSION` (workstream 2) — three places is one too many for comfort; consider at implementation time whether to instead read the version from `web/package.json` in this step (e.g. `node -p "require('./package.json').devDependencies['@playwright/test']"`) to collapse it to one source of truth.
+   `ubuntu-latest` GitHub-hosted runners are on Playwright's officially supported list, so `--with-deps` (unlike the devcontainer's Debian base in workstream 2) should work as documented here — verify at implementation time rather than assuming, and fall back to the devcontainer's explicit package list if not. This invokes `node_modules/playwright/cli.js` directly instead of `npx playwright@1.63.0` to avoid a bin-name collision with `@playwright/test`'s own `playwright` binary (see the identical fix and rationale in the `ts` job's own "Install Playwright browser" step in `.github/workflows/ci.yaml`); the version is read from `web/package.json` itself, so there's nothing here to keep in sync.
 2. Add a new, separate job for the live smoke suite, gated so it does **not** run on every push/PR (per [ADR 0003](../../adrs/0003-svelte-e2e-testing-strategy.md), this is opt-in, not a required check):
    ```yaml
    on:
@@ -159,7 +169,11 @@ Reuses the same user flows as workstream 1's mocked specs but with loose, struct
            sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
            rm argocd-linux-amd64
        - name: Install Playwright browser
-         run: npx --yes playwright@1.63.0 install --with-deps chromium
+         # See the `ts` job's own "Install Playwright browser" step above
+         # (and its counterpart in `.github/workflows/ci.yaml`) for why this
+         # invokes `node_modules/playwright/cli.js` directly instead of
+         # `npx playwright@<version>`.
+         run: node node_modules/playwright/cli.js install --with-deps chromium
          working-directory: web
        - name: Run live-stack e2e smoke suite
          run: task e2e:smoke
