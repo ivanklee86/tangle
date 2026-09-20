@@ -1,7 +1,8 @@
 package main
 
 import (
-	"github.com/gofiber/fiber/v2/log"
+	"log"
+
 	"github.com/knadh/koanf/v2"
 
 	"github.com/ivanklee86/tangle/internal/tangle"
