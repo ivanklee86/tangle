@@ -141,7 +141,14 @@ at all. It uploads its own raw `coverage.out` alongside the rendered `coverage.h
 run octocov itself (see the `report` job below). `ts` similarly runs unit tests and the mocked
 (network-stubbed) Playwright suite, installing a pinned-version Playwright Chromium build (invoked
 via `node node_modules/playwright/cli.js` rather than `npx`, to dodge a bin-name collision with
-`@playwright/test`'s own bundled `playwright`). `docs` only needs `uv` to build the mkdocs site.
+`@playwright/test`'s own bundled `playwright`). Both `ts` and `e2e` install frontend packages via
+`task ts:install-ci` (`npm ci`, mirroring `go:install-ci`'s naming) rather than `task ts:install`
+(`npm install`, kept for local use) — `npm ci` refuses to run against a `package.json`/
+`package-lock.json` that are out of sync, so a Renovate PR whose artifact-update step failed to
+regenerate the lockfile fails fast and legibly at the install step instead of several steps later
+with a misleading transitive peer-dependency error
+([ADR 0019](../adrs/0019-hold-typescript-majors-until-svelte-check-supports-them.md)). `docs` only
+needs `uv` to build the mkdocs site.
 `pre-commit` is the leanest of the always-run jobs: checkout, a pinned Go toolchain (`go-fmt` is
 `language: script` in `dnephin/pre-commit-golang`, so prek doesn't provision one itself), then
 [`j178/prek-action`](https://github.com/j178/prek-action) (SHA-pinned) runs the rest of
