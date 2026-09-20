@@ -14,8 +14,10 @@ import (
 
 	"github.com/flowchartsman/swaggerui"
 	"github.com/hellofresh/health-go/v5"
+	"github.com/lmittmann/tint"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/yarlson/chiprom"
+	"golang.org/x/term"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -45,10 +47,25 @@ func New(config *TangleConfig, version string) *Tangle {
 
 	// set up logging
 	schema := httplog.SchemaECS.Concise(true)
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level:       slog.LevelDebug,
-		ReplaceAttr: schema.ReplaceAttr,
-	})).With(
+	// httplog v3 dropped its own colorized console handler (v2's color.go/
+	// text_handler.go) in favor of plumbing straight to slog - see
+	// docs/agents/plans/go-major-dependency-migration.md. Restore colorized,
+	// human-readable logs for local dev (air, `task go:run`) by swapping in
+	// tint's handler when running interactively; keep plain JSON everywhere
+	// else (CI, tests, containers) so log shipping/parsing is unaffected.
+	var handler slog.Handler
+	if config.Env == "dev" && term.IsTerminal(int(os.Stdout.Fd())) {
+		handler = tint.NewTextHandler(os.Stdout, &tint.Options{
+			Level:       slog.LevelDebug,
+			ReplaceAttr: schema.ReplaceAttr,
+		})
+	} else {
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			Level:       slog.LevelDebug,
+			ReplaceAttr: schema.ReplaceAttr,
+		})
+	}
+	logger := slog.New(handler).With(
 		slog.String("version", version),
 		slog.String("env", config.Env),
 	)
