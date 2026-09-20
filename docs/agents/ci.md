@@ -29,6 +29,7 @@ flowchart TB
         go_job["go (if: go paths changed)<br/>gofmt · lint · unit + integration tests · coverage"]
         ts_job["ts (if: web/** changed)<br/>vitest · mocked Playwright · eslint · sveltekit build"]
         docs_job["docs (if: docs/** changed)<br/>mkdocs build (task python:test)"]
+        pre_commit_job["pre-commit (always runs)<br/>prek run --all-files (SKIP=web-lint)"]
         e2e_job["e2e (always runs)<br/>real k3d+ArgoCD · Go live tests · live Playwright suite"]
         report_job["report (always runs)<br/>unified JUnit + centralized octocov coverage"]
 
@@ -61,7 +62,14 @@ flowchart TB
 `go`/`ts`/`docs` are gated on `filter`'s path outputs and skip cleanly (green, skipped — not
 pending) when their paths aren't touched; a skipped job still satisfies branch-protection required
 checks naming it. `e2e` has no `if:` — it always runs, since it's the one place real ArgoCD/browser
-coverage happens for both languages. `report` `needs: [go, ts, e2e]` with `if: always()`, so it
+coverage happens for both languages. `pre-commit` likewise has no `if:` — most of its hooks
+(`trailing-whitespace`, `check-yaml`, `markdownlint-cli2`, `renovate-config-validator`) are
+repo-wide with no single ecosystem path to filter on; it replaced the hosted pre-commit.ci service
+with a self-hosted [prek](https://github.com/j178/prek) run once the repo standardized on prek
+locally ([ADR 0014](../adrs/0014-drop-precommit-ci-run-prek-in-actions.md)) — `web-lint` stays
+skipped (`SKIP=web-lint`) since `ts`'s own `task ts:lint` already gates it for real. `report`
+`needs: [go, ts, e2e]` with `if: always()` (deliberately not `pre-commit`, which produces no JUnit
+output to merge), so it
 still runs and produces a combined result even when `go`/`ts` were skipped — including its
 coverage report, since `go`/`e2e` upload their raw coverage profiles as artifacts rather than each
 running [octocov](https://github.com/k1LoW/octocov) (ADR 0010) itself; `report` is the one place
@@ -89,10 +97,11 @@ the live suite runs separately via `task ts:test:e2e:live` (no local dev server 
 `e2e` is the only job that runs against a real cluster rather than a fake/mocked ArgoCD API, and
 the only job in `ci.yaml` with no path-based `if:`:
 
-1. Install Go 1.27, Node 24, [Task](https://taskfile.dev), [k3d](https://k3d.io) `v5.9.0`
-   (pinned in step; kept in sync with `.devcontainer/Dockerfile`), and the `argocd` CLI
-   `v3.5.3` (same sync comment). No separate Docker setup step — `ubuntu-latest` ships a recent
-   enough Docker/Buildx already.
+1. Install Go 1.27, Node 24, [Task](https://taskfile.dev), [k3d](https://k3d.io), and the `argocd`
+   CLI — both versions come from this job's own `env: K3D_VERSION`/`ARGOCD_VERSION` (`v5.9.0`/
+   `v3.5.3`), which `renovate.json`'s "k8s" group also tracks alongside `.devcontainer/Dockerfile`'s
+   copies, so a Renovate bump moves both files together instead of relying on a comment. No
+   separate Docker setup step — `ubuntu-latest` ships a recent enough Docker/Buildx already.
 2. `task go:install-ci` — Go deps + CI tooling; `task go:generate` — regenerates the Swagger spec.
 3. `task services:cicd` (`Taskfile.yaml`) — the expensive step: tears down and recreates a k3d
    cluster, waits for a real ArgoCD install to become healthy, mints an ArgoCD API token, builds
@@ -119,6 +128,10 @@ run octocov itself (see the `report` job below). `ts` similarly runs unit tests 
 (network-stubbed) Playwright suite, installing a pinned-version Playwright Chromium build (invoked
 via `node node_modules/playwright/cli.js` rather than `npx`, to dodge a bin-name collision with
 `@playwright/test`'s own bundled `playwright`). `docs` only needs `uv` to build the mkdocs site.
+`pre-commit` is the leanest of the always-run jobs: checkout, a pinned Go toolchain (`go-fmt` is
+`language: script` in `dnephin/pre-commit-golang`, so prek doesn't provision one itself), then
+[`j178/prek-action`](https://github.com/j178/prek-action) (SHA-pinned) runs the rest of
+`.pre-commit-config.yaml`'s hooks — no Node/npm install, since `web-lint` is skipped here.
 
 ## The `report` job: unified tests and coverage
 
@@ -153,6 +166,10 @@ comparing `octocov dump report` against each input file alone before landing thi
   [workstream 12](plans/ci-pipeline-restructure.md#12-ci-dependency-caching) landed this: Go
   module/build cache, Go tool-binary cache, npm cache, Playwright-browser cache, k3d/argocd CLI
   cache, and Docker layer caching via buildx + the GitHub Actions cache backend.
+- **Resolved**: pre-commit.ci (a hosted third-party GitHub App) has been dropped — a self-hosted
+  `pre-commit` job now runs the same hook suite via [prek](https://github.com/j178/prek) directly
+  in `ci.yaml`, the same tool already used locally
+  ([ADR 0014](../adrs/0014-drop-precommit-ci-run-prek-in-actions.md)).
 - **Resolved**: coverage reporting uses octocov instead of Codecov — no more
   `jandelgado/gcov2lcov-action`, `codecov/codecov-action`, or `CODECOV_TOKEN`
   ([ADR 0010](../adrs/0010-replace-codecov-with-octocov.md)/workstream 10). It runs centrally in
