@@ -15,7 +15,7 @@ Land the four workstreams below in order; each is independently useful and indep
 **Layout change** (`web/e2e/`)
 
 | | Current | Target |
-|---|---|---|
+| --- | --- | --- |
 | `web/e2e/demo.test.ts` | Checks for an `h1` (fails — no page has one) | Deleted |
 | `web/e2e/fixtures/` | — | New: fixture JSON matching `$lib/data.ts` types |
 | `web/e2e/mocked/*.spec.ts` | — | New: the real suite, network-mocked |
@@ -47,6 +47,7 @@ Land the four workstreams below in order; each is independently useful and indep
 **Steps**
 
 1. In `.devcontainer/Dockerfile`, after the existing Node setup (Playwright needs `npm`/`npx` on `PATH`, already true by that point) and before switching `USER vscode` back (the apt install needs root):
+
    ```dockerfile
    # Playwright (for web/ e2e tests) — keep the version in sync with
    # @playwright/test in web/package.json.
@@ -60,6 +61,7 @@ Land the four workstreams below in order; each is independently useful and indep
            fonts-liberation fonts-dejavu-core && \
        rm -rf /var/lib/apt/lists/*
    ```
+
    Deliberately not `playwright install --with-deps` (that's what failed above) — install the browser binary and the runtime library/font list explicitly instead, confirmed working in this session (`sudo dpkg --configure -a` was needed once to recover from the failed `--with-deps` attempt's interrupted apt state; a clean image build shouldn't hit that).
 
    **Corrected during implementation of [the component unit-tests plan](svelte-component-unit-tests.md)** (2026-09-19), which shares this exact devcontainer prerequisite: `chromium-headless-shell` is a separate download from `chromium` (needed by `@vitest/browser-playwright`, and Playwright's own e2e runner can use it too for faster headless runs), and `libcups2`/`libpango-1.0-0`/`libcairo2` were missing from the original researched list — only surfaced by Playwright's `Host system is missing dependencies` warning when actually launching a browser, not by an install-only check. If this workstream is implemented after that plan already landed the Dockerfile change, this step is already done — skip to confirming it, don't redo the research.
@@ -74,6 +76,7 @@ Land the four workstreams below in order; each is independently useful and indep
 **`tasks/ts.yaml`**
 
 1. Add `test:e2e` (mocked suite; effectively what `npm run test:e2e` already does, exposed at the Task level for consistency with the other `ts:*` tasks and so CI can call it the same way as everything else):
+
    ```yaml
    test:e2e:
      desc: Run the mocked-API Playwright e2e suite.
@@ -81,8 +84,10 @@ Land the four workstreams below in order; each is independently useful and indep
      cmds:
        - npx playwright test
    ```
+
    (`ts:test` already runs `npm run test:unit -- --run && npm run test:e2e`, i.e. it already covers this — this task exists so CI/devs can run just the e2e leg without the unit leg.)
 2. Add `test:e2e:smoke` for the live-stack suite from [ADR 0003](../../adrs/0003-svelte-e2e-testing-strategy.md):
+
    ```yaml
    test:e2e:smoke:
      desc: Run the live-stack Playwright smoke suite against task services:cicd.
@@ -90,8 +95,10 @@ Land the four workstreams below in order; each is independently useful and indep
      cmds:
        - npx playwright test --config=playwright.smoke.config.ts
    ```
+
    This task assumes `task services:cicd` (root `Taskfile.yaml`) is already up — `tangle-server` embeds and serves `web/build` itself (`internal/tangle/server.go`'s `http.FileServer(http.Dir("./build"))` on `/*`), on the same `:8081` the API is on, so the smoke config points straight at `http://localhost:8081` and needs no `webServer`/dev-server of its own.
 3. Add a convenience root-level task in `Taskfile.yaml` that sequences the live smoke run end-to-end (bring up the stack, run the suite, tear down), since `test:e2e:smoke` alone assumes the stack is already running:
+
    ```yaml
    e2e:smoke:
      desc: Full live-stack e2e smoke run (brings up services, runs Playwright, tears down).
@@ -100,6 +107,7 @@ Land the four workstreams below in order; each is independently useful and indep
        - task: ts:test:e2e:smoke
        - task: k8s:cluster:delete
    ```
+
    Cross-namespace task calls from inside `tasks/ts.yaml` back to root-level tasks (`services:cicd`, `k8s:cluster:delete`) use Task's root-namespace prefix (`:services:cicd`) if called from within `ts:`'s own task definitions — this top-level sequencing task avoids needing that by living in the root `Taskfile.yaml` instead, calling `ts:test:e2e:smoke` the normal namespaced way.
 
 **Steps**
@@ -124,6 +132,7 @@ Reuses the same user flows as workstream 1's mocked specs but with loose, struct
 **CI** (`.github/workflows/ci.yaml`)
 
 1. In the `ts` job, after the existing `Build website` step, add Playwright browser install + the mocked suite:
+
    ```yaml
    - name: Install Playwright browser
      # Invoke the locally installed `playwright` package directly rather
@@ -138,8 +147,10 @@ Reuses the same user flows as workstream 1's mocked specs but with loose, struct
    - name: Run e2e tests
      run: task ts:test:e2e
    ```
+
    `ubuntu-latest` GitHub-hosted runners are on Playwright's officially supported list, so `--with-deps` (unlike the devcontainer's Debian base in workstream 2) should work as documented here — verify at implementation time rather than assuming, and fall back to the devcontainer's explicit package list if not. This invokes `node_modules/playwright/cli.js` directly instead of `npx playwright@1.63.0` to avoid a bin-name collision with `@playwright/test`'s own `playwright` binary (see the identical fix and rationale in the `ts` job's own "Install Playwright browser" step in `.github/workflows/ci.yaml`); the version is read from `web/package.json` itself, so there's nothing here to keep in sync.
 2. Add a new, separate job for the live smoke suite, gated so it does **not** run on every push/PR (per [ADR 0003](../../adrs/0003-svelte-e2e-testing-strategy.md), this is opt-in, not a required check):
+
    ```yaml
    on:
      push:
@@ -182,6 +193,7 @@ Reuses the same user flows as workstream 1's mocked specs but with loose, struct
        - name: Run live-stack e2e smoke suite
          run: task e2e:smoke
    ```
+
    This duplicates the `go` job's k3d/argocd/Docker setup steps rather than depending on that job, since GitHub Actions jobs don't share a filesystem/running services across jobs — `needs: go` would only sequence them, not hand off the live cluster. Revisit at implementation time whether that duplication is worth collapsing into a reusable composite action; not required for this to work.
 
 **Steps**

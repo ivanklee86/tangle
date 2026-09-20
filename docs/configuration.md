@@ -20,7 +20,7 @@ sortOrder:  # This section allows you to configure the order of ArgoCDs in the w
 Additional configurations can be configured in the `tangle.yaml` or via environment variables with the `TANGLE_<var>` format.
 
 | Configuration | Required? | Default Value | Description |
-|---------------|-----------|---------------|-------------|
+| --------------- | ----------- | --------------- | ------------- |
 | timeout | No | 60 (seconds) | Timeout on ArgoCD queries |
 | listWorkers | No | 10 | Control `List` parallelism |
 | manifestWorkers | No | 5 | Controls `GetManifests` parallelism |

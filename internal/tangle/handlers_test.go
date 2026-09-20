@@ -232,3 +232,46 @@ func TestDiffs(t *testing.T) {
 		})
 	}
 }
+
+// TestDiffsError guards against a regression where a GetManifests error fell
+// through into the success path instead of returning, nil-dereferencing the
+// (nil, on error) *argocd.GetManifestsResponse right after the error
+// response had already been written — silently recovered by chi's
+// Recoverer, so it never failed a test despite panicking on every real
+// GetManifests error. See docs/agents/plans/go-major-dependency-migration.md's
+// Outcome section for how this was found.
+func TestDiffsError(t *testing.T) {
+	t.Run("GetManifests error", func(t *testing.T) {
+		tangle := newTestTangle()
+		testWrapper := argocdfakes.NewFakeWrapper(testArgoCDApplications())
+		testWrapper.ErrOnGetManifests["test-1"] = errors.New("simulated manifest generation error")
+		tangle.ArgoCDs["test"] = testWrapper
+
+		requestBody := map[string]interface{}{
+			"currentRef": "main",
+			"compareRef": "test_gitops",
+		}
+		body, _ := json.Marshal(requestBody)
+		req, _ := http.NewRequest("POST", "/api/argocd/test/applications/test-1/diffs", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		rctx := chi.NewRouteContext()
+		rctx.URLParams.Add("argocd", "test")
+		rctx.URLParams.Add("name", "test-1")
+		ctx := context.WithValue(context.Background(), chi.RouteCtxKey, rctx)
+		req = req.WithContext(ctx)
+
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(tangle.applicationManifestsHandler)
+		assert.NotPanics(t, func() { handler.ServeHTTP(rr, req) })
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+
+		var result DiffsResponse
+		err := json.NewDecoder(rr.Body).Decode(&result)
+		assert.Nil(t, err)
+		assert.Equal(t, "simulated manifest generation error", result.ManifestGenerationError)
+		assert.Empty(t, result.LiveManifests)
+		assert.Empty(t, result.TargetManifests)
+		assert.Empty(t, result.Diffs)
+	})
+}

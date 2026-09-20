@@ -10,7 +10,7 @@ Land the twelve workstreams below in order; each is independently useful and ind
 
 ## The test pyramid (target state)
 
-```
+```text
                      ┌─────────────────────────────┐
                      │   e2e (real ArgoCD + real    │  slow, few tests,
                      │   browser) — always runs     │  real infra, top of
@@ -28,7 +28,7 @@ Land the twelve workstreams below in order; each is independently useful and ind
 ```
 
 | Layer | Go | TS | Runs in | Gated on |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Unit | `pkg/client`, `internal/tangle` (server/loader/manifests), `internal/cli/output_test.go`, `cmd/tangle-cli`'s help-text case | `*.spec.ts`, `*.svelte.test.ts` (vitest) | `go` / `ts` jobs | Path filter |
 | Integration (mock/fixture-backed) | `internal/argocd/wrapper_test.go`, `internal/tangle/handlers_test.go`, `internal/cli`/`cmd/tangle-cli`'s CLI-against-`httptest.Server` cases | `web/e2e/mocked/*.spec.ts` (Playwright, network-mocked) | `go` / `ts` jobs | Path filter |
 | E2E (real ArgoCD, real browser) | `internal/argocd/client_e2e_test.go`, `internal/tangle/server_e2e_test.go` | `web/e2e/live/*.spec.ts` (Playwright, real cluster) | `e2e` job | Always runs |
@@ -36,7 +36,7 @@ Land the twelve workstreams below in order; each is independently useful and ind
 ## Test taxonomy (target state) — Go
 
 | File | Today | Target bucket | Why |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `pkg/client/client_test.go` | Pure (URL string building) | Unit | Already no external dependency. |
 | `internal/tangle/server_test.go` | Pure | Unit | Already no external dependency. |
 | `internal/tangle/loader_test.go` | Pure (reads `integration/tangle.yaml` from disk) | Unit | Reads a checked-in fixture file, no network. |
@@ -96,6 +96,7 @@ Land the twelve workstreams below in order; each is independently useful and ind
 1. `test` (default, used locally and in the fast `go` CI job) stays `go test -v ./... 2>&1` — untagged, so it now runs the unit+integration bucket only, with no behavior change to the command itself (the tests moved, the task didn't).
 2. `test-ci` stays as-is for the unit/integration bucket's CI invocation (JUnit + coverage), also unchanged.
 3. Add `test:e2e` and `test:e2e:ci` as their own flat, colon-named keys (Task has no nested-subtask syntax — a `:` in a task's key is just a literal namespacing convention, the same way `tasks/k8s.yaml` has `cluster:create`/`cluster:delete`/`cluster:config` as sibling top-level keys). These mirror `test`/`test-ci` but with `-tags=e2e` and (for `test:e2e:ci`) a separate report/coverage filename (`report-e2e.xml`, `coverage-e2e.out`/`.html`) so the two suites' reports don't collide when both run in the same job (workstream 7):
+
    ```yaml
    tasks:
      test:
@@ -123,6 +124,7 @@ Land the twelve workstreams below in order; each is independently useful and ind
          - go test -tags=e2e --coverprofile {{.COVERAGE_RAW}} -v ./... 2>&1 | tee >(go-junit-report > report-e2e.xml)
          - go tool cover -html={{.COVERAGE_RAW}} -o {{.COVERAGE_REPORT}}
    ```
+
    (`test`/`test-ci` shown unchanged, for context — this plan doesn't rename them, only adds the two `test:e2e*` siblings alongside them, matching the frontend's `ts:test:e2e:live` naming from workstream 6.)
 
 **Steps**
@@ -140,7 +142,7 @@ Turn `web/`'s Playwright setup from a single non-passing, CI-unused spec (`e2e/d
 **Layout change** (`web/e2e/`)
 
 | | Current | Target |
-|---|---|---|
+| --- | --- | --- |
 | `web/e2e/demo.test.ts` | Checks for an `h1` (fails — no page has one) | Deleted |
 | `web/e2e/fixtures/` | — | New: fixture JSON matching `$lib/data.ts` types |
 | `web/e2e/mocked/*.spec.ts` | — | New: the mocked suite, network-mocked |
@@ -174,6 +176,7 @@ Turn `web/`'s Playwright setup from a single non-passing, CI-unused spec (`e2e/d
 **Steps**
 
 1. In `.devcontainer/Dockerfile`, after the existing Node setup and before switching `USER vscode` back (the apt install needs root):
+
    ```dockerfile
    # Playwright (for web/ e2e tests) — keep the version in sync with
    # @playwright/test in web/package.json.
@@ -187,6 +190,7 @@ Turn `web/`'s Playwright setup from a single non-passing, CI-unused spec (`e2e/d
            fonts-liberation fonts-dejavu-core && \
        rm -rf /var/lib/apt/lists/*
    ```
+
    Deliberately not `playwright install --with-deps` (that's what failed above) — install the browser binary and the runtime library/font list explicitly instead. If `libcups2`/`libpango-1.0-0`/`libcairo2` turn out already covered by another dependency's install step by the time this lands, that's fine — redundant `apt-get install` of an already-present package is a no-op.
 2. Confirm `ARG PLAYWRIGHT_VERSION` matches the exact version pinned in `web/package.json` (workstream 4, step 4) — Playwright's browser binary and npm package versions must match exactly or the test run refuses to launch.
 3. `task devcontainer` (builds `.devcontainer/Dockerfile`) to confirm the image still builds.
@@ -208,6 +212,7 @@ The top of the frontend pyramid: same user flows as workstream 4's mocked specs,
 
 1. Write the three live specs and `playwright.live.config.ts`.
 2. Add Task wiring in `tasks/ts.yaml`:
+
    ```yaml
    test:e2e:live:
      desc: Run the live-stack Playwright suite against task services:cicd.
@@ -215,7 +220,9 @@ The top of the frontend pyramid: same user flows as workstream 4's mocked specs,
      cmds:
        - npx playwright test --config=playwright.live.config.ts
    ```
+
    and a root-level convenience task in `Taskfile.yaml`:
+
    ```yaml
    e2e:live:
      desc: Full live-stack e2e run (brings up services, runs Playwright, tears down).
@@ -224,6 +231,7 @@ The top of the frontend pyramid: same user flows as workstream 4's mocked specs,
        - task: ts:test:e2e:live
        - task: k8s:cluster:delete
    ```
+
 3. `task e2e:live` locally to confirm the full bring-up/test/teardown cycle passes against a real cluster.
 4. Add a JUnit reporter to `playwright.live.config.ts` too, for workstream 8.
 
@@ -465,6 +473,7 @@ Per [ADR 0011](../../adrs/0011-octocov-central-reporting-and-badges-repository.m
 
 1. Create the repository (`ivanklee86/octocov-central`, public) — a manual/one-time step, not part of this plan's file changes to `tangle`. Done via `gh repo create`.
 2. Add `.octocov.yml`:
+
    ```yaml
    central:
      root: .
@@ -475,6 +484,7 @@ Per [ADR 0011](../../adrs/0011-octocov-central-reporting-and-badges-repository.m
        datastores:
          - local://badges
    ```
+
    (`central.reports.datastores` is a list — more source repos are added later as more `artifact://owner/repo` entries, no structural change needed. No `push:` key — see "What actually shipped.")
 3. Add a scheduled workflow, `.github/workflows/central.yaml` — see "What actually shipped" for the real (not `k1LoW/octocov-action`-based) version that ended up working.
 4. Create a fine-grained PAT scoped to read-only `actions` access on `ivanklee86/tangle` only, and store it as the `TANGLE_ARTIFACTS_TOKEN` secret in `octocov-central`'s repo settings — a manual step the user did themselves (PAT creation has no API; it's web-UI-only).

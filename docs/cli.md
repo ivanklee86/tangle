@@ -1,6 +1,7 @@
 The `tangle-cli` allows you to easily leverage `tangle` in your CI/CD pipelines.  For example, you can quickly generate manifests for all your deplyments with `tangle-cli generate-manifests` and run [kubeconform](https://github.com/yannh/kubeconform) or [conftest](https://www.conftest.dev/) to give your developers fast feedback!
 
 Example usage:
+
 ```shell
 tangle-cli generate-manifests --server-address localhost:8081 --insecure --folder ./tmpdir --target-ref test_gitops --fail-on-error
 ```
@@ -8,7 +9,8 @@ tangle-cli generate-manifests --server-address localhost:8081 --insecure --folde
 ## Commands
 
 ### tangle-cli
-```
+
+```text
 Usage:
   tangle-cli [flags]
   tangle-cli [command]
@@ -27,7 +29,8 @@ Use "tangle-cli [command] --help" for more information about a command.
 ```
 
 ### tangle-cli generate-manifests
-```
+
+```text
 Generate manifests for ArgoCD applications.
 
 Usage:

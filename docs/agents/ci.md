@@ -73,7 +73,7 @@ Both languages now split unit/integration (fast, path-conditional, no live depen
 (slow, always-run, real ArgoCD):
 
 | Layer | Go | TS | Runs in | Gated on |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Unit | `pkg/client`, `internal/tangle` (server/loader/manifests), `internal/cli/output_test.go` | `*.spec.ts`, `*.svelte.test.ts` (vitest) | `go` / `ts` | Path filter |
 | Integration (mock/fixture-backed) | `internal/argocd` (via `internal/argocd/argocdfakes`), `internal/tangle/handlers_test.go`, CLI round-trip tests (via `httptest.NewServer`) | `web/e2e/mocked/*.spec.ts` (Playwright, network-mocked via `page.route`) | `go` / `ts` | Path filter |
 | E2E (real ArgoCD, real browser) | `internal/argocd/client_e2e_test.go`, `internal/tangle/server_e2e_test.go` (`//go:build e2e`) | `web/e2e/live/*.spec.ts` (Playwright, real cluster, `playwright.live.config.ts`) | `e2e` | Always runs |

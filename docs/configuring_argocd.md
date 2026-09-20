@@ -1,4 +1,5 @@
 Tangle uses a JWT to authenticate to ArgoCD. This can be configured in the Helm chart as follows:
+
 ```yaml
 configs:
   cm:
@@ -11,6 +12,7 @@ configs:
 ```
 
 A JWT can be then generated using the ArgoCD CLI using the following command:
+
 ```shell
 argocd login # Using username/password or SSO
 argocd account generate-token --account YOUR_ACCOUNT

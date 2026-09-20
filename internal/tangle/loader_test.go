@@ -21,4 +21,17 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, "tangle", loadedConfig.Name)
 		assert.Len(t, loadedConfig.ArgoCDs, 2)
 	})
+
+	t.Run("Environment variable overrides file config", func(t *testing.T) {
+		t.Setenv("TANGLE_NAME", "from-env")
+
+		config := koanf.New(".")
+		options := LoadConfigOptions{
+			Path: "../../integration/tangle.yaml",
+		}
+
+		loadedConfig, err := LoadConfig(config, options)
+		assert.Nil(t, err)
+		assert.Equal(t, "from-env", loadedConfig.Name)
+	})
 }

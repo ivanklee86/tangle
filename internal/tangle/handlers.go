@@ -174,6 +174,7 @@ func (t *Tangle) applicationManifestsHandler(w http.ResponseWriter, req *http.Re
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+		return
 	}
 
 	live, _ := assembleManifests(generatedManifests.LiveManifests)

@@ -35,6 +35,7 @@ For frontend: `task ts:fmt` & `task ts:lint` respectively.
 Where possible, rules are enforced with [pre-commit](https://pre-commit.com/) hooks.
 
 ## Running Tests
+
 Note: Both test suites will (eventually) include unit/integration tests.  You need to run the server locally for tests to pass!
 
 - Go tests can be run with `task go:tests`

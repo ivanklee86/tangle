@@ -11,7 +11,7 @@ Do these as a single PR, landing the workstreams in the order below so each one 
 **Current → target**
 
 | | Current | Target |
-|---|---|---|
+| --- | --- | --- |
 | `argo-cd` Helm chart (`integration/kubernetes/argocd/Chart.yaml`) | 8.5.0 | 10.9.2 |
 | ArgoCD app version (chart's `appVersion`) | v3.1.5 | v3.5.3 |
 | `github.com/argoproj/argo-cd/v3` (`go.mod`) | v3.1.7 | v3.5.3 |

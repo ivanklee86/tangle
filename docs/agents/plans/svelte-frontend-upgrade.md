@@ -11,7 +11,7 @@ Do this as a single PR, landing the two workstreams below in order so each is va
 **Current → target** (`web/package.json`)
 
 | | Current | Target |
-|---|---|---|
+| --- | --- | --- |
 | `svelte` | 5.16.0 (resolved 5.26.1) | 5.57.1 |
 | `@sveltejs/kit` | 2.0.0 (resolved 2.20.5) | 2.70.3 |
 | `@sveltejs/adapter-static` | 3.0.6 (resolved 3.0.8) | 3.0.10 |
@@ -33,7 +33,7 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
 **Current → target** (`web/package.json`)
 
 | | Current | Target |
-|---|---|---|
+| --- | --- | --- |
 | `tailwindcss` | `^3` (resolved 3.4.17) | 4.3.3 |
 | `flowbite-svelte` | 0.47.4 | 1.33.1 |
 | `flowbite-svelte-icons` | 2.1.1 | 3.1.0 |
@@ -49,6 +49,7 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
 
 1. Delete `web/postcss.config.js` and `web/tailwind.config.ts`.
 2. In `web/vite.config.ts`, add the `@tailwindcss/vite` plugin ahead of `sveltekit()`:
+
    ```ts
    import { defineConfig } from 'vitest/config';
    import { sveltekit } from '@sveltejs/kit/vite';
@@ -61,7 +62,9 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
    	}
    });
    ```
+
 3. Rewrite `web/src/app.css` (replacing the three `@tailwind` directives) with the CSS-first equivalent of the deleted `tailwind.config.ts` — the primary color palette, the `flowbite/plugin` registration, and (since `app.html` toggles `class="dark"` on `<html>` via the `DarkMode` component, and Tailwind v4 defaults `dark:` to a media query) an explicit class-based dark variant:
+
    ```css
    @import 'tailwindcss';
 
@@ -86,6 +89,7 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
    	--color-primary-900: #a5371b;
    }
    ```
+
    The `@source` lines replace `tailwind.config.ts`'s `content: [...]` array — Tailwind v4 auto-scans the project but not `node_modules`, so any package shipping class names used at runtime (here: `flowbite-svelte`, `flowbite-svelte-icons`, `svhighlight`'s `CodeBlock`) needs an explicit `@source`.
 4. `npm install` the version table above (removing `autoprefixer`, adding `@tailwindcss/vite`).
 
@@ -97,6 +101,7 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
 - **`src/lib/components/Header.svelte`** — `Navbar`, `NavBrand`, `DarkMode` usage is prop-compatible as-is; verify `<Navbar color="form">` is still a valid `color` value in 1.x's navbar theme (its color palette may have changed).
 - **`src/lib/components/ApplicationsGrid.svelte`**:
   - `<TabItem title=... open=... disabled=...><span slot="title">...</span></TabItem>` → drop the now-redundant `title` prop and the `slot="title"` span, use the `titleSlot` snippet prop instead:
+
     ```svelte
     <TabItem open={index === 0} disabled={argoCDApplications.applications.length === 0}>
     	{#snippet titleSlot()}
@@ -105,10 +110,12 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
     	...
     {/TabItem}
     ```
+
   - `<Table hoverable={true} items={argoCDApplications.applications}>` + `<TableBodyRow slot="row" let:item>`: in `flowbite-svelte` 1.x, `Table`'s `items` prop makes it render an auto-generated head/body from the items and **ignore its children entirely** — it can no longer be combined with hand-written `TableHead`/`TableBody`/custom cell rendering the way 0.x allowed. Drop `items` from `<Table>` and replace the `slot="row" let:item` row with a plain `{#each}` inside `<TableBody>` (also `TableBody`'s `tableBodyClass` prop is gone in 1.x — use `class` instead). This also removes the three `{/* @ts-expect-error */}` workarounds in this file — they existed only because 0.x's `let:item` slot prop couldn't be typed; a typed `{#each item of ...}` doesn't need them.
   - **`sort` is gone from `TableHeadCell` entirely in 1.x** — confirmed by reading both the 0.47.4 and 1.33.1 source: in 0.x, `Table`'s `items` prop plus a `sort` comparator on `TableHeadCell` wired into a shared Svelte context (`sorter`) that `TableBody` read to reorder rows and render a ▲/▼ indicator; in 1.x that whole context mechanism (and the `sort`/`defaultDirection`/`direction` props) was removed along with the `items`+custom-children combination, with no replacement. Since this app's column-sort was real, working functionality, it has to be reimplemented locally rather than dropped: track one `{ key, direction }` sort state per tab in a `$state` record, sort a copy of the tab's `applications` array before the `{#each}`, and make each `TableHeadCell` clickable (`onclick`) with an inline ▲/▼ indicator appended to its label. See the actual implementation in `ApplicationsGrid.svelte` for the exact shape.
   - The raw `<a href={item.url} target="_blank">` (an external ArgoCD URL, not an internal SvelteKit route) trips `eslint-plugin-svelte`'s `svelte/no-navigation-without-resolve` rule once `eslint-plugin-svelte` is bumped (2c) — add `rel="external"` per that rule's own documented escape hatch for non-SvelteKit links, rather than wrapping it in `resolve()` (which is for internal routes only).
 - **`src/lib/components/AppManifests.svelte`** — `<AccordionItem><span slot="header">Manifests</span>...</AccordionItem>` → `header` snippet prop:
+
   ```svelte
   <AccordionItem>
   	{#snippet header()}
@@ -117,9 +124,11 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
   	<CodeBlock language="yaml" code={diffData.response.targetManifests} />
   </AccordionItem>
   ```
+
   Verify `<Card size="xl">`'s `size="xl"` is still a valid value in 1.x's card theme.
 - **`src/routes/+page.svelte`**:
   - `<Toast ... on:close={() => (...)}>` + `<svelte:fragment slot="icon">...</svelte:fragment>` → `onclose` callback prop + `icon` snippet prop:
+
     ```svelte
     <Toast color="red" position="top-right" onclose={() => (noRefSpecified = false)}>
     	{#snippet icon()}
@@ -129,7 +138,9 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
     	You must provide a target git ref to generate a diff!
     </Toast>
     ```
+
   - `<Input ...><LabelSolid slot="left" class="w-6 h-6" /></Input>` → `left` snippet prop:
+
     ```svelte
     <Input type="text" placeholder="..." bind:value={labels} size="lg">
     	{#snippet left()}
@@ -137,6 +148,7 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
     	{/snippet}
     </Input>
     ```
+
     (every `slot="left"` `Input` usage in this file — 5 occurrences: labels ×2, excludeLabels ×2, targetRef ×1; the `CodeBranchOutline slot="left"` on the targetRef `Input` follows the same pattern)
 
     **Also add `class="ps-11"` to each of these `Input`s.** Confirmed visually (screenshot) that without it, the icon overlaps the placeholder/typed text: 0.x's `Input` automatically added left padding (`ps-9`/`ps-10`/`ps-11` for sm/md/lg) whenever a `left` slot was present; 1.x's `input` theme (`node_modules/flowbite-svelte/dist/forms/input-field/theme.ts`) does not — its padding is a fixed `px-3 py-3` for `lg` regardless of whether `left`/`right` are used, so the caller has to reserve the space itself. `size="lg"` here maps to 0.x's `ps-11`.
@@ -154,7 +166,7 @@ This is a same-major bump (Svelte 5.x, SvelteKit 2.x) — no snippet/slot API ch
 Bump these devDependencies alongside `flowbite-svelte`/Tailwind so linting and formatting understand the new syntax (snippets, Tailwind v4 class names) instead of flagging it:
 
 | | Current | Target |
-|---|---|---|
+| --- | --- | --- |
 | `eslint-plugin-svelte` | 3.0.2 | 3.23.0 |
 | `prettier-plugin-svelte` | 3.3.3 | 4.1.1 (peer: `prettier ^3.0.0`, `svelte ^5.0.0` — both already satisfied) |
 | `prettier-plugin-tailwindcss` | 0.6.11 | 0.8.1 (needed for Tailwind v4 class sorting) |

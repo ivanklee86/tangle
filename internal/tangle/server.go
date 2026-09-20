@@ -20,7 +20,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/go-chi/httplog/v2"
+	"github.com/go-chi/httplog/v3"
 
 	"github.com/ivanklee86/tangle/internal/argocd"
 )
@@ -29,7 +29,7 @@ type Tangle struct {
 	Server  *http.Server
 	Config  *TangleConfig
 	ArgoCDs map[string]argocd.IArgoCDWrapper
-	Log     *httplog.Logger
+	Log     *slog.Logger
 }
 
 var (
@@ -44,25 +44,29 @@ func New(config *TangleConfig, version string) *Tangle {
 	tangle.Config = config
 
 	// set up logging
-	logger := httplog.NewLogger("tangle", httplog.Options{
-		// JSON:             true,
-		LogLevel:         slog.LevelDebug,
-		Concise:          true,
-		RequestHeaders:   false,
-		MessageFieldName: "message",
-		// TimeFieldFormat: time.RFC850,
-		Tags: map[string]string{
-			"version": version,
-			"env":     config.Env,
+	schema := httplog.SchemaECS.Concise(true)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level:       slog.LevelDebug,
+		ReplaceAttr: schema.ReplaceAttr,
+	})).With(
+		slog.String("version", version),
+		slog.String("env", config.Env),
+	)
+	// quietRoutes are skipped from request logging entirely (no rate-limited "quiet down"
+	// period like httplog v2 had — see docs/agents/plans/go-major-dependency-migration.md).
+	quietRoutes := map[string]bool{
+		"/":        true,
+		"/metrics": true,
+		"/swagger": true,
+		"/health":  true,
+	}
+	requestLoggerOptions := httplog.Options{
+		Level:  slog.LevelDebug,
+		Schema: schema,
+		Skip: func(req *http.Request, _ int) bool {
+			return quietRoutes[req.URL.Path]
 		},
-		QuietDownRoutes: []string{
-			"/",
-			"/metrics",
-			"/swagger",
-			"/health",
-		},
-		QuietDownPeriod: 10 * time.Second,
-	})
+	}
 	tangle.Log = logger
 
 	// Create ArgoCD clients
@@ -95,12 +99,12 @@ func New(config *TangleConfig, version string) *Tangle {
 	tangle.Server = server
 
 	// Middlewares
-	router.Use(httplog.RequestLogger(logger))
+	router.Use(httplog.RequestLogger(logger, &requestLoggerOptions))
 	router.Use(middleware.RequestID)
 	// middleware.RealIP is deprecated (IP-spoofable); resolve the client IP with the
 	// rightmost X-Forwarded-For entry (safe for exactly one trusted hop, e.g. an
 	// ingress/reverse proxy immediately in front of this server) and copy it into
-	// RemoteAddr so it still shows up in httplog's "remoteIP" field.
+	// RemoteAddr so it still shows up in httplog's ECS-schema "client.ip" field.
 	router.Use(middleware.ClientIPFromXFF())
 	router.Use(setRemoteAddrFromClientIP)
 	router.Use(middleware.Recoverer)
@@ -145,7 +149,7 @@ func New(config *TangleConfig, version string) *Tangle {
 
 // setRemoteAddrFromClientIP copies the client IP resolved by one of chi's
 // middleware.ClientIPFrom* middlewares into r.RemoteAddr, so it's visible in
-// httplog's "remoteIP" field. Leaves RemoteAddr untouched if none was resolved.
+// httplog's "client.ip" field. Leaves RemoteAddr untouched if none was resolved.
 func setRemoteAddrFromClientIP(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if ip := middleware.GetClientIP(r.Context()); ip != "" {
@@ -159,7 +163,7 @@ func (t *Tangle) Start() {
 	t.Log.Info("Starting server.")
 	go func() {
 		if err := t.Server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-			t.Log.Error("HTTP server error.", httplog.ErrAttr(err))
+			t.Log.Error("HTTP server error.", httplog.ErrorKey, err)
 		}
 		t.Log.Info("Stopped serving new connections.")
 	}()
@@ -173,7 +177,7 @@ func (t *Tangle) Start() {
 	defer shutdownRelease()
 
 	if err := t.Server.Shutdown(shutdownCtx); err != nil {
-		t.Log.Error("HTTP shutdown error", httplog.ErrAttr(err))
+		t.Log.Error("HTTP shutdown error", httplog.ErrorKey, err)
 	}
 	t.Log.Info("Graceful shutdown complete.")
 }
