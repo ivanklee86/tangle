@@ -15,8 +15,6 @@ jobs:
   filter:
     runs-on: ubuntu-latest
     outputs:
-      go: ${{ steps.filter.outputs.go }}
-      ts: ${{ steps.filter.outputs.ts }}
       docs: ${{ steps.filter.outputs.docs }}
     steps:
     - uses: actions/checkout@v7
@@ -24,22 +22,6 @@ jobs:
       id: filter
       with:
         filters: |
-          go:
-            - '**/*.go'
-            - 'go.mod'
-            - 'go.sum'
-            - 'Taskfile.yaml'
-            - 'tasks/go.yaml'
-            - 'tasks/docker.yaml'
-            - 'tasks/k8s.yaml'
-            - 'tasks/argocd.yaml'
-            - 'Dockerfile'
-            - '.github/workflows/ci.yaml'
-          ts:
-            - 'web/**'
-            - 'Taskfile.yaml'
-            - 'tasks/ts.yaml'
-            - '.github/workflows/ci.yaml'
           docs:
             - 'docs/**'
             - '!docs/agents/**'
@@ -48,8 +30,6 @@ jobs:
             - '.github/workflows/ci.yaml'
 
   go:
-    needs: [filter]
-    if: needs.filter.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -106,8 +86,6 @@ jobs:
         path: ./report.xml
 
   ts:
-    needs: [filter]
-    if: needs.filter.outputs.ts == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -336,9 +314,10 @@ jobs:
       # lists both; octocov merges overlapping files itself (folding
       # duplicate-covered lines, not double-counting), so this becomes one
       # combined Go coverage report instead of go's slice alone. Each
-      # pattern is globbed independently, so a skipped go job (path filter)
-      # just leaves that one glob empty rather than erroring — e2e always
-      # runs, so there's always at least its coverage to report on.
+      # pattern is globbed independently, so a go job that fails outright
+      # (or, before ADR 0017, was skipped by the path filter) just leaves
+      # that one glob empty rather than erroring — e2e always runs, so
+      # there's always at least its coverage to report on.
       uses: actions/download-artifact@v8
       with:
         pattern: '*-coverage-profile'
