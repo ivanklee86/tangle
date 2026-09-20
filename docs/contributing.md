@@ -21,9 +21,7 @@ Pull requests are the best way to propose changes to the codebase (we use [Githu
 
 1. Land your changes on `main`.
 2. Create a [Release](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository) with a new [semver](https://semver.org/) tag.
-3. Github Actions will build new Docker image & CLI.
-4. Update the [tangle-deployments](https://github.com/ivanklee86/tangle-deployments) repository with new application version (`Renovate` usually gives you a handy PR!).
-5. Bump chart version and create a new Helm release.
+3. Github Actions will build new Docker image & CLI and trigger update to helm chart.
 
 ## Formatting and Linting
 
