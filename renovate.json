@@ -85,6 +85,13 @@
       "matchStrings": ["gateway-api/releases/download/(?<currentValue>v[0-9.]+)/"],
       "datasourceTemplate": "github-releases",
       "depNameTemplate": "kubernetes-sigs/gateway-api"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/ci\\.yaml$/"],
+      "matchStrings": [
+        "(?:K3D|ARGOCD)_VERSION: (?<currentValue>.*) # (?<datasource>.*?)/(?<depName>.*?)\\s"
+      ]
     }
   ]
 }

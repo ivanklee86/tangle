@@ -41,6 +41,7 @@ Chosen options, landed together in one `renovate.json` restructure (see [the imp
 6. **Pin `alpine/helm` and `derailed/k9s` to explicit tags** (`4.3.0`, `v0.50.18` as of 2026-09-20) in `.devcontainer/Dockerfile` — a prerequisite for Renovate to track them at all, and a direct fix for an existing AGENTS.md pinning-rule violation found during this review.
 7. **Pin `air-verse/air` and the devcontainer's own `go-swagger` install to explicit versions** (`v1.67.4`, `v0.36.6` as of 2026-09-20, the latter matching `tasks/go.yaml`'s pin) in `.devcontainer/Dockerfile` — same rationale as 6, for the `@latest` pins found in that file's "Go extras" section.
 8. **`renovatebot/pre-commit-hooks`' `renovate-config-validator` hook**, added to `.pre-commit-config.yaml`, pinned to `44.103.6`.
+9. **Track `.github/workflows/ci.yaml`'s own `k3d`/`argocd` version copies** (a CodeRabbit finding on the PR) — the `e2e` job hardcoded both versions a second time (cache key, install commands) with only a comment asking a human to keep them in sync with `.devcontainer/Dockerfile`. Collapsed to a job-level `env:` block and tracked by a new `customManagers` entry, joining the same `k8s` group so a bump moves every occurrence together.
 
 ### Consequences
 

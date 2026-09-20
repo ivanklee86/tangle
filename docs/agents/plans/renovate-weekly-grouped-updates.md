@@ -319,3 +319,90 @@ and `files: '(^|/).?renovate(?:rc)?(?:\.json5?)?$'`, which matches only the repo
 
 **Rollback**: remove the added block from `.pre-commit-config.yaml`; `renovate.json` goes back to
 being validated only by the Renovate app itself, after the fact.
+
+## 5. Track `ci.yaml`'s own k3d/argocd version copies (CodeRabbit finding)
+
+**Problem, found by CodeRabbit review on the PR**: workstream 2's `K3D_VERSION` custom manager only
+tracks `.devcontainer/Dockerfile`'s copy. `.github/workflows/ci.yaml`'s `e2e` job independently
+hardcodes the same k3d version twice (its cache key and its `TAG=` install value) and the argocd
+version twice (same cache key, and the release-download URL) — four more untracked literals, with
+only a code comment ("keep in sync") holding the devcontainer and CI copies together. A Renovate
+bump to `.devcontainer/Dockerfile` would silently leave `ci.yaml` on the old version.
+
+**Fix**: collapse `ci.yaml`'s four literals to two, via a job-level `env:` block, then track those
+two lines with a new `customManagers` entry — grouped into the same `k8s` `groupName` (via
+workstream 1's blanket `matchDatasources: ["github-releases"]` rule) as `.devcontainer/Dockerfile`'s
+copy, so a bump to either file's `k3d-io/k3d`/`argoproj/argo-cd` pin moves every occurrence
+together in one PR instead of relying on a human to notice a stale comment.
+
+**`.github/workflows/ci.yaml`**:
+
+```diff
+   e2e:
+     runs-on: ubuntu-latest
++    env:
++      # Single source of truth for both CLI versions in this job (cache key
++      # and install steps below all reference these instead of repeating the
++      # literal) — tracked by renovate.json's "k8s" group alongside
++      # .devcontainer/Dockerfile's own K3D_VERSION/argocd copies, so a
++      # Renovate bump moves every occurrence together in one PR.
++      K3D_VERSION: v5.9.0 # github-releases/k3d-io/k3d
++      ARGOCD_VERSION: v3.5.3 # github-releases/argoproj/argo-cd
+     steps:
+     ...
+         path: |
+           /usr/local/bin/k3d
+           /usr/local/bin/argocd
+-        # Neither version is derived from a hashed file — both are hardcoded
+-        # here and duplicated in .devcontainer/Dockerfile's K3D_VERSION arg
+-        # and argocd base-image tag. Keep this key in sync if either pin
+-        # is bumped.
+-        key: cli-tools-k3d-v5.9.0-argocd-v3.5.3
++        key: cli-tools-k3d-${{ env.K3D_VERSION }}-argocd-${{ env.ARGOCD_VERSION }}
+     - name: Install k3d
+-      # Keep in sync with K3D_VERSION in .devcontainer/Dockerfile.
+       if: steps.cli-tools-cache.outputs.cache-hit != 'true'
+-      run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.9.0 bash
++      run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=${{ env.K3D_VERSION }} bash
+     - name: Install argocd
+-      # Keep in sync with the argocd CLI version in .devcontainer/Dockerfile.
+       if: steps.cli-tools-cache.outputs.cache-hit != 'true'
+       run: |
+-        curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v3.5.3/argocd-linux-amd64
++        curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/${{ env.ARGOCD_VERSION }}/argocd-linux-amd64
+         sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+         rm argocd-linux-amd64
+```
+
+**`renovate.json`** — new `customManagers` entry:
+
+```json
+{
+  "customType": "regex",
+  "managerFilePatterns": ["/^\\.github/workflows/ci\\.yaml$/"],
+  "matchStrings": [
+    "(?:K3D|ARGOCD)_VERSION: (?<currentValue>.*) # (?<datasource>.*?)/(?<depName>.*?)\\s"
+  ]
+}
+```
+
+Produces `k3d-io/k3d`/`github-releases` (identical `depName`/`datasource` to `.devcontainer/
+Dockerfile`'s entry — verified by running both regexes against the actual files with Node's
+`RegExp` before landing this) and a *new* `argoproj/argo-cd`/`github-releases` dependency, previously
+untracked anywhere — closing the same gap for argocd that CodeRabbit only flagged for k3d, since
+the exact same "cache key + hardcoded value, comment-only sync" pattern applied to both.
+
+**Steps**
+
+1. Make both file edits.
+2. `npx --yes --package renovate@44.103.6 -- renovate-config-validator` — confirm it still passes.
+3. Verify extraction manually (`node -e` with the two regexes against the real file contents) —
+   confirm `ci.yaml`'s `K3D_VERSION` match produces the identical `depName`/`datasource` as
+   `.devcontainer/Dockerfile`'s, which is what makes Renovate's shared `groupName: "k8s"` combine
+   them into one PR rather than two independent ones.
+4. `prek run --files renovate.json .github/workflows/ci.yaml` — confirm `check-yaml` and
+   `renovate-config-validator` both still pass.
+
+**Rollback**: revert both file edits; `ci.yaml` goes back to four hardcoded literals and a
+comment-only sync obligation, and `.devcontainer/Dockerfile`'s copy stays the only Renovate-tracked
+one — reintroducing the drift risk this workstream closes.

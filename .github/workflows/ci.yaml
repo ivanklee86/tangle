@@ -179,6 +179,14 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    env:
+      # Single source of truth for both CLI versions in this job (cache key
+      # and install steps below all reference these instead of repeating the
+      # literal) — tracked by renovate.json's "k8s" group alongside
+      # .devcontainer/Dockerfile's own K3D_VERSION/argocd copies, so a
+      # Renovate bump moves every occurrence together in one PR.
+      K3D_VERSION: v5.9.0 # github-releases/k3d-io/k3d
+      ARGOCD_VERSION: v3.5.3 # github-releases/argoproj/argo-cd
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -211,20 +219,14 @@ jobs:
         path: |
           /usr/local/bin/k3d
           /usr/local/bin/argocd
-        # Neither version is derived from a hashed file — both are hardcoded
-        # here and duplicated in .devcontainer/Dockerfile's K3D_VERSION arg
-        # and argocd base-image tag. Keep this key in sync if either pin
-        # is bumped.
-        key: cli-tools-k3d-v5.9.0-argocd-v3.5.3
+        key: cli-tools-k3d-${{ env.K3D_VERSION }}-argocd-${{ env.ARGOCD_VERSION }}
     - name: Install k3d
-      # Keep in sync with K3D_VERSION in .devcontainer/Dockerfile.
       if: steps.cli-tools-cache.outputs.cache-hit != 'true'
-      run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.9.0 bash
+      run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=${{ env.K3D_VERSION }} bash
     - name: Install argocd
-      # Keep in sync with the argocd CLI version in .devcontainer/Dockerfile.
       if: steps.cli-tools-cache.outputs.cache-hit != 'true'
       run: |
-        curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v3.5.3/argocd-linux-amd64
+        curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/${{ env.ARGOCD_VERSION }}/argocd-linux-amd64
         sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
         rm argocd-linux-amd64
     - name: Install all dependencies
