@@ -19,9 +19,21 @@
 		valuePlaceholder = 'Value'
 	}: Props = $props();
 
+	const uid = $props.id();
+	const keyErrorId = `${uid}-key-error`;
+	const valueErrorId = `${uid}-value-error`;
+
 	let pairs: LabelPair[] = $state(untrack(() => parseLabels(value)));
 	let draftKey: string = $state('');
 	let draftValue: string = $state('');
+
+	// An initial value with a malformed segment (e.g. from a hand-edited URL)
+	// only shows the well-formed pairs as chips — reserialize immediately so
+	// the bound value matches what's actually rendered/usable, rather than
+	// leaving the original, still-malformed string bound (which a caller like
+	// DiffsForm would keep validating and could get permanently stuck on).
+	// A no-op for an already-well-formed value.
+	value = untrack(() => serializeLabels(pairs));
 
 	let canAdd = $derived(isValidLabelFormat(`${draftKey}:${draftValue}`));
 
@@ -77,13 +89,15 @@
 				type="text"
 				placeholder={keyPlaceholder}
 				aria-label="{label} key"
+				aria-invalid={keyMissing}
+				aria-describedby={keyMissing ? keyErrorId : undefined}
 				bind:value={draftKey}
 				color={keyMissing ? 'red' : 'default'}
 				size="lg"
 				onkeydown={handleDraftKeydown}
 			/>
 			{#if keyMissing}
-				<Helper color="red">Key is required</Helper>
+				<Helper id={keyErrorId} color="red">Key is required</Helper>
 			{/if}
 		</div>
 		<div class="flex-1 space-y-1">
@@ -91,13 +105,15 @@
 				type="text"
 				placeholder={valuePlaceholder}
 				aria-label="{label} value"
+				aria-invalid={valueMissing}
+				aria-describedby={valueMissing ? valueErrorId : undefined}
 				bind:value={draftValue}
 				color={valueMissing ? 'red' : 'default'}
 				size="lg"
 				onkeydown={handleDraftKeydown}
 			/>
 			{#if valueMissing}
-				<Helper color="red">Value is required</Helper>
+				<Helper id={valueErrorId} color="red">Value is required</Helper>
 			{/if}
 		</div>
 		<Button

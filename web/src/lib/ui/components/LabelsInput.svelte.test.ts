@@ -148,4 +148,11 @@ describe('LabelsInput', () => {
 		await expect.element(screen.getByText('env:prod')).toBeVisible();
 		await expect.element(screen.getByText('tier:frontend')).toBeVisible();
 	});
+
+	test('drops a malformed segment from an initial value, keeping only the well-formed chip', async () => {
+		const screen = await render(LabelsInput, { label: 'Labels', value: 'env:prod,not-a-pair' });
+
+		await expect.element(screen.getByText('env:prod')).toBeVisible();
+		await expect.element(screen.getByText('not-a-pair', { exact: false })).not.toBeInTheDocument();
+	});
 });

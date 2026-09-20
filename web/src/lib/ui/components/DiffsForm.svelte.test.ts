@@ -70,4 +70,14 @@ describe('DiffsForm', () => {
 			.element(screen.getByText('Enter a target ref (git branch) to see diffs.'))
 			.not.toBeInTheDocument();
 	});
+
+	test('normalizes a malformed segment in the initial labels instead of getting permanently stuck disabled', async () => {
+		const onSubmit = vi.fn();
+		const screen = await render(DiffsForm, { onSubmit, initialLabels: 'env:prod,not-a-pair' });
+
+		await screen.getByPlaceholder('Git branch').fill('main');
+		await screen.getByRole('button', { name: 'See diffs' }).click();
+
+		expect(onSubmit).toHaveBeenCalledWith('env:prod', '', 'main');
+	});
 });
