@@ -15,7 +15,7 @@ RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
 ARG K3D_VERSION=v5.9.0 # github-releases/k3d-io/k3d
 RUN curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=${K3D_VERSION} bash
 
-COPY --from=rancher/kubectl:v1.32.5 /bin/kubectl /usr/local/bin/kubectl
+COPY --from=rancher/kubectl:v1.36.2 /bin/kubectl /usr/local/bin/kubectl
 COPY --from=alpine/helm:4.3.0 /usr/bin/helm /usr/local/bin
 COPY --from=derailed/k9s:v0.50.18 /bin/k9s /usr/local/bin
 COPY --from=quay.io/argoproj/argocd:v3.5.3 /usr/local/bin/argocd /usr/local/bin
