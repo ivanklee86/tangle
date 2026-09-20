@@ -10,11 +10,21 @@ builds:
       - -X main.version={{.Version}}
 changelog:
   disable: true
-brews:
+homebrew_casks:
   - name: tangle-cli
-    homepage: "https://github.com/ivanklee86/tangle-cli"
+    homepage: "https://github.com/ivanklee86/tangle"
     description: "A CLI to configure/clear SyncWindows on ArgoCD projects."
-    directory: Formula
+    directory: Casks
+    binaries:
+      - tangle-cli
+    # Release binaries are unsigned, so macOS Gatekeeper quarantines them on
+    # download and refuses to run them. Strip the attribute after staging.
+    hooks:
+      post:
+        install: |
+          if system_command("/usr/bin/xattr", args: ["-h"]).exit_status == 0
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/tangle-cli"]
+          end
     repository:
       owner: ivanklee86
       name: homebrew-tap
