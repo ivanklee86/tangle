@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { Card, Label, Input, Button, Heading } from 'flowbite-svelte';
-	import { ArrowRightOutline, LabelSolid } from 'flowbite-svelte-icons';
+	import { Card, Button, Heading } from 'flowbite-svelte';
+	import { ArrowRightOutline } from 'flowbite-svelte-icons';
 	import { isValidLabelFormat } from '$lib/ui/validation';
+	import LabelsInput from './LabelsInput.svelte';
 
 	interface Props {
 		onSubmit: (labels: string, excludeLabels: string) => void;
@@ -24,35 +25,8 @@
 	<Heading tag="h2" class="mb-2 text-2xl">Applications</Heading>
 
 	<form class="space-y-4" onsubmit={handleSubmit}>
-		<Label class="space-y-2">
-			<span>Labels</span>
-			<Input
-				type="text"
-				placeholder="Labels in format 'key:value'"
-				bind:value={labels}
-				size="lg"
-				class="ps-11"
-			>
-				{#snippet left()}
-					<LabelSolid class="h-6 w-6" />
-				{/snippet}
-			</Input>
-		</Label>
-
-		<Label class="space-y-2">
-			<span>Exclude Labels</span>
-			<Input
-				type="text"
-				placeholder="Labels to exclude in format 'key:value'"
-				bind:value={excludeLabels}
-				size="lg"
-				class="ps-11"
-			>
-				{#snippet left()}
-					<LabelSolid class="h-6 w-6" />
-				{/snippet}
-			</Input>
-		</Label>
+		<LabelsInput label="Labels" bind:value={labels} />
+		<LabelsInput label="Exclude Labels" bind:value={excludeLabels} />
 
 		<Button
 			type="submit"

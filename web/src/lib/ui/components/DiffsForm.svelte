@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { Card, Label, Input, Button, Heading } from 'flowbite-svelte';
-	import { ArrowRightOutline, CodeBranchOutline, LabelSolid } from 'flowbite-svelte-icons';
+	import { Card, Label, Input, Button, Heading, Tooltip } from 'flowbite-svelte';
+	import { ArrowRightOutline, CodeBranchOutline } from 'flowbite-svelte-icons';
 	import { isValidLabelFormat } from '$lib/ui/validation';
 	import { untrack } from 'svelte';
+	import LabelsInput from './LabelsInput.svelte';
 
 	interface Props {
 		initialLabels?: string;
@@ -22,8 +23,8 @@
 	let excludeLabels: string = $state(untrack(() => initialExcludeLabels));
 	let targetRef: string = $state(untrack(() => initialTargetRef));
 
-	// The target ref is required — rather than explain that in a toast or a
-	// paragraph, the submit button simply stays disabled until it's filled in.
+	// The target ref is required — the submit button stays disabled until
+	// it's filled in, with a tooltip on hover explaining why (see below).
 	let normalizedTargetRef = $derived(targetRef.trim());
 	let canSubmit = $derived(
 		normalizedTargetRef.length > 0 &&
@@ -41,35 +42,8 @@
 	<Heading tag="h2" class="mb-2 text-2xl">Diffs</Heading>
 
 	<form class="space-y-4" onsubmit={handleSubmit}>
-		<Label class="space-y-2">
-			<span>Labels</span>
-			<Input
-				type="text"
-				placeholder="Labels in format 'key:value'"
-				bind:value={labels}
-				size="lg"
-				class="ps-11"
-			>
-				{#snippet left()}
-					<LabelSolid class="h-6 w-6" />
-				{/snippet}
-			</Input>
-		</Label>
-
-		<Label class="space-y-2">
-			<span>Exclude Labels</span>
-			<Input
-				type="text"
-				placeholder="Labels to exclude in format 'key:value'"
-				bind:value={excludeLabels}
-				size="lg"
-				class="ps-11"
-			>
-				{#snippet left()}
-					<LabelSolid class="h-6 w-6" />
-				{/snippet}
-			</Input>
-		</Label>
+		<LabelsInput label="Labels" bind:value={labels} />
+		<LabelsInput label="Exclude Labels" bind:value={excludeLabels} />
 
 		<Label class="space-y-2">
 			<span>Target Ref</span>
@@ -88,5 +62,8 @@
 		>
 			See diffs<ArrowRightOutline class="w-6 h-6 ms-2 text-white" />
 		</Button>
+		{#if normalizedTargetRef.length === 0}
+			<Tooltip>Enter a target ref (git branch) to see diffs.</Tooltip>
+		{/if}
 	</form>
 </Card>

@@ -74,8 +74,9 @@ describe('applications +page.svelte', () => {
 			data: { applications: Promise.resolve(resolvedApplications) }
 		});
 
-		const labelsInputs = screen.getByPlaceholder("Labels in format 'key:value'");
-		await labelsInputs.fill('foo:bar');
+		await screen.getByRole('textbox', { name: 'Labels key' }).fill('foo');
+		await screen.getByRole('textbox', { name: 'Labels value' }).fill('bar');
+		await screen.getByRole('button', { name: 'Add Labels' }).click();
 		await screen.getByRole('button', { name: 'See applications' }).click();
 
 		expect(goto).toHaveBeenCalledWith('/applications?labels=foo%3Abar&searched=true');
