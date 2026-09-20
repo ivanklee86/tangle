@@ -25,6 +25,12 @@
       "groupName": "ts"
     },
     {
+      "description": "svelte-check 4.x peers typescript ^5 || ^6; drop this rule when it supports 7",
+      "matchDatasources": ["npm"],
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
+    },
+    {
       "matchManagers": ["dockerfile"],
       "matchPackageNames": ["node"],
       "groupName": "ts"

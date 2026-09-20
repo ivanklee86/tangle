@@ -34,6 +34,12 @@ tasks:
     cmds:
       - npm install
 
+  install-ci:
+    desc: Install dependencies from the lockfile, exactly (CI).
+    dir: web
+    cmds:
+      - npm ci
+
   lint:
     desc: Lint the code
     dir: web

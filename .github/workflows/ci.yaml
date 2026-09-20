@@ -99,7 +99,7 @@ jobs:
     - name: Install Task
       uses: ./.github/actions/setup-task
     - name: Install packages
-      run: task ts:install
+      run: task ts:install-ci
     - name: Cache Playwright browser
       id: playwright-cache
       uses: actions/cache@v6
@@ -241,7 +241,7 @@ jobs:
     - name: Run Go e2e tests
       run: task go:test:e2e:ci
     - name: Install frontend packages
-      run: task ts:install
+      run: task ts:install-ci
     - name: Cache Playwright browser
       id: playwright-cache
       uses: actions/cache@v6
