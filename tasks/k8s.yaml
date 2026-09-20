@@ -65,7 +65,7 @@ tasks:
   bootstrap:traefik:
     desc: "Bootstrap Gateway API CRDs and Traefik."
     cmds:
-      - kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/standard-install.yaml
+      - kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.2/standard-install.yaml
       - helm repo add traefik https://traefik.github.io/charts
       - cd integration/kubernetes/traefik; helm dependency build
       - helm install traefik integration/kubernetes/traefik --namespace default
