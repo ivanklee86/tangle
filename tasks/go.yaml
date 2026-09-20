@@ -71,3 +71,17 @@ tasks:
     cmds:
       - go test --coverprofile {{.COVERAGE_RAW}} -v ./... 2>&1  | tee >(go-junit-report > report.xml)
       - go tool cover -html={{.COVERAGE_RAW}} -o {{.COVERAGE_REPORT}}
+
+  test:e2e:
+    desc: Run Golang e2e tests (needs a live ArgoCD — see `task services:cicd`).
+    cmds:
+      - go test -tags=e2e -v ./... 2>&1
+
+  test:e2e:ci:
+    desc: Run Golang e2e tests and generate coverage report, for CI.
+    vars:
+      COVERAGE_RAW: coverage-e2e.out
+      COVERAGE_REPORT: coverage-e2e.html
+    cmds:
+      - go test -tags=e2e --coverprofile {{.COVERAGE_RAW}} -v ./... 2>&1 | tee >(go-junit-report > report-e2e.xml)
+      - go tool cover -html={{.COVERAGE_RAW}} -o {{.COVERAGE_REPORT}}
