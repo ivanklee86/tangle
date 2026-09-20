@@ -97,7 +97,7 @@
 				onkeydown={handleDraftKeydown}
 			/>
 			{#if keyMissing}
-				<Helper id={keyErrorId} color="red">Key is required</Helper>
+				<Helper id={keyErrorId} color="red" aria-live="assertive">Key is required</Helper>
 			{/if}
 		</div>
 		<div class="flex-1 space-y-1">
@@ -113,7 +113,7 @@
 				onkeydown={handleDraftKeydown}
 			/>
 			{#if valueMissing}
-				<Helper id={valueErrorId} color="red">Value is required</Helper>
+				<Helper id={valueErrorId} color="red" aria-live="assertive">Value is required</Helper>
 			{/if}
 		</div>
 		<Button
