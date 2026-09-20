@@ -17,7 +17,7 @@ jobs:
     outputs:
       docs: ${{ steps.filter.outputs.docs }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - uses: dorny/paths-filter@v4
       id: filter
       with:
@@ -33,9 +33,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
     - name: Install Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v7
       with:
         go-version: 1.27
         cache: true   # default; explicit for clarity
@@ -44,7 +44,7 @@ jobs:
         gofmt -d .
         test -z "$(gofmt -l .)"
     - name: Install Task
-      uses: arduino/setup-task@v2
+      uses: arduino/setup-task@v3.0.0
     - name: Cache Go tool binaries
       uses: actions/cache@v6
       with:
@@ -64,7 +64,7 @@ jobs:
       with:
         files: report.xml
     - name: Save coverage report.
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: go-coverage-report
@@ -73,13 +73,13 @@ jobs:
       # Raw profile for the report job's centralized octocov run — octocov
       # moved there so it can merge this with e2e's own coverage-e2e.out
       # into one combined report instead of only ever seeing go's slice.
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: go-coverage-profile
         path: ./coverage.out
     - name: Save JUnit report.
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: go-junit-report
@@ -89,15 +89,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
     - name: Install Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v7
       with:
         node-version: '24'
         cache: 'npm'
         cache-dependency-path: web/package-lock.json
     - name: Install Task
-      uses: arduino/setup-task@v2
+      uses: arduino/setup-task@v3.0.0
     - name: Install packages
       run: task ts:install
     - name: Cache Playwright browser
@@ -129,7 +129,7 @@ jobs:
     - name: Build website
       run: task ts:build
     - name: Save JUnit report.
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: ts-junit-report
@@ -141,15 +141,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
     - name: Install Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: '3.13'
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v10.1.0
     - name: Install Task
-      uses: arduino/setup-task@v2
+      uses: arduino/setup-task@v3.0.0
     - name: Install dependencies
       run: task python:install:ci
     - name: Test docs
@@ -159,13 +159,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
     - name: Install Go
       # go-fmt (dnephin/pre-commit-golang) is `language: script`, so prek
       # doesn't provision a Go toolchain for it — it just runs `gofmt`
       # against whatever's on PATH. Pin explicitly rather than relying on
       # the runner image's ambient Go version.
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v7
       with:
         go-version: 1.27
         cache: true   # default; explicit for clarity
@@ -190,20 +190,20 @@ jobs:
       ARGOCD_VERSION: v3.5.3 # github-releases/argoproj/argo-cd
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
     - name: Install Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v7
       with:
         go-version: 1.27
         cache: true   # default; explicit for clarity
     - name: Install Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v7
       with:
         node-version: '24'
         cache: 'npm'
         cache-dependency-path: web/package-lock.json
     - name: Install Task
-      uses: arduino/setup-task@v2
+      uses: arduino/setup-task@v3.0.0
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
     - name: Expose GitHub Actions cache variables for buildx
@@ -262,7 +262,7 @@ jobs:
           report-e2e.xml
           web/test-results/junit-live.xml
     - name: Save JUnit report.
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: e2e-junit-report
@@ -274,7 +274,7 @@ jobs:
       # the go job. This is the *only* place e2e's own Go coverage gets
       # surfaced anywhere; today it's generated and then never looked at
       # again once it leaves this job.
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: e2e-coverage-profile
@@ -301,9 +301,9 @@ jobs:
       # octocov needs the checked-out repo for .octocov.yml itself and for
       # git-root-relative path normalization — the JUnit-only version of
       # this job never needed one.
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
     - name: Download JUnit reports
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         pattern: '*-junit-report'
         path: reports
@@ -318,7 +318,7 @@ jobs:
       # (or, before ADR 0017, was skipped by the path filter) just leaves
       # that one glob empty rather than erroring — e2e always runs, so
       # there's always at least its coverage to report on.
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         pattern: '*-coverage-profile'
         path: coverage
