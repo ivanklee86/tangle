@@ -45,8 +45,26 @@ tasks:
     desc: Run tests
     dir: web
     cmds:
+      - task: test:unit
+      - task: test:e2e
+
+  test:unit:
+    desc: Run unit tests.
+    dir: web
+    cmds:
       - npm run test:unit -- --run
+
+  test:e2e:
+    desc: Run the mocked (integration-layer) Playwright suite.
+    dir: web
+    cmds:
       - npm run test:e2e
+
+  test:e2e:live:
+    desc: Run the live-stack Playwright suite against `task services:cicd`.
+    dir: web
+    cmds:
+      - npx playwright test --config=playwright.live.config.ts
 
   dev:
     desc: Run the development server

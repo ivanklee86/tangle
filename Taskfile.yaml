@@ -43,3 +43,10 @@ tasks:
         - docker:build
         cmds:
         - docker run -d -v `pwd`/integration:/config -e TANGLE_CONFIG_PATH=/config/tangle.yaml --network=host --env-file .env --rm -p 8081:8081 tangle
+
+    e2e:live:
+        desc: Full live-stack e2e run (brings up services, runs Playwright, tears down).
+        cmds:
+        - task: services:cicd
+        - task: ts:test:e2e:live
+        - task: k8s:cluster:delete
