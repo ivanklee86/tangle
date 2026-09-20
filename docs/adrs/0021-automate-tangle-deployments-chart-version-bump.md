@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-09-20
 decision-makers: ["Ivan Lee"]
 consulted: []
@@ -91,8 +91,10 @@ Chosen option: **`repository_dispatch`, feeding a PR-based bump workflow gated b
    `repository_dispatch` type, which strips the `v` prefix into `appVersion`, patch-bumps
    `version`, and opens a PR via `peter-evans/create-pull-request` against a fixed branch name
    (so a second dispatch before the first PR merges updates the same PR instead of piling up
-   parallel ones) using the workflow's own default `GITHUB_TOKEN` — no PAT needed for this half,
-   since it's a same-repo commit.
+   parallel ones). **Revised during implementation** (see "Found during a live test" below): this
+   half also needs a second fine-grained PAT, scoped to `tangle-deployments` itself
+   (`CHART_BUMP_PAT`, `Contents` + `Pull requests: Read and write`), used for *both* opening the PR
+   and merging it — the default `GITHUB_TOKEN` turned out not to work for either.
 3. `tangle-deployments` also gets a minimal CI workflow (new) that runs `task template:default`
    and `task tests` (`helm template` + `kubeconform`, already defined in its `Taskfile.yaml`) on
    every pull request — the safety net the bump PR relies on, and a gap worth closing regardless
@@ -125,21 +127,63 @@ left as a separately verified change rather than assumed safe here.
 ### Consequences
 
 - Good, because publishing a `tangle` release now fully drives a chart release with no manual
-  edit in a second repository — the stated goal.
+  edit in a second repository — the stated goal, verified end to end on a real release (`v0.2.0`
+  → chart `0.0.13`, `gh-pages` index updated) with no manual intervention.
 - Good, because `tangle-deployments`' `release.yaml` finally runs the way
   `chart-releaser-action` is documented to run (`push` to `main`), rather than needing a
   human-cut release as a workaround trigger.
 - Good, because `tangle-deployments` gains PR-time CI (`helm lint`/`kubeconform`) it didn't have
   before, closing a real gap independent of this automation.
-- Neutral, because a new fine-grained PAT has to be created and stored by hand (not scriptable),
-  and its expiry has to be tracked and rotated — a small, recurring maintenance cost in exchange
-  for not granting a long-lived, broadly-scoped credential.
+- Neutral, because two fine-grained PATs now exist (one per repo — see "Found during a live test"
+  below) instead of the one originally planned, each has to be created and stored by hand (not
+  scriptable), and each expiry has to be tracked and rotated — a small, recurring maintenance cost
+  in exchange for not granting a long-lived, broadly-scoped credential.
 - Bad, because a cross-repo credential exists at all — its blast radius is scoped to exactly one
-  repository's contents, but it's still a secret that didn't need to exist before this.
+  repository each, but they're secrets that didn't need to exist before this.
 - Bad, because auto-merge on the bump PR means a `tangle` release now indirectly cuts a public
-  chart release with no human in the loop by default — mitigated by the new CI gate, but a
-  bug that CI doesn't catch (e.g. a bad `appVersion` string) would still ship. Turning off
-  auto-merge trades this for requiring a manual click on every `tangle` release.
+  chart release with no human in the loop by default — mitigated by the new CI gate (and, since the
+  live test, by branch protection actually enforcing it), but a bug that CI doesn't catch (e.g. a
+  bad `appVersion` string) would still ship. Turning off auto-merge trades this for requiring a
+  manual click on every `tangle` release.
+
+### Found during a live test
+
+Three things the design above got wrong, each only visible by actually cutting a release and
+watching the chain run (not from reading the workflow YAML):
+
+1. **`main` had no branch protection.** `gh pr merge --auto` has nothing to wait for without a
+   required status check, so it merged the first test PR in ~2 seconds — before the `chart` CI job
+   had even started, which then failed orphaned (its branch was already deleted). Fixed by adding
+   branch protection on `tangle-deployments`' `main` requiring the `chart` check, and by enabling
+   the repo's "Allow auto-merge" setting (`allow_auto_merge`), which was also off and made
+   `gh pr merge --auto` fail outright (`GraphQL: Auto merge is not allowed for this repository`).
+2. **A bot-authored PR is gated behind manual approval.** `peter-evans/create-pull-request`'s
+   default `GITHUB_TOKEN` makes the PR's author `github-actions[bot]`, whose `author_association`
+   on this public repo resolves to `CONTRIBUTOR` — GitHub gates `pull_request`-triggered workflow
+   runs (i.e. the new `chart` check) behind manual "Approve and run" for any non-collaborator
+   author. That's the right default for real outside contributors, but it silently blocks this
+   repo's own automation from ever completing unattended. Fixed by passing the `CHART_BUMP_PAT`
+   (repo permission `Contents` + `Pull requests: Read and write`) to `create-pull-request`'s
+   `token:` input, making the PR's author the token's owner instead.
+3. **GitHub suppresses events from its own token, and this applies to more than `push`.** Even
+   after (1) and (2), `release.yaml`'s `push: main` trigger never fired once the bump PR merged.
+   GitHub's anti-recursion rule ("events triggered using `GITHUB_TOKEN` won't create a new workflow
+   run") isn't limited to raw `git push` — it also suppressed the `pull_request: closed` event that
+   would otherwise fire once `gh pr merge --auto`'s *merge itself* completed, because that step was
+   still using `GITHUB_TOKEN`. The first fix attempt (add `workflow_dispatch` to `release.yaml` and
+   an explicit `pull_request: closed`-triggered job calling it) treated the symptom and didn't work
+   either, for the same underlying reason: the `pull_request: closed` event it depended on was
+   itself suppressed. The actual fix was simpler than either workaround: use `CHART_BUMP_PAT` for
+   the merge step too, not just for opening the PR. A PAT-authenticated merge behaves like an
+   ordinary user merge and triggers `release.yaml` via its plain `push: main` trigger with no
+   special-casing needed — proven by every merge in this chain performed by a real account (the
+   PAT, or a human clicking merge) correctly triggering it, and every one performed by
+   `GITHUB_TOKEN` alone not triggering it.
+
+Net effect on the design: `CHART_BUMP_PAT` is used for both the `create-pull-request` step and the
+`gh pr merge --auto` step in `bump-chart-version.yaml`; no `workflow_dispatch` workaround job was
+needed in the end. Branch protection (`chart` required) and `allow_auto_merge: true` are both now
+set on `tangle-deployments`.
 
 ## Pros and Cons of the Options
 
@@ -178,11 +222,19 @@ left as a separately verified change rather than assumed safe here.
 - `chart-releaser-action`'s documented trigger: `on: push: branches: [main]` —
   <https://github.com/helm/chart-releaser-action>
 - `repository_dispatch` token requirements — <https://docs.github.com/en/rest/repos/repos#create-a-repository-dispatch-event>
-- Current state: `tangle-deployments/.github/workflows/release.yaml` (`on: release: published`),
-  `tangle-deployments/charts/tangle/Chart.yaml` (`appVersion: "0.1.0"`, `version: 0.0.9`),
-  `tangle-deployments/charts/tangle/values.yaml` (`image.tag: "v0.1.0"`, overriding the chart's own
-  `.Chart.AppVersion` default)
+- Original state (now superseded by this ADR): `tangle-deployments/.github/workflows/release.yaml`
+  (`on: release: published`), `tangle-deployments/charts/tangle/Chart.yaml`
+  (`appVersion: "0.1.0"`, `version: 0.0.9`), `tangle-deployments/charts/tangle/values.yaml`
+  (`image.tag: "v0.1.0"`, overriding the chart's own `.Chart.AppVersion` default)
+- `tangle` PR: [#228](https://github.com/ivanklee86/tangle/pull/228) (the `notify-tangle-deployments`
+  dispatch job)
+- `tangle-deployments` PRs, in the order they actually landed:
+  [#11](https://github.com/ivanklee86/tangle-deployments/pull/11) (receiver workflow + CI +
+  release-trigger retarget), [#14](https://github.com/ivanklee86/tangle-deployments/pull/14)
+  (first, incomplete fix attempt for finding 3 above), [#16](https://github.com/ivanklee86/tangle-deployments/pull/16)
+  (`CHART_BUMP_PAT` for opening the PR — finding 2), [#18](https://github.com/ivanklee86/tangle-deployments/pull/18)
+  (`CHART_BUMP_PAT` for the merge too — the actual fix for finding 3, superseding #14's approach)
 - Related: [ADR 0013](0013-renovate-weekly-grouped-updates.md) — the automerge-non-major policy
   this ADR's auto-merge choice mirrors, applied here to a fully mechanical bump instead of a
   Renovate PR
-- Superseded by, if adopted later: a GitHub App-based token replacing the fine-grained PAT.
+- Superseded by, if adopted later: a GitHub App-based token replacing the fine-grained PATs.
