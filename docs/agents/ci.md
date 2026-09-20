@@ -30,7 +30,7 @@ flowchart TB
         ts_job["ts (if: web/** changed)<br/>vitest · mocked Playwright · eslint · sveltekit build"]
         docs_job["docs (if: docs/** changed)<br/>mkdocs build (task python:test)"]
         e2e_job["e2e (always runs)<br/>real k3d+ArgoCD · Go live tests · live Playwright suite"]
-        report_job["report (always runs)<br/>merges go/ts/e2e JUnit into one check"]
+        report_job["report (always runs)<br/>unified JUnit + centralized octocov coverage"]
 
         filter_job --> go_job
         filter_job --> ts_job
@@ -62,7 +62,10 @@ flowchart TB
 pending) when their paths aren't touched; a skipped job still satisfies branch-protection required
 checks naming it. `e2e` has no `if:` — it always runs, since it's the one place real ArgoCD/browser
 coverage happens for both languages. `report` `needs: [go, ts, e2e]` with `if: always()`, so it
-still runs and produces a combined result even when `go`/`ts` were skipped.
+still runs and produces a combined result even when `go`/`ts` were skipped — including its
+coverage report, since `go`/`e2e` upload their raw coverage profiles as artifacts rather than each
+running [octocov](https://github.com/k1LoW/octocov) (ADR 0010) itself; `report` is the one place
+that runs, downloading and merging whichever of the two are actually available.
 
 ## The test pyramid
 
@@ -101,8 +104,8 @@ the only job in `ci.yaml` with no path-based `if:`:
    `coverage-e2e.out`/`.html`, kept separate from the `go` job's own report/coverage filenames).
 5. Install the frontend's npm packages and pinned Playwright browser, then
    `task ts:test:e2e:live` — the live-stack Playwright suite against the container from step 3.
-6. Publish JUnit results (both the Go e2e suite and the frontend live suite) and upload them as
-   build artifacts for the `report` job.
+6. Publish JUnit results (both the Go e2e suite and the frontend live suite) and upload them, plus
+   the raw `coverage-e2e.out` profile, as build artifacts for the `report` job.
 
 Go module/tool-binary caching, npm caching, Playwright-browser caching, and k3d/argocd CLI caching
 (workstream 12) all apply here too, alongside the Docker layer cache — this is the one job that
@@ -111,12 +114,36 @@ pays for all of them on every run, since it's the one job with no path-based `if
 The `go` job, by contrast, is now fully hermetic: it folds in what used to be the standalone
 `format` job (a `gofmt` check, first, before installing the rest of the Go toolchain) and runs only
 `internal/argocd/argocdfakes`-backed unit/integration tests — no Docker, k3d, or ArgoCD CLI install
-at all. Coverage reporting is [octocov](https://github.com/k1LoW/octocov) (ADR 0010), not Codecov —
-no external SaaS account or `CODECOV_TOKEN`, PR comments and its `artifact://` datastore both
-authenticated with the workflow's own token. `ts` similarly runs unit tests and the mocked
+at all. It uploads its own raw `coverage.out` alongside the rendered `coverage.html`, but doesn't
+run octocov itself (see the `report` job below). `ts` similarly runs unit tests and the mocked
 (network-stubbed) Playwright suite, installing a pinned-version Playwright Chromium build (invoked
 via `node node_modules/playwright/cli.js` rather than `npx`, to dodge a bin-name collision with
 `@playwright/test`'s own bundled `playwright`). `docs` only needs `uv` to build the mkdocs site.
+
+## The `report` job: unified tests and coverage
+
+Once `go`/`ts`/`e2e` all use JUnit-format test results and `go`/`e2e` both produce a Go coverage
+profile, one job downstream of all three can centralize both instead of each producing its own,
+partial version:
+
+1. Download every `*-junit-report` artifact (`go`, `ts`, `e2e` — whichever ran) into one directory
+   and publish them as a single "Unified Test Results" check.
+2. Download every `*-coverage-profile` artifact — `go`'s `coverage.out` and `e2e`'s
+   `coverage-e2e.out`, if present (a skipped `go` job just leaves that one missing, not erroring;
+   `e2e` always runs, so there's always at least its own) — into one directory.
+3. Run [octocov](https://github.com/k1LoW/octocov) (ADR 0010) once, pointed at both files via
+   `.octocov.yml`'s `coverage.paths:`. octocov merges overlapping coverage itself (folding
+   duplicate-covered lines rather than double-counting), so the resulting PR comment/diff reflects
+   coverage from the fast unit/integration suite *and* the live e2e suite — not just whichever job
+   used to run octocov alone. No external SaaS account or `CODECOV_TOKEN`; PR comments and the
+   `artifact://` datastore are both authenticated with the workflow's own token.
+
+One side effect worth knowing: a merged report measures *line* coverage, not exact statement
+coverage — statement/block boundaries aren't reliably comparable across two separately-compiled
+profile instances, only lines are (the same mechanism that would let this merge across formats
+entirely, e.g. Go coverage + LCOV, not just two Go profiles). The percentage is still a legitimate
+combined-coverage figure, just on a coarser basis than a single unmerged report's — confirmed by
+comparing `octocov dump report` against each input file alone before landing this.
 
 ## Things worth revisiting
 
@@ -126,15 +153,18 @@ via `node node_modules/playwright/cli.js` rather than `npx`, to dodge a bin-name
   [workstream 12](plans/ci-pipeline-restructure.md#12-ci-dependency-caching) landed this: Go
   module/build cache, Go tool-binary cache, npm cache, Playwright-browser cache, k3d/argocd CLI
   cache, and Docker layer caching via buildx + the GitHub Actions cache backend.
-- **Resolved**: the `go` job now uses octocov instead of Codecov — no more `jandelgado/gcov2lcov-action`,
-  `codecov/codecov-action`, or `CODECOV_TOKEN` ([ADR 0010](../adrs/0010-replace-codecov-with-octocov.md)/workstream 10).
+- **Resolved**: coverage reporting uses octocov instead of Codecov — no more
+  `jandelgado/gcov2lcov-action`, `codecov/codecov-action`, or `CODECOV_TOKEN`
+  ([ADR 0010](../adrs/0010-replace-codecov-with-octocov.md)/workstream 10). It runs centrally in
+  the `report` job (see above), not in `go` — `go` and `e2e` each just upload their own raw
+  coverage profile as an artifact.
 - **Mostly done**: a durable, publicly-embeddable coverage badge and dashboard
   ([ADR 0011](../adrs/0011-octocov-central-reporting-and-badges-repository.md)/workstream 11) —
   `ivanklee86/octocov-central` exists, its scheduled workflow works, and GitHub Pages serves it live
   at `https://ivanklee86.github.io/octocov-central/`. **Open**: the dashboard is still empty and no
-  badge exists yet, since both need `tangle`'s `main` branch to have run the `go` job at least once
-  (octocov's `report.if: is_default_branch`) — the coverage badge hasn't been added to this repo's
-  `README.md` yet, pending that.
+  badge exists yet, since both need `tangle`'s `main` branch to have run `ci.yaml` at least once
+  (octocov's `report.if: is_default_branch`, evaluated in the `report` job) — the coverage badge
+  hasn't been added to this repo's `README.md` yet, pending that.
 - **Accepted trade-off, not an oversight**: `e2e` still stands up a whole k3d + ArgoCD cluster and
   rebuilds the Docker image on every run — the slowest step by a wide margin, and the one job every
   PR always waits on regardless of what changed. [ADR 0009](../adrs/0009-ci-pipeline-test-taxonomy-and-conditional-jobs.md)

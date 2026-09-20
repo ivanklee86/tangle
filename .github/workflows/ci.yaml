@@ -51,18 +51,6 @@ jobs:
     needs: [filter]
     if: needs.filter.outputs.go == 'true'
     runs-on: ubuntu-latest
-    # Job-level permissions replace the workflow-level block entirely for
-    # this job (they don't merge), so every scope go's steps use has to be
-    # re-listed here. actions: write is scoped to just this job — it's only
-    # for octocov's artifact:// datastore (workstream 10), which reads/
-    # deletes prior coverage-report artifacts via the REST Actions-artifacts
-    # API (authenticated with GITHUB_TOKEN, not the separate runtime-token
-    # upload path actions/upload-artifact uses) — no other job needs it.
-    permissions:
-      contents: read
-      checks: write
-      pull-requests: write
-      actions: write
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -95,20 +83,21 @@ jobs:
       if: always()
       with:
         files: report.xml
-    - name: Report coverage via octocov
-      # Pinned to the exact commit v1 (currently v1.5.2) resolves to, not the
-      # mutable tag — this step runs with actions: write, so a repointed tag
-      # could swap in code that runs with that elevated token.
-      uses: k1LoW/octocov-action@a167dc0dee441b7ffc45e1b862ab55ec0d87f278 # v1.5.2
-      with:
-        config: .octocov.yml
-        version: v0.79.0
     - name: Save coverage report.
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: go-coverage-report
         path: ./coverage.html
+    - name: Save coverage profile.
+      # Raw profile for the report job's centralized octocov run — octocov
+      # moved there so it can merge this with e2e's own coverage-e2e.out
+      # into one combined report instead of only ever seeing go's slice.
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: go-coverage-profile
+        path: ./coverage.out
     - name: Save JUnit report.
       uses: actions/upload-artifact@v4
       if: always()
@@ -277,18 +266,67 @@ jobs:
         path: |
           ./report-e2e.xml
           web/test-results/junit-live.xml
+    - name: Save coverage profile.
+      # For the report job's centralized octocov run — see the same step in
+      # the go job. This is the *only* place e2e's own Go coverage gets
+      # surfaced anywhere; today it's generated and then never looked at
+      # again once it leaves this job.
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-coverage-profile
+        path: ./coverage-e2e.out
 
   report:
     needs: [go, ts, e2e]
     if: always()
     runs-on: ubuntu-latest
+    # Job-level permissions replace the workflow-level block entirely for
+    # this job (they don't merge), so every scope its steps use has to be
+    # re-listed here. actions: write moved here with octocov (workstream
+    # 10 originally ran it in go) — it's for octocov's artifact:// datastore,
+    # which reads/deletes prior coverage-report artifacts via the REST
+    # Actions-artifacts API (authenticated with GITHUB_TOKEN, not the
+    # separate runtime-token upload path actions/upload-artifact uses).
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+      actions: write
     steps:
+    - name: Checkout code
+      # octocov needs the checked-out repo for .octocov.yml itself and for
+      # git-root-relative path normalization — the JUnit-only version of
+      # this job never needed one.
+      uses: actions/checkout@v4
     - name: Download JUnit reports
       uses: actions/download-artifact@v4
       with:
         pattern: '*-junit-report'
         path: reports
         merge-multiple: true
+    - name: Download coverage profiles
+      # go's coverage.out and e2e's coverage-e2e.out land side by side here
+      # (different filenames, no collision) — .octocov.yml's coverage.paths
+      # lists both; octocov merges overlapping files itself (folding
+      # duplicate-covered lines, not double-counting), so this becomes one
+      # combined Go coverage report instead of go's slice alone. Each
+      # pattern is globbed independently, so a skipped go job (path filter)
+      # just leaves that one glob empty rather than erroring — e2e always
+      # runs, so there's always at least its coverage to report on.
+      uses: actions/download-artifact@v4
+      with:
+        pattern: '*-coverage-profile'
+        path: coverage
+        merge-multiple: true
+    - name: Report coverage via octocov
+      # Pinned to the exact commit v1 (currently v1.5.2) resolves to, not the
+      # mutable tag — this step runs with actions: write, so a repointed tag
+      # could swap in code that runs with that elevated token.
+      uses: k1LoW/octocov-action@a167dc0dee441b7ffc45e1b862ab55ec0d87f278 # v1.5.2
+      with:
+        config: .octocov.yml
+        version: v0.79.0
     - name: Publish unified test results
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always()
