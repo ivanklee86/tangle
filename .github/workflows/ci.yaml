@@ -203,3 +203,21 @@ jobs:
       with:
         name: e2e-junit-report
         path: ./report-e2e.xml
+
+  report:
+    needs: [go, ts, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download JUnit reports
+      uses: actions/download-artifact@v4
+      with:
+        pattern: '*-junit-report'
+        path: reports
+        merge-multiple: true
+    - name: Publish unified test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: reports/*.xml
+        check_name: 'Unified Test Results'
