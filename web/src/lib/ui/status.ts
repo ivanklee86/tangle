@@ -27,7 +27,11 @@ function statusAppearance(status: string): StatusAppearance {
 		case 'Synced':
 			return HEALTHY;
 		case 'OutOfSync':
+		case 'Degraded':
+		case 'Missing':
 			return UNHEALTHY;
+		case 'Progressing':
+		case 'Suspended':
 		case 'Unknown':
 			return UNKNOWN;
 		default:

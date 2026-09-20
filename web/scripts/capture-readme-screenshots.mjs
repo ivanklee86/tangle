@@ -25,14 +25,17 @@ const imagesDir = path.join(webDir, '..', 'docs', 'images');
 
 const shots = [
 	{
-		path: '/applications/?labels=env:test',
+		path: '/applications/?labels=bazz:buzz',
 		file: 'TangleApplications.png',
-		waitForText: 'Applications'
+		// The "Applications" heading renders unconditionally (loading, error, or
+		// results), so waiting on it can't confirm real data loaded — wait for an
+		// actual application row instead.
+		ready: (page) => page.getByRole('table').getByRole('link').first()
 	},
 	{
 		path: '/diffs/?labels=env:test&targetRef=test_gitops',
 		file: 'TangleDiffs.png',
-		waitForText: 'Status'
+		ready: (page) => page.getByRole('heading', { name: 'Status', level: 3 })
 	}
 ];
 
@@ -98,10 +101,7 @@ async function main() {
 			await page.goto(url, { waitUntil: 'networkidle' });
 
 			try {
-				await page
-					.getByText(shot.waitForText, { exact: false })
-					.first()
-					.waitFor({ timeout: 15_000 });
+				await shot.ready(page).waitFor({ timeout: 15_000 });
 			} catch {
 				throw new Error(
 					`Timed out waiting for real content on ${shot.path} — is the backend (tangle-server ` +

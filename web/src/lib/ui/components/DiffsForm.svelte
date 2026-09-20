@@ -24,15 +24,23 @@
 
 	// The target ref is required — rather than explain that in a toast or a
 	// paragraph, the submit button simply stays disabled until it's filled in.
+	let normalizedTargetRef = $derived(targetRef.trim());
 	let canSubmit = $derived(
-		targetRef.length > 0 && isValidLabelFormat(labels) && isValidLabelFormat(excludeLabels)
+		normalizedTargetRef.length > 0 &&
+			isValidLabelFormat(labels) &&
+			isValidLabelFormat(excludeLabels)
 	);
+
+	function handleSubmit(event: SubmitEvent): void {
+		event.preventDefault();
+		if (canSubmit) onSubmit(labels, excludeLabels, normalizedTargetRef);
+	}
 </script>
 
 <Card class="w-full max-w-none justify-center p-6">
 	<Heading tag="h2" class="mb-2 text-2xl">Diffs</Heading>
 
-	<div class="space-y-4">
+	<form class="space-y-4" onsubmit={handleSubmit}>
 		<Label class="space-y-2">
 			<span>Labels</span>
 			<Input
@@ -73,12 +81,12 @@
 		</Label>
 
 		<Button
+			type="submit"
 			color="primary"
 			class="w-fit leading-none bg-gradient-to-br from-primary-400 to-primary-700 hover:from-primary-500 hover:to-primary-800 dark:from-primary-500 dark:to-primary-900"
 			disabled={!canSubmit}
-			onclick={() => onSubmit(labels, excludeLabels, targetRef)}
 		>
 			See diffs<ArrowRightOutline class="w-6 h-6 ms-2 text-white" />
 		</Button>
-	</div>
+	</form>
 </Card>

@@ -13,7 +13,7 @@
 	import { page } from '$app/state';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { onMount, untrack } from 'svelte';
+	import { onMount } from 'svelte';
 	import { buildQuery } from '$lib/backend/url';
 	import { ApplicationGrid, ApplicationsForm } from '$lib/ui/components';
 	import type { PageProps } from './$types';
@@ -32,17 +32,13 @@
 	// `searched` covers the case where labels/excludeLabels were submitted
 	// but left empty — buildQuery drops empty values, so labels/excludeLabels
 	// alone can't distinguish "submitted with no filters" from "never submitted".
-	let hasSearched: boolean = $state(
-		untrack(
-			() =>
-				page.url.searchParams.get('searched') === 'true' ||
-				page.url.searchParams.get('labels') !== null ||
-				page.url.searchParams.get('excludeLabels') !== null
-		)
+	let hasSearched = $derived(
+		page.url.searchParams.get('searched') === 'true' ||
+			page.url.searchParams.get('labels') !== null ||
+			page.url.searchParams.get('excludeLabels') !== null
 	);
 
 	function search(labels: string, excludeLabels: string): void {
-		hasSearched = true;
 		goto(
 			resolve(
 				`/applications${buildQuery({ labels, excludeLabels, searched: 'true' })}` as '/applications'

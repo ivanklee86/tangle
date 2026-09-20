@@ -34,7 +34,7 @@
 
 	let { data }: PageProps = $props();
 
-	let targetRef = $derived(page.url.searchParams.get('targetRef'));
+	let targetRef = $derived(page.url.searchParams.get('targetRef')?.trim() || null);
 
 	function goToDiffs(labels: string, excludeLabels: string, targetRef: string): void {
 		const query = buildQuery({ targetRef, labels, excludeLabels });
