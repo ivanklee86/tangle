@@ -12,12 +12,12 @@ RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
     ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
 # Kubernetes / ArgoCD tooling (tangle-specific, not centralized)
-ARG K3D_VERSION=v5.9.0
+ARG K3D_VERSION=v5.9.0 # github-releases/k3d-io/k3d
 RUN curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=${K3D_VERSION} bash
 
 COPY --from=rancher/kubectl:v1.32.5 /bin/kubectl /usr/local/bin/kubectl
-COPY --from=alpine/helm /usr/bin/helm /usr/local/bin
-COPY --from=derailed/k9s /bin/k9s /usr/local/bin
+COPY --from=alpine/helm:4.3.0 /usr/bin/helm /usr/local/bin
+COPY --from=derailed/k9s:v0.50.18 /bin/k9s /usr/local/bin
 COPY --from=quay.io/argoproj/argocd:v3.5.3 /usr/local/bin/argocd /usr/local/bin
 
 # Playwright (for web/ e2e tests and vitest-browser-svelte component tests) —
@@ -26,7 +26,7 @@ COPY --from=quay.io/argoproj/argocd:v3.5.3 /usr/local/bin/argocd /usr/local/bin
 # base (ttf-ubuntu-font-family/ttf-unifont aren't in its apt sources). Without a
 # font package installed, Chromium renders real content but all text is
 # genuinely zero-height/invisible — looks exactly like a CSS bug.
-ARG PLAYWRIGHT_VERSION=1.63.0
+ARG PLAYWRIGHT_VERSION=1.63.0 # npm/playwright
 RUN npx --yes playwright@${PLAYWRIGHT_VERSION} install chromium chromium-headless-shell && \
     apt-get update && apt-get install -y --no-install-recommends \
         libglib2.0-0 libnss3 libnspr4 libdbus-1-3 libatk1.0-0 \
@@ -47,5 +47,5 @@ RUN uv python install ${PYTHON_VERSION}
 ENV UV_LINK_MODE=copy
 
 # Go extras not in the central go image
-RUN go install github.com/air-verse/air@latest && \
-    go install github.com/go-swagger/go-swagger/cmd/swagger@latest
+RUN go install github.com/air-verse/air@v1.67.4 && \
+    go install github.com/go-swagger/go-swagger/cmd/swagger@v0.36.6
