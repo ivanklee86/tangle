@@ -77,4 +77,7 @@ Everything else runs at markdownlint's defaults; genuine violations found on the
 - [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2)
 - [pre-commit/mirrors-eslint](https://github.com/pre-commit/mirrors-eslint) (considered and rejected)
 - [pre-commit.ci](https://pre-commit.ci)
-- Superseded by, if adopted later: none.
+- Superseded by, if adopted later: [ADR 0014](0014-drop-precommit-ci-run-prek-in-actions.md) (the
+  `language: system` vs. `language: node`/pre-commit.ci distinction this ADR's `web-lint` design
+  leans on no longer applies once pre-commit.ci is dropped — the split itself still stands, just
+  for a different reason: avoiding duplication with the `ts` job, not a sandbox limitation).

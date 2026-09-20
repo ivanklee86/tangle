@@ -18,11 +18,12 @@ repos:
           - id: markdownlint-cli2
     - repo: local
       hooks:
-          # `language: system` hooks aren't run by pre-commit.ci (they're
-          # silently skipped there), so this is local, pre-push convenience
-          # only. The actual gate is the `ts` job in
-          # .github/workflows/ci.yaml, which runs `task ts:lint` on every
-          # PR touching web/. Mirroring the flat ESLint config here instead
+          # `language: system` needs web/node_modules installed, which prek
+          # doesn't provision — this stays local, pre-push convenience only.
+          # The `pre-commit` CI job (.github/workflows/ci.yaml) explicitly
+          # skips it (SKIP=web-lint) to avoid duplicating the `ts` job's own
+          # gate (`task ts:lint`), which already runs on every PR touching
+          # web/. Mirroring the flat ESLint config here instead
           # (pre-commit/mirrors-eslint) would mean hand-duplicating every
           # plugin version from web/package.json into additional_dependencies
           # and keeping the two in sync by hand.
@@ -38,5 +39,3 @@ exclude: |
         ^integration/kubernetes/example/manifests/3/templates/.*|
         ^charts/tangle/templates/.*
     )
-ci:
-    skip: [web-lint]

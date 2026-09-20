@@ -1,6 +1,6 @@
 # Tangle
 
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/ivanklee86/tangle/main.svg)](https://results.pre-commit.ci/latest/github/ivanklee86/tangle/main) [![CI](https://github.com/ivanklee86/tangle/actions/workflows/ci.yaml/badge.svg)](https://github.com/ivanklee86/tangle/actions/workflows/ci.yaml) [![Coverage](https://raw.githubusercontent.com/ivanklee86/octocov-central/main/badges/ivanklee86/tangle/coverage.svg)](https://octocov.dev/ivanklee86/tangle)
+[![CI](https://github.com/ivanklee86/tangle/actions/workflows/ci.yaml/badge.svg)](https://github.com/ivanklee86/tangle/actions/workflows/ci.yaml) [![Coverage](https://raw.githubusercontent.com/ivanklee86/octocov-central/main/badges/ivanklee86/tangle/coverage.svg)](https://octocov.dev/ivanklee86/tangle)
 
 **tangle** (_noun_): A theoretical name for a group of octopuses since in the wild they are solitary creatures.
 
