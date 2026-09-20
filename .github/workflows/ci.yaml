@@ -44,7 +44,7 @@ jobs:
         gofmt -d .
         test -z "$(gofmt -l .)"
     - name: Install Task
-      uses: arduino/setup-task@v3.0.0
+      uses: ./.github/actions/setup-task
     - name: Cache Go tool binaries
       uses: actions/cache@v6
       with:
@@ -97,7 +97,7 @@ jobs:
         cache: 'npm'
         cache-dependency-path: web/package-lock.json
     - name: Install Task
-      uses: arduino/setup-task@v3.0.0
+      uses: ./.github/actions/setup-task
     - name: Install packages
       run: task ts:install
     - name: Cache Playwright browser
@@ -149,7 +149,7 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@v10.1.0
     - name: Install Task
-      uses: arduino/setup-task@v3.0.0
+      uses: ./.github/actions/setup-task
     - name: Install dependencies
       run: task python:install:ci
     - name: Test docs
@@ -203,7 +203,7 @@ jobs:
         cache: 'npm'
         cache-dependency-path: web/package-lock.json
     - name: Install Task
-      uses: arduino/setup-task@v3.0.0
+      uses: ./.github/actions/setup-task
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
     - name: Expose GitHub Actions cache variables for buildx
