@@ -185,6 +185,8 @@ jobs:
       run: task services:cicd
     - name: Run Go e2e tests
       run: task go:test:e2e:ci
+    - name: Install frontend packages
+      run: task ts:install
     - name: Install Playwright browser
       run: node node_modules/playwright/cli.js install --with-deps chromium chromium-headless-shell
       working-directory: web
