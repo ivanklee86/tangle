@@ -31,7 +31,7 @@ tasks:
     desc: Builds binary.
     cmds:
       - task: generate
-      - mkdir {{.BUILD_DIR}} | true
+      - mkdir -p {{.BUILD_DIR}}
       - go build -ldflags "-X main.version=${VERSION}" -o {{.BUILD_DIR}} ./...
 
   generate:
@@ -70,4 +70,21 @@ tasks:
     desc: Run Golang tests and generate coverage report.
     cmds:
       - go test --coverprofile {{.COVERAGE_RAW}} -v ./... 2>&1  | tee >(go-junit-report > report.xml)
+      - go tool cover -html={{.COVERAGE_RAW}} -o {{.COVERAGE_REPORT}}
+
+  test:e2e:
+    desc: Run Golang e2e tests (needs a live ArgoCD — see `task services:cicd`).
+    cmds:
+      # -tags=e2e adds the //go:build e2e files to the build, it doesn't
+      # remove the untagged ones — -run selects just the TestE2E_-prefixed
+      # tests so this doesn't also re-run every unit/integration test.
+      - go test -tags=e2e -run '^TestE2E_' -v ./... 2>&1
+
+  test:e2e:ci:
+    desc: Run Golang e2e tests and generate coverage report, for CI.
+    vars:
+      COVERAGE_RAW: coverage-e2e.out
+      COVERAGE_REPORT: coverage-e2e.html
+    cmds:
+      - go test -tags=e2e -run '^TestE2E_' --coverprofile {{.COVERAGE_RAW}} -v ./... 2>&1 | tee >(go-junit-report > report-e2e.xml)
       - go tool cover -html={{.COVERAGE_RAW}} -o {{.COVERAGE_REPORT}}

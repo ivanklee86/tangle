@@ -1,0 +1,33 @@
+coverage:
+  # Downloaded by the report job's centralized octocov run (ci.yaml) — go's
+  # and e2e's own coverage.out/coverage-e2e.out artifacts land here side by
+  # side. octocov merges them (folding duplicate-covered lines rather than
+  # double-counting), so this reflects both the fast unit/integration suite
+  # and the live e2e suite, not just whichever job used to run octocov.
+  #
+  # Verified locally (`octocov dump report`) that this merge is real, not a
+  # no-op: cmd/tangle-cli/main.go differs between the two inputs (covered by
+  # the unit suite's CLI tests, untouched by the live e2e suite). One
+  # side effect worth knowing: a merged report measures *line* coverage,
+  # not exact statement coverage — a single input's own total/covered
+  # numbers (statement-based) won't match the merged ones 1:1 even for
+  # files neither run's coverage actually changed, since statement/block
+  # boundaries aren't reliably comparable across two separately-compiled
+  # profile instances, only lines are (the same mechanism that lets this
+  # merge across formats entirely, e.g. Go coverage + LCOV, not just two
+  # Go profiles). This is octocov's own documented merge behavior, not a
+  # bug — the percentage is still a legitimate combined-coverage figure,
+  # just on a coarser basis than a single unmerged report's.
+  paths:
+    - coverage/coverage.out
+    - coverage/coverage-e2e.out
+report:
+  datastores:
+    - artifact://${GITHUB_REPOSITORY}
+  if: is_default_branch
+diff:
+  datastores:
+    - artifact://${GITHUB_REPOSITORY}
+  if: is_pull_request
+comment:
+  if: is_pull_request

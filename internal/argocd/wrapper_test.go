@@ -1,24 +1,43 @@
-package argocd
+// External test package (not `package argocd`): argocdfakes imports argocd,
+// so argocd's own in-package tests can't import argocdfakes without an
+// import cycle. Every symbol used below is exported, so this needs no
+// unexported access anyway.
+package argocd_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
+	"github.com/argoproj/argo-cd/v3/pkg/apis/application/v1alpha1"
+	repoServerApiClient "github.com/argoproj/argo-cd/v3/reposerver/apiclient"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/ivanklee86/tangle/internal/argocd"
+	"github.com/ivanklee86/tangle/internal/argocd/argocdfakes"
 )
 
+// wrapperFixtureApplications scopes argocdfakes.ExampleApplications() down
+// to test-1/test-2 — the "default" project subset a real ArgoCD server
+// restricted the ARGOCD_TOKEN identity these tests authenticated as to,
+// before this file moved off a live cluster. Keeping just that subset
+// preserves every assertion below unchanged.
+func wrapperFixtureApplications() []v1alpha1.Application {
+	return argocdfakes.ExampleApplications()[:2]
+}
+
+// Test cases preserved from before this file moved to argocdfakes (byte-for-byte
+// same subtests/assertions — only how the client dependency is provided changed):
+//   - pool: labels{env=test} returns exactly test-1
+//   - exclude: labels{foo=bar} minus excludeLabels{env=test} returns exactly test-2
+//   - error: a client-level List failure propagates out of the wrapper
+//   - get manifests from pool: a known application returns non-nil manifests
+//   - not found getting manifests: an unknown application errors
 func TestArgoCDWrapper(t *testing.T) {
-	setup(t)
-
 	t.Run("pool", func(t *testing.T) {
-		client, err := NewArgoCDClient(&ArgoCDClientOptions{
-			Address:         "localhost:8080",
-			PlainText:       true,
-			AuthTokenEnvVar: "ARGOCD_TOKEN",
-		})
-		assert.Nil(t, err)
+		client := argocdfakes.NewFakeClient(wrapperFixtureApplications())
 
-		wrapper, err := New(client, "test", &ArgoCDWrapperOptions{
+		wrapper, err := argocd.New(client, "test", &argocd.ArgoCDWrapperOptions{
 			DoNotInstrumentWorkers: true,
 		})
 		assert.Nil(t, err)
@@ -34,14 +53,9 @@ func TestArgoCDWrapper(t *testing.T) {
 	})
 
 	t.Run("exclude", func(t *testing.T) {
-		client, err := NewArgoCDClient(&ArgoCDClientOptions{
-			Address:         "localhost:8080",
-			PlainText:       true,
-			AuthTokenEnvVar: "ARGOCD_TOKEN",
-		})
-		assert.Nil(t, err)
+		client := argocdfakes.NewFakeClient(wrapperFixtureApplications())
 
-		wrapper, err := New(client, "test", &ArgoCDWrapperOptions{
+		wrapper, err := argocd.New(client, "test", &argocd.ArgoCDWrapperOptions{
 			DoNotInstrumentWorkers: true,
 		})
 		assert.Nil(t, err)
@@ -58,14 +72,10 @@ func TestArgoCDWrapper(t *testing.T) {
 	})
 
 	t.Run("error", func(t *testing.T) {
-		client, err := NewArgoCDClient(&ArgoCDClientOptions{
-			Address:         "https://localhost:8080",
-			PlainText:       true,
-			AuthTokenEnvVar: "ARGOCD_TOKEN",
-		})
-		assert.Nil(t, err)
+		client := argocdfakes.NewFakeClient(wrapperFixtureApplications())
+		client.ErrOnList = errors.New("simulated connection error")
 
-		wrapper, err := New(client, "test", &ArgoCDWrapperOptions{
+		wrapper, err := argocd.New(client, "test", &argocd.ArgoCDWrapperOptions{
 			DoNotInstrumentWorkers: true,
 		})
 		assert.Nil(t, err)
@@ -79,14 +89,12 @@ func TestArgoCDWrapper(t *testing.T) {
 	})
 
 	t.Run("get manifests from pool", func(t *testing.T) {
-		client, err := NewArgoCDClient(&ArgoCDClientOptions{
-			Address:         "localhost:8080",
-			PlainText:       true,
-			AuthTokenEnvVar: "ARGOCD_TOKEN",
-		})
-		assert.Nil(t, err)
+		client := argocdfakes.NewFakeClient(wrapperFixtureApplications())
+		client.ManifestsByApp["test-1"] = &repoServerApiClient.ManifestResponse{
+			Manifests: []string{"apiVersion: v1\nkind: ConfigMap\n"},
+		}
 
-		wrapper, err := New(client, "test", &ArgoCDWrapperOptions{
+		wrapper, err := argocd.New(client, "test", &argocd.ArgoCDWrapperOptions{
 			DoNotInstrumentWorkers: true,
 		})
 		assert.Nil(t, err)
@@ -97,14 +105,9 @@ func TestArgoCDWrapper(t *testing.T) {
 	})
 
 	t.Run("not found getting manifests", func(t *testing.T) {
-		client, err := NewArgoCDClient(&ArgoCDClientOptions{
-			Address:         "localhost:8080",
-			PlainText:       true,
-			AuthTokenEnvVar: "ARGOCD_TOKEN",
-		})
-		assert.Nil(t, err)
+		client := argocdfakes.NewFakeClient(wrapperFixtureApplications())
 
-		wrapper, err := New(client, "test", &ArgoCDWrapperOptions{
+		wrapper, err := argocd.New(client, "test", &argocd.ArgoCDWrapperOptions{
 			DoNotInstrumentWorkers: true,
 		})
 		assert.Nil(t, err)
@@ -112,5 +115,4 @@ func TestArgoCDWrapper(t *testing.T) {
 		_, err = wrapper.GetManifests(context.Background(), "test-5", "main", "test_gitops")
 		assert.NotNil(t, err)
 	})
-
 }

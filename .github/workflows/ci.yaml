@@ -7,11 +7,49 @@ on:
   pull_request:
 
 permissions:
+  contents: read
   checks: write
   pull-requests: write
 
 jobs:
+  filter:
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.filter.outputs.go }}
+      ts: ${{ steps.filter.outputs.ts }}
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v4
+      id: filter
+      with:
+        filters: |
+          go:
+            - '**/*.go'
+            - 'go.mod'
+            - 'go.sum'
+            - 'Taskfile.yaml'
+            - 'tasks/go.yaml'
+            - 'tasks/docker.yaml'
+            - 'tasks/k8s.yaml'
+            - 'tasks/argocd.yaml'
+            - 'Dockerfile'
+            - '.github/workflows/ci.yaml'
+          ts:
+            - 'web/**'
+            - 'Taskfile.yaml'
+            - 'tasks/ts.yaml'
+            - '.github/workflows/ci.yaml'
+          docs:
+            - 'docs/**'
+            - '!docs/agents/**'
+            - 'mkdocs.yml'
+            - 'requirements.txt'
+            - '.github/workflows/ci.yaml'
+
   go:
+    needs: [filter]
+    if: needs.filter.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -20,27 +58,24 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: 1.27
+        cache: true   # default; explicit for clarity
+    - name: Check formatting
+      run: |
+        gofmt -d .
+        test -z "$(gofmt -l .)"
     - name: Install Task
       uses: arduino/setup-task@v2
-    - name: Set up Docker
-      uses: crazy-max/ghaction-setup-docker@v4
-    - name: Install k3d
-      # Keep in sync with K3D_VERSION in .devcontainer/Dockerfile.
-      run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.9.0 bash
-    - name: Install argocd
-      # Keep in sync with the argocd CLI version in .devcontainer/Dockerfile.
-      run: |
-        curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v3.5.3/argocd-linux-amd64
-        sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
-        rm argocd-linux-amd64
+    - name: Cache Go tool binaries
+      uses: actions/cache@v6
+      with:
+        path: ~/go/bin
+        key: go-tools-${{ hashFiles('tasks/go.yaml') }}
     - name: Install all dependencies
       run: task go:install-ci
     - name: Generate OpenAPI spec
       run: task go:generate
     - name: Lint code.
       run: task go:lint
-    - name: Run service for integration tests
-      run: task services:cicd
     - name: Run tests.
       run: task go:test-ci
     - name: Publish Unit Test Results
@@ -48,20 +83,31 @@ jobs:
       if: always()
       with:
         files: report.xml
-    - name: Generate lcov coverage report.
-      uses: jandelgado/gcov2lcov-action@v1.1.1
-    - name: Upload results to Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-    - name: Save artifacts.
+    - name: Save coverage report.
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: Coverage report.
+        name: go-coverage-report
         path: ./coverage.html
+    - name: Save coverage profile.
+      # Raw profile for the report job's centralized octocov run — octocov
+      # moved there so it can merge this with e2e's own coverage-e2e.out
+      # into one combined report instead of only ever seeing go's slice.
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: go-coverage-profile
+        path: ./coverage.out
+    - name: Save JUnit report.
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: go-junit-report
+        path: ./report.xml
 
   ts:
+    needs: [filter]
+    if: needs.filter.outputs.ts == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -70,10 +116,21 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '24'
+        cache: 'npm'
+        cache-dependency-path: web/package-lock.json
     - name: Install Task
       uses: arduino/setup-task@v2
     - name: Install packages
       run: task ts:install
+    - name: Cache Playwright browser
+      id: playwright-cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/ms-playwright
+        # Literal version, not a hash of web/package.json — this needs to
+        # match exactly what's installed, and an unrelated package.json
+        # change shouldn't accidentally bust this cache.
+        key: playwright-${{ runner.os }}-1.63.0
     - name: Install Playwright browser
       # Invoke the locally installed `playwright` package directly rather
       # than `npx playwright@<version>` — this project also depends on
@@ -82,30 +139,27 @@ jobs:
       # the version requested, silently installing the wrong browser
       # revision. `node node_modules/playwright/cli.js` bypasses the bin
       # collision and always uses the exact version in web/package.json.
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
       run: node node_modules/playwright/cli.js install --with-deps chromium chromium-headless-shell
       working-directory: web
     - name: Run unit tests
-      run: task ts:test
+      run: task ts:test:unit
+    - name: Run mocked e2e tests
+      run: task ts:test:e2e
     - name: Lint code
       run: task ts:lint
     - name: Build website
       run: task ts:build
-
-  format:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Install Go
-      uses: actions/setup-go@v5
+    - name: Save JUnit report.
+      uses: actions/upload-artifact@v4
+      if: always()
       with:
-        go-version: 1.27.x
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Generate format report.
-      run: gofmt -d .
-    - name: Run format again (so job will error if format issues found).
-      run: test -z $(gofmt -l .)
+        name: ts-junit-report
+        path: web/test-results/junit.xml
 
   docs:
+    needs: [filter]
+    if: needs.filter.outputs.docs == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -122,3 +176,160 @@ jobs:
       run: task python:install:ci
     - name: Test docs
       run: task python:test
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Install Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.27
+        cache: true   # default; explicit for clarity
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'npm'
+        cache-dependency-path: web/package-lock.json
+    - name: Install Task
+      uses: arduino/setup-task@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+    - name: Expose GitHub Actions cache variables for buildx
+      uses: crazy-max/ghaction-github-runtime@v4
+    - name: Cache Go tool binaries
+      uses: actions/cache@v6
+      with:
+        path: ~/go/bin
+        key: go-tools-${{ hashFiles('tasks/go.yaml') }}
+    - name: Cache k3d/argocd CLIs
+      id: cli-tools-cache
+      uses: actions/cache@v6
+      with:
+        path: |
+          /usr/local/bin/k3d
+          /usr/local/bin/argocd
+        # Neither version is derived from a hashed file — both are hardcoded
+        # here and duplicated in .devcontainer/Dockerfile's K3D_VERSION arg
+        # and argocd base-image tag. Keep this key in sync if either pin
+        # is bumped.
+        key: cli-tools-k3d-v5.9.0-argocd-v3.5.3
+    - name: Install k3d
+      # Keep in sync with K3D_VERSION in .devcontainer/Dockerfile.
+      if: steps.cli-tools-cache.outputs.cache-hit != 'true'
+      run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.9.0 bash
+    - name: Install argocd
+      # Keep in sync with the argocd CLI version in .devcontainer/Dockerfile.
+      if: steps.cli-tools-cache.outputs.cache-hit != 'true'
+      run: |
+        curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v3.5.3/argocd-linux-amd64
+        sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+        rm argocd-linux-amd64
+    - name: Install all dependencies
+      run: task go:install-ci
+    - name: Generate OpenAPI spec
+      run: task go:generate
+    - name: Bring up live stack
+      run: task services:cicd
+      env:
+        DOCKER_BUILD_CACHE_FLAGS: --cache-from type=gha --cache-to type=gha,mode=max
+    - name: Run Go e2e tests
+      run: task go:test:e2e:ci
+    - name: Install frontend packages
+      run: task ts:install
+    - name: Cache Playwright browser
+      id: playwright-cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-1.63.0
+    - name: Install Playwright browser
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      run: node node_modules/playwright/cli.js install --with-deps chromium chromium-headless-shell
+      working-directory: web
+    - name: Run frontend live e2e suite
+      run: task ts:test:e2e:live
+    - name: Publish Unit Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: |
+          report-e2e.xml
+          web/test-results/junit-live.xml
+    - name: Save JUnit report.
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-junit-report
+        path: |
+          ./report-e2e.xml
+          web/test-results/junit-live.xml
+    - name: Save coverage profile.
+      # For the report job's centralized octocov run — see the same step in
+      # the go job. This is the *only* place e2e's own Go coverage gets
+      # surfaced anywhere; today it's generated and then never looked at
+      # again once it leaves this job.
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-coverage-profile
+        path: ./coverage-e2e.out
+
+  report:
+    needs: [go, ts, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    # Job-level permissions replace the workflow-level block entirely for
+    # this job (they don't merge), so every scope its steps use has to be
+    # re-listed here. actions: write moved here with octocov (workstream
+    # 10 originally ran it in go) — it's for octocov's artifact:// datastore,
+    # which reads/deletes prior coverage-report artifacts via the REST
+    # Actions-artifacts API (authenticated with GITHUB_TOKEN, not the
+    # separate runtime-token upload path actions/upload-artifact uses).
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+      actions: write
+    steps:
+    - name: Checkout code
+      # octocov needs the checked-out repo for .octocov.yml itself and for
+      # git-root-relative path normalization — the JUnit-only version of
+      # this job never needed one.
+      uses: actions/checkout@v4
+    - name: Download JUnit reports
+      uses: actions/download-artifact@v4
+      with:
+        pattern: '*-junit-report'
+        path: reports
+        merge-multiple: true
+    - name: Download coverage profiles
+      # go's coverage.out and e2e's coverage-e2e.out land side by side here
+      # (different filenames, no collision) — .octocov.yml's coverage.paths
+      # lists both; octocov merges overlapping files itself (folding
+      # duplicate-covered lines, not double-counting), so this becomes one
+      # combined Go coverage report instead of go's slice alone. Each
+      # pattern is globbed independently, so a skipped go job (path filter)
+      # just leaves that one glob empty rather than erroring — e2e always
+      # runs, so there's always at least its coverage to report on.
+      uses: actions/download-artifact@v4
+      with:
+        pattern: '*-coverage-profile'
+        path: coverage
+        merge-multiple: true
+    - name: Report coverage via octocov
+      # Pinned to the exact commit v1 (currently v1.5.2) resolves to, not the
+      # mutable tag — this step runs with actions: write, so a repointed tag
+      # could swap in code that runs with that elevated token.
+      uses: k1LoW/octocov-action@a167dc0dee441b7ffc45e1b862ab55ec0d87f278 # v1.5.2
+      with:
+        config: .octocov.yml
+        version: v0.79.0
+    - name: Publish unified test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: reports/*.xml
+        check_name: 'Unified Test Results'

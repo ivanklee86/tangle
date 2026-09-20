@@ -1,6 +1,10 @@
 # Svelte frontend e2e testing
 
-Status: proposed · 2026-09-19
+Status: superseded by [ci-pipeline-restructure.md](ci-pipeline-restructure.md) · 2026-09-19
+
+**Superseded 2026-09-20**: this plan's four workstreams (mocked suite, devcontainer Playwright install, Task wiring, live suite + CI) are absorbed and expanded into [ci-pipeline-restructure.md](ci-pipeline-restructure.md) as part of building out the full Go+TS test pyramid, including promoting the live-stack suite from opt-in to always-run (see [ADR 0009](../../adrs/0009-ci-pipeline-test-taxonomy-and-conditional-jobs.md)) and widening its coverage beyond a two-file smoke check. Kept here for the original research (the devcontainer font/library findings in workstream 2 especially) — don't implement from this file directly, follow the consolidated plan instead.
+
+~~Status: proposed · 2026-09-19~~
 
 Turn `web/`'s Playwright setup from a single non-passing, CI-unused spec (`e2e/demo.test.ts` waits for an `h1` no page renders) into a real e2e suite, wire Playwright into the devcontainer, add Taskfile tasks for it, and run it in CI. See [ADR 0003](../../adrs/0003-svelte-e2e-testing-strategy.md) for why this is two suites — a mocked-API suite that's the required, fast, every-PR check, and a live-stack smoke suite that's opt-in — rather than one.
 

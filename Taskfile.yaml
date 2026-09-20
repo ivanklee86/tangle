@@ -2,6 +2,13 @@
 # https://taskfile.dev
 version: '3'
 
+# Must live here, not in an included Taskfile (e.g. tasks/go.yaml) — Task
+# silently ignores `set`/`shopt` declared in an included file; only the
+# root Taskfile's applies. Without pipefail, `go test ... | tee ...`
+# (tasks/go.yaml's test-ci/test:e2e:ci) would report tee's exit status, not
+# go test's, so a failing suite could still look green.
+set: [pipefail]
+
 includes:
     go: ./tasks/go.yaml
     k8s: ./tasks/k8s.yaml
@@ -42,4 +49,22 @@ tasks:
         - services
         - docker:build
         cmds:
-        - docker run -d -v `pwd`/integration:/config -e TANGLE_CONFIG_PATH=/config/tangle.yaml --network=host --env-file .env --rm -p 8081:8081 tangle
+        # Stable name (not an anonymous auto-generated one) so callers like
+        # e2e:live can stop it deterministically; remove any stale container
+        # left over from a prior failed/interrupted run first, so this stays
+        # idempotent rather than erroring on a name collision.
+        - docker rm -f tangle-cicd >/dev/null 2>&1 || true
+        - docker run -d --name tangle-cicd -v `pwd`/integration:/config -e TANGLE_CONFIG_PATH=/config/tangle.yaml --network=host --env-file .env --rm -p 8081:8081 tangle
+
+    e2e:live:
+        desc: Full live-stack e2e run (brings up services, runs Playwright, tears down).
+        cmds:
+        # Registered before services:cicd runs, not after — a defer is only
+        # registered once Task reaches it, so putting these first guarantees
+        # both run even if services:cicd itself fails partway through (e.g.
+        # the container starts but the cluster healthcheck doesn't), not just
+        # when ts:test:e2e:live fails.
+        - defer: { task: k8s:cluster:delete }
+        - defer: docker stop tangle-cicd >/dev/null 2>&1 || true
+        - task: services:cicd
+        - task: ts:test:e2e:live

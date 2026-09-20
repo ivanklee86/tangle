@@ -6,7 +6,13 @@ tasks:
   build:
     desc: Build Dockerfile.
     cmds:
-      - docker build -f Dockerfile -t tangle .
+      # --load is required with buildx (unlike classic `docker build`, which
+      # loads into the local daemon implicitly). DOCKER_BUILD_CACHE_FLAGS is
+      # a plain shell env var (not a Task `vars:` default), left unquoted so
+      # it word-splits into separate arguments when CI sets it — empty
+      # locally, which is today's behavior via the default docker-driver
+      # builder.
+      - docker buildx build -f Dockerfile -t tangle --load ${DOCKER_BUILD_CACHE_FLAGS:-} .
 
   shell:
     desc: Run shell in Docker container.

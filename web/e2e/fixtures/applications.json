@@ -1,0 +1,44 @@
+{
+	"results": [
+		{
+			"name": "test",
+			"link": "https://argocd-test.example.com/applications?labels=foo%253Dbar",
+			"applications": [
+				{
+					"name": "frontend",
+					"url": "https://argocd-test.example.com/applications/argocd/frontend",
+					"health": "Healthy",
+					"syncStatus": "Synced",
+					"liveRef": "main"
+				},
+				{
+					"name": "backend",
+					"url": "https://argocd-test.example.com/applications/argocd/backend",
+					"health": "Degraded",
+					"syncStatus": "OutOfSync",
+					"liveRef": "main"
+				}
+			]
+		},
+		{
+			"name": "prod",
+			"link": "https://argocd-prod.example.com/applications",
+			"applications": [
+				{
+					"name": "gateway",
+					"url": "https://argocd-prod.example.com/applications/argocd/gateway",
+					"health": "Healthy",
+					"syncStatus": "Synced",
+					"liveRef": "main"
+				},
+				{
+					"name": "worker",
+					"url": "https://argocd-prod.example.com/applications/argocd/worker",
+					"health": "Degraded",
+					"syncStatus": "OutOfSync",
+					"liveRef": "main"
+				}
+			]
+		}
+	]
+}
