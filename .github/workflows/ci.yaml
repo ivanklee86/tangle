@@ -11,7 +11,42 @@ permissions:
   pull-requests: write
 
 jobs:
+  filter:
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.filter.outputs.go }}
+      ts: ${{ steps.filter.outputs.ts }}
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v4
+      id: filter
+      with:
+        filters: |
+          go:
+            - '**/*.go'
+            - 'go.mod'
+            - 'go.sum'
+            - 'Taskfile.yaml'
+            - 'tasks/go.yaml'
+            - 'tasks/docker.yaml'
+            - 'tasks/k8s.yaml'
+            - 'tasks/argocd.yaml'
+            - 'Dockerfile'
+            - '.github/workflows/ci.yaml'
+          ts:
+            - 'web/**'
+            - '.github/workflows/ci.yaml'
+          docs:
+            - 'docs/**'
+            - '!docs/agents/**'
+            - 'mkdocs.yml'
+            - 'requirements.txt'
+            - '.github/workflows/ci.yaml'
+
   go:
+    needs: [filter]
+    if: needs.filter.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -20,27 +55,18 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: 1.27
+    - name: Check formatting
+      run: |
+        gofmt -d .
+        test -z "$(gofmt -l .)"
     - name: Install Task
       uses: arduino/setup-task@v2
-    - name: Set up Docker
-      uses: crazy-max/ghaction-setup-docker@v4
-    - name: Install k3d
-      # Keep in sync with K3D_VERSION in .devcontainer/Dockerfile.
-      run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.9.0 bash
-    - name: Install argocd
-      # Keep in sync with the argocd CLI version in .devcontainer/Dockerfile.
-      run: |
-        curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v3.5.3/argocd-linux-amd64
-        sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
-        rm argocd-linux-amd64
     - name: Install all dependencies
       run: task go:install-ci
     - name: Generate OpenAPI spec
       run: task go:generate
     - name: Lint code.
       run: task go:lint
-    - name: Run service for integration tests
-      run: task services:cicd
     - name: Run tests.
       run: task go:test-ci
     - name: Publish Unit Test Results
@@ -54,14 +80,22 @@ jobs:
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-    - name: Save artifacts.
+    - name: Save coverage report.
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: Coverage report.
+        name: go-coverage-report
         path: ./coverage.html
+    - name: Save JUnit report.
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: go-junit-report
+        path: ./report.xml
 
   ts:
+    needs: [filter]
+    if: needs.filter.outputs.ts == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -85,27 +119,23 @@ jobs:
       run: node node_modules/playwright/cli.js install --with-deps chromium chromium-headless-shell
       working-directory: web
     - name: Run unit tests
-      run: task ts:test
+      run: task ts:test:unit
+    - name: Run mocked e2e tests
+      run: task ts:test:e2e
     - name: Lint code
       run: task ts:lint
     - name: Build website
       run: task ts:build
-
-  format:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Install Go
-      uses: actions/setup-go@v5
+    - name: Save JUnit report.
+      uses: actions/upload-artifact@v4
+      if: always()
       with:
-        go-version: 1.27.x
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Generate format report.
-      run: gofmt -d .
-    - name: Run format again (so job will error if format issues found).
-      run: test -z $(gofmt -l .)
+        name: ts-junit-report
+        path: web/test-results/junit.xml
 
   docs:
+    needs: [filter]
+    if: needs.filter.outputs.docs == 'true'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -122,3 +152,52 @@ jobs:
       run: task python:install:ci
     - name: Test docs
       run: task python:test
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Install Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.27
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+    - name: Install Task
+      uses: arduino/setup-task@v2
+    - name: Install k3d
+      # Keep in sync with K3D_VERSION in .devcontainer/Dockerfile.
+      run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.9.0 bash
+    - name: Install argocd
+      # Keep in sync with the argocd CLI version in .devcontainer/Dockerfile.
+      run: |
+        curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v3.5.3/argocd-linux-amd64
+        sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+        rm argocd-linux-amd64
+    - name: Install all dependencies
+      run: task go:install-ci
+    - name: Generate OpenAPI spec
+      run: task go:generate
+    - name: Bring up live stack
+      run: task services:cicd
+    - name: Run Go e2e tests
+      run: task go:test:e2e:ci
+    - name: Install Playwright browser
+      run: node node_modules/playwright/cli.js install --with-deps chromium chromium-headless-shell
+      working-directory: web
+    - name: Run frontend live e2e suite
+      run: task ts:test:e2e:live
+    - name: Publish Unit Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: report-e2e.xml
+    - name: Save JUnit report.
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-junit-report
+        path: ./report-e2e.xml
