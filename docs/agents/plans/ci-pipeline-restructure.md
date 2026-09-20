@@ -455,11 +455,13 @@ comment:
 
 ## 11. Stand up the octocov central repository
 
+**Status: done**, with one deliberate deviation from the design below — see "What actually shipped."
+
 Per [ADR 0011](../../adrs/0011-octocov-central-reporting-and-badges-repository.md), create a new public repository, `ivanklee86/octocov-central`, running octocov's "central mode" on a schedule to turn workstream 10's `artifact://` reports into a publicly embeddable coverage badge and a browsable dashboard, published via GitHub Pages. **Almost none of this workstream's steps touch the `tangle` repository** — it's a separate repo, created and maintained independently; the one `tangle`-side change is step 6 below.
 
 **In the new `octocov-central` repository**
 
-1. Create the repository (`ivanklee86/octocov-central`, public) — a manual/one-time step, not part of this plan's file changes to `tangle`.
+1. Create the repository (`ivanklee86/octocov-central`, public) — a manual/one-time step, not part of this plan's file changes to `tangle`. Done via `gh repo create`.
 2. Add `.octocov.yml`:
    ```yaml
    central:
@@ -470,43 +472,77 @@ Per [ADR 0011](../../adrs/0011-octocov-central-reporting-and-badges-repository.m
      badges:
        datastores:
          - local://badges
-     push:
-       if: env.GITHUB_REF == 'refs/heads/main'
    ```
-   (`central.reports.datastores` is a list — more source repos are added later as more `artifact://owner/repo` entries, no structural change needed.)
-3. Add a scheduled workflow, `.github/workflows/central.yaml`:
-   ```yaml
-   name: Central
-   on:
-     schedule:
-       - cron: '0 6 * * *'  # daily
-     workflow_dispatch: {}
-   permissions:
-     contents: write
-   jobs:
-     central:
-       runs-on: ubuntu-latest
-       steps:
-         - uses: actions/checkout@v4
-         - uses: k1LoW/octocov-action@v1
-           with:
-             config: .octocov.yml
-             version: v0.79.0
-             github-token: ${{ secrets.TANGLE_ARTIFACTS_TOKEN }}
-   ```
-   (Resolved by reading `k1LoW/octocov-action`'s `action.yml` directly via `gh api repos/k1LoW/octocov-action/contents/action.yml`: the action takes a single `github-token` input, defaulting to `${{ github.token }}`, and internally exports it as both the `gh-setup` download step's auth *and* the `OCTOCOV_GITHUB_TOKEN` env var octocov itself reads — so the cross-repo token for reading `tangle`'s artifact datastore is passed via `with: { github-token: ... }`, not a hand-set `env:` block on this step, which would only shadow the action's own internal `env:` assignment and be silently ignored.)
-4. Create a fine-grained PAT scoped to read-only `actions` access on `ivanklee86/tangle` only, and store it as the `TANGLE_ARTIFACTS_TOKEN` secret in `octocov-central`'s repo settings — a manual step, not a file change.
-5. Enable GitHub Pages on `octocov-central`, serving the generated dashboard (`central.root`'s output) and badge SVGs (`central.badges.datastores`' `local://badges` path).
-6. **In `tangle`**: add a coverage badge to `README.md` linking to `octocov-central`'s published badge URL, once it exists.
+   (`central.reports.datastores` is a list — more source repos are added later as more `artifact://owner/repo` entries, no structural change needed. No `push:` key — see "What actually shipped.")
+3. Add a scheduled workflow, `.github/workflows/central.yaml` — see "What actually shipped" for the real (not `k1LoW/octocov-action`-based) version that ended up working.
+4. Create a fine-grained PAT scoped to read-only `actions` access on `ivanklee86/tangle` only, and store it as the `TANGLE_ARTIFACTS_TOKEN` secret in `octocov-central`'s repo settings — a manual step the user did themselves (PAT creation has no API; it's web-UI-only).
+5. Enable GitHub Pages on `octocov-central`, serving the generated dashboard (`central.root`'s output) and badge SVGs (`central.badges.datastores`' `local://badges` path). Done via `gh api repos/ivanklee86/octocov-central/pages` — live at `https://ivanklee86.github.io/octocov-central/`.
+6. **In `tangle`**: add a coverage badge to `README.md` linking to `octocov-central`'s published badge URL — **not done yet**, deliberately: `badges/coverage.svg` doesn't exist yet, since it needs `tangle`'s `go` job to have run on `main` at least once first (workstream 10's `report.if: is_default_branch`), which hasn't happened (this plan's PR hadn't merged as of this writing). Land this once that badge is confirmed to actually render.
+
+**What actually shipped, and why it differs from the design above**
+
+The original design ran octocov via `k1LoW/octocov-action` with `central.push` configured to have octocov commit and push its own generated dashboard/badges back to the repo. That never worked: octocov's `central.push` (`gh.PushUsingLocalGit`, a go-git-based push) consistently failed with `authorization failed: Permission to ivanklee86/octocov-central.git denied to ivanklee86`, reproducibly, regardless of:
+
+- which token backed `GITHUB_TOKEN` (the workflow's default token, with `permissions: contents: write` and the repo's workflow-permissions ceiling explicitly raised to `write` — both checked and fixed along the way; still failed),
+- whether `GITHUB_TOKEN` was set at step level vs. job level (ruling out one guess about composite-action env relay — a same-job A/B test running the identical octocov binary+config directly in a plain step, bypassing `k1LoW/octocov-action` entirely, produced the exact same failure once there was actually something new to push, disproving that theory once a vacuous first "success" — nothing to commit that run — was caught and re-tested properly), or
+- `actions/checkout`'s `persist-credentials` setting (ruling out a credential-header conflict).
+
+A plain `git push` using the identical `GITHUB_TOKEN` value, from the same job, succeeded immediately — with either `octocov` (octocov's own hardcoded username) or `x-access-token` as the Basic Auth username, ruling that out too. The failure is specific to go-git's HTTP transport in this environment, not to any of the more obvious suspects (permissions, token identity, or username).
+
+Given that, `.octocov.yml` omits `push:` entirely — octocov then just writes `README.md`/`badges/*.svg` to the local checkout and skips pushing (the same graceful-skip path already used when `central.reReport` is unset; logged as `Skip commit and push central report: ...`), and the workflow commits and pushes those files itself with plain `git`, using a token it already proved works. The real `.github/workflows/central.yaml`:
+
+```yaml
+name: Central
+on:
+  schedule:
+    - cron: '0 6 * * *'  # daily
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  central:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install octocov
+        run: |
+          curl -sSL https://github.com/k1LoW/octocov/releases/download/v0.79.0/octocov_v0.79.0_linux_amd64.tar.gz -o /tmp/octocov.tar.gz
+          tar -xzf /tmp/octocov.tar.gz -C /tmp octocov
+          sudo install -m 755 /tmp/octocov /usr/local/bin/octocov
+      - name: Run octocov (central mode)
+        env:
+          OCTOCOV_GITHUB_TOKEN: ${{ secrets.TANGLE_ARTIFACTS_TOKEN }}
+        run: octocov --config=.octocov.yml
+      - name: Commit and push the regenerated dashboard/badges
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "Nothing to commit."
+            exit 0
+          fi
+          git add -A
+          git commit -m "Update by octocov [skip ci]"
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/ivanklee86/octocov-central.git" HEAD:main
+```
+
+Also needed along the way, both real gaps found by actually running this rather than by reading docs:
+
+- `central.badges.datastores: local://badges` needs the `badges/` directory to already exist in the repo — octocov's local datastore does `os.Stat(root)` at construction time and errors (`stat .../badges: no such file or directory`) rather than creating it; only writes to files *inside* an already-validated root get `MkdirAll`'d. Fixed with a checked-in `badges/.gitkeep`.
+- The repo's own "Workflow permissions" setting (`gh api repos/.../actions/permissions/workflow`) defaulted to `read`, silently capping whatever the workflow file's own `permissions:` block requested — raised to `write` via the same API. (This turned out not to be the actual fix for the push failure above, but it's a real prerequisite regardless, and worth knowing about for any repo whose account-wide default is read-only.)
+
+Confirmed working end to end: `gh run view` shows a successful commit+push (`[main 0f29350] Update by octocov [skip ci]`), and `https://ivanklee86.github.io/octocov-central/` serves the regenerated dashboard live (HTTP 200, Jekyll-rendered from the committed `README.md`). The dashboard's repository table is currently empty — expected, not a bug: it reflects `ivanklee86/tangle` having no persisted `artifact://` report yet, since that only happens on a `main`-branch run of `tangle`'s `go` job (workstream 10), which hasn't happened yet.
 
 **Steps**
 
-1. Land `octocov-central`'s `.octocov.yml` and workflow, confirm `workflow_dispatch` runs successfully end-to-end (reads `tangle`'s latest `main`-branch artifact, writes `badges/coverage.svg` and the dashboard, self-pushes per `central.push`).
-2. Enable the `on.schedule` trigger once the manual run is confirmed working.
-3. Enable GitHub Pages, confirm the badge URL resolves publicly (unauthenticated) and renders.
-4. Add the badge to `tangle`'s `README.md`.
+1. ~~Land `octocov-central`'s `.octocov.yml` and workflow, confirm `workflow_dispatch` runs successfully end-to-end~~ Done, per above (with the plain-git-push design, not `central.push`).
+2. ~~Enable the `on.schedule` trigger once the manual run is confirmed working~~ Done — it was in the workflow file from the start; no separate enablement step turned out to be needed.
+3. ~~Enable GitHub Pages, confirm the badge URL resolves publicly (unauthenticated) and renders~~ Done — Pages is live; no badge exists yet since there's no coverage data yet (see above).
+4. Add the badge to `tangle`'s `README.md` — **remaining**: do this once `tangle`'s `main` branch has run the `go` job at least once and a subsequent `octocov-central` run (manual `workflow_dispatch` is fine, no need to wait for the daily schedule) produces a real `badges/coverage.svg`.
 
-**Rollback**: delete or archive the `octocov-central` repository and the `TANGLE_ARTIFACTS_TOKEN` secret; remove the badge line from `tangle`'s `README.md`. Workstream 10's artifact datastore and PR-diff comment are unaffected either way — they don't depend on `octocov-central` existing.
+**Rollback**: delete or archive the `octocov-central` repository and the `TANGLE_ARTIFACTS_TOKEN` secret; remove the badge line from `tangle`'s `README.md` (once added). Workstream 10's artifact datastore and PR-diff comment are unaffected either way — they don't depend on `octocov-central` existing.
 
 ## 12. CI dependency caching
 
