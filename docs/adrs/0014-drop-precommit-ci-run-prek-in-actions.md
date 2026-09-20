@@ -45,7 +45,7 @@ Chosen options:
 - Good, because `go-fmt` now gets CI enforcement through this new job too (in addition to the `go` job's own `gofmt` check) — mild, harmless duplication, not a gap.
 - Neutral, because `web-lint` still has no *pre-commit-driven* CI enforcement, same as today — its real gate remains the `ts` job's `task ts:lint`, unchanged by this ADR.
 - Neutral, because the new job re-installs a Go toolchain independently of the `go` job (GitHub Actions jobs run in separate VMs with no shared state) — this mirrors the `e2e` job's already-established pattern of re-provisioning toolchains rather than depending on another job's setup.
-- Bad, because `rev:` auto-updates that pre-commit.ci previously ran on its own weekly schedule stop happening automatically — `renovate.json`'s `pre-commit` manager is deliberately disabled by upstream Renovate policy (see [ADR 0013](0013-renovate-weekly-grouped-updates.md)'s "Considered Options"), so those hook `rev`s (`pre-commit-hooks`, `pre-commit-golang`, `markdownlint-cli2`, `renovatebot/pre-commit-hooks`) now need a manual bump when a maintainer notices they're stale, with no automated nudge from either system.
+- Bad, because `rev:` auto-updates that pre-commit.ci previously ran on its own weekly schedule stop happening automatically — Renovate's `pre-commit` manager is deliberately disabled by upstream Renovate policy (see ADR 0013, "Renovate weekly grouped updates," for the full reasoning), so those hook `rev`s (`pre-commit-hooks`, `pre-commit-golang`, `markdownlint-cli2`, `renovatebot/pre-commit-hooks`) now need a manual bump when a maintainer notices they're stale, with no automated nudge from either system.
 
 ## More Information
 
