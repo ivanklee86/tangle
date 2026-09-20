@@ -71,4 +71,4 @@ Chosen options, landed together in one `renovate.json` restructure (see [the imp
 - [Renovate: `customManagers`](https://docs.renovatebot.com/configuration-options/#custommanagers)
 - [`renovatebot/pre-commit-hooks`](https://github.com/renovatebot/pre-commit-hooks)
 - [ADR 0012](0012-pre-commit-ts-and-markdown-checks.md) (pre-commit.ci's `language: node` vs. `language: system` distinction this decision relies on)
-- Superseded by, if adopted later: none.
+- Superseded by, if adopted later: [ADR 0015](0015-restrict-argo-cd-go-module-updates-to-major-only.md) narrows Go module automerge further (argo-cd's own minor/patch updates); [ADR 0016](0016-automerge-major-updates-outside-go-and-ts.md) narrows this ADR's repo-wide "majors always manual" rule to Go/TypeScript only, automerging majors everywhere else.

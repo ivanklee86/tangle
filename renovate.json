@@ -10,6 +10,12 @@
       "groupName": "go"
     },
     {
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["github.com/argoproj/argo-cd/v3"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "enabled": false
+    },
+    {
       "matchManagers": ["dockerfile"],
       "matchPackageNames": ["golang", "ghcr.io/ivanklee86/devcontainer/go"],
       "groupName": "go"
@@ -52,6 +58,23 @@
       "platformAutomerge": true
     },
     {
+      "matchUpdateTypes": ["major"],
+      "automerge": true,
+      "platformAutomerge": true
+    },
+    {
+      "matchDatasources": ["go"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "matchDatasources": ["npm"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["golang", "ghcr.io/ivanklee86/devcontainer/go", "node"],
       "matchUpdateTypes": ["major"],
       "automerge": false
     },
