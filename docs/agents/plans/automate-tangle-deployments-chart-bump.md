@@ -1,17 +1,19 @@
 # Automate the `tangle-deployments` chart bump
 
-Status: proposed · 2026-09-20
+Status: done · 2026-09-20
 
 Implements [ADR 0021](../adrs/0021-automate-tangle-deployments-chart-version-bump.md): publishing
 a release on `ivanklee86/tangle` should automatically bump `charts/tangle/Chart.yaml`'s
 `appVersion` (and patch-bump its own chart `version`) in `ivanklee86/tangle-deployments`, land that
 as a PR, and cut a real chart release once it merges — with no manual edit or manually-cut release
-in either repository.
+in either repository. Verified end to end on a real release (`v0.2.0` → chart `tangle-0.0.13`,
+`gh-pages` index updated) with no manual intervention required.
 
-This plan spans two repositories. Each workstream says which one it touches. Land them in order:
-1 and 2 create the receiving side and its safety net in `tangle-deployments`; 3 retargets its
-release trigger; 4 wires up the sender in `tangle`; 5 is the one manual, unscriptable step both
-sides depend on and has to happen before 4 can be tested end-to-end.
+This plan spans two repositories. Each workstream says which one it touches. Workstreams 1–3 were
+landed roughly as originally written; workstream 2's workflow and workstream 5's PAT section below
+reflect the *final*, working shape, not the first draft — three real issues only surfaced once the
+chain was actually exercised with a live dispatch, each documented inline where it changed the
+design. See ADR 0021's "Found during a live test" section for the narrative version.
 
 ## 1. Add PR-time CI to `tangle-deployments`
 
@@ -73,9 +75,10 @@ Helm version string) and the `kubeconform` URL (needs a `customManagers` regex e
 1. Add the file above.
 2. Open a throwaway PR (e.g. a no-op whitespace change) to confirm the `chart` check runs and
    passes.
-3. In `tangle-deployments`' repo settings, add `chart` as a required status check for `main` if
-   branch protection is (or becomes) enabled — otherwise workstream 2's auto-merge has nothing
-   real to wait on.
+3. Add branch protection on `main` requiring the `chart` check (see workstream 6) — **not
+   optional**: without it, `gh pr merge --auto` in workstream 2 has no required check to wait for
+   and merges almost immediately regardless of CI outcome, as found live (a test PR merged in ~2
+   seconds, before its `chart` job had even started).
 
 **Rollback**: delete the file; `tangle-deployments` goes back to having no PR-time CI.
 
@@ -133,6 +136,12 @@ jobs:
         id: pr
         uses: peter-evans/create-pull-request@v8.1.1
         with:
+          # A PAT, not GITHUB_TOKEN: a PR authored by github-actions[bot] has
+          # author_association "CONTRIBUTOR" on this public repo, which GitHub gates behind
+          # manual approval before any pull_request-triggered workflow (our "chart" CI
+          # check) will run at all. A PAT makes the PR's author the token owner (an
+          # OWNER/COLLABORATOR), which isn't gated. (Found live — see below.)
+          token: ${{ secrets.CHART_BUMP_PAT }}
           commit-message: "chore: bump chart to appVersion ${{ steps.bump.outputs.app_version }}"
           title: "chore: bump chart to appVersion ${{ steps.bump.outputs.app_version }}"
           body: |
@@ -146,10 +155,17 @@ jobs:
           labels: automated
 
       - name: Enable auto-merge
+        # The same PAT, not GITHUB_TOKEN: GitHub also suppresses the pull_request:closed /
+        # push events that would otherwise fire once this merge completes when the merge
+        # itself is GITHUB_TOKEN-authenticated (same anti-recursion rule as above). A
+        # PAT-authenticated merge behaves like an ordinary user merge and triggers
+        # release.yaml's plain `push: main` trigger with no special-casing needed.
+        # (Also found live — the first fix attempt tried an explicit workflow_dispatch
+        # instead of this and didn't work, for the same underlying reason.)
         if: steps.pr.outputs.pull-request-operation == 'created'
         run: gh pr merge --auto --squash "${{ steps.pr.outputs.pull-request-number }}"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CHART_BUMP_PAT }}
 ```
 
 Notes on the pieces:
@@ -168,9 +184,15 @@ Notes on the pieces:
   three-segment version, so this is a known, accepted limitation rather than a hidden one.
 - `gh pr merge --auto` (not an immediate merge) queues the merge behind whatever required checks
   exist — workstream 1's `chart` job — so it still respects CI even though no human clicks merge.
-- Uses the workflow's own default `GITHUB_TOKEN`, not the PAT from workstream 5 — this half is a
-  same-repo commit/PR/merge, which the default token can already do once `permissions:
-  contents: write` / `pull-requests: write` are granted.
+  This only actually gates anything once `main` has branch protection requiring `chart` *and* the
+  repo's "Allow auto-merge" setting is on — both off by default, both needed (see workstream 1's
+  steps and workstream 6).
+- **Both steps use `CHART_BUMP_PAT`**, a PAT scoped to `tangle-deployments` itself (see
+  workstream 6) — not the workflow's own default `GITHUB_TOKEN`, and not the
+  `TANGLE_DEPLOYMENTS_DISPATCH_TOKEN` from workstream 5 (that one lives in `tangle` and is only
+  used for the cross-repo dispatch call). The original design assumed `GITHUB_TOKEN` would work for
+  this whole job since it's a same-repo commit/PR/merge — it doesn't, for two independent reasons
+  documented inline above and in ADR 0021's "Found during a live test."
 
 **Steps**
 
@@ -178,11 +200,15 @@ Notes on the pieces:
 2. Trigger it manually to test before wiring up the real sender:
    `gh api repos/ivanklee86/tangle-deployments/dispatches -f event_type=tangle-release -f 'client_payload[version]=v0.1.1'`
    (using your own `gh` session is fine for this manual test — only the automated sender in
-   workstream 4 needs the scoped PAT).
-3. Confirm a PR opens on `chore/bump-chart-appversion` with the expected `appVersion`/`version`
-   values, workstream 1's `chart` check runs on it, and it auto-merges once that check passes.
+   workstream 4 needs the scoped dispatch PAT).
+3. Confirm a PR opens on `chore/bump-chart-appversion`, authored by a real collaborator (not
+   `github-actions[bot]`), with the expected `appVersion`/`version` values; confirm workstream 1's
+   `chart` check actually runs (not stuck on `action_required`) and the PR auto-merges only once it
+   passes.
 4. Send a second manual dispatch with a different version before the first PR merges (or right
    after) to confirm the fixed-branch/concurrency behavior updates rather than duplicates.
+5. Confirm `release.yaml` fires immediately after the merge via its ordinary `push: main` trigger
+   (no separate workaround needed) and a real chart release / `gh-pages` index update follows.
 
 **Rollback**: delete the file; a dispatch to `tangle-deployments` becomes a no-op (GitHub still
 accepts and drops `repository_dispatch` events with no listener, so workstream 4 doesn't need to
@@ -268,10 +294,11 @@ tag name, not either build artifact.
 **Rollback**: revert the job; releasing `tangle` goes back to not touching
 `tangle-deployments` at all.
 
-## 5. Create and store the fine-grained PAT
+## 5. Create and store the cross-repo dispatch PAT
 
 **Manual, not scriptable** — do this before workstream 4's diff is merged, since that job depends
-on the secret existing.
+on the secret existing. This is the first of two PATs this plan ends up needing (see workstream 6
+for the second, found only once the chain was actually tested end to end).
 
 1. On GitHub, create a fine-grained personal access token scoped to **only**
    `ivanklee86/tangle-deployments`, with repository permission **Contents: Read and write** (the
@@ -287,6 +314,34 @@ on the secret existing.
 **Rollback**: revoke the token and delete the secret; workstream 4's job starts failing
 immediately and visibly (a 401/403 from the `dispatches` API call), which is the correct failure
 mode — nothing silently falls back to the old manual process.
+
+## 6. Create the bump-PR PAT, and two repo settings, in `tangle-deployments`
+
+**Manual (the PAT) plus two repo settings** — all three were found necessary only once the chain
+was tested with a real dispatch; none of them were part of the original design. Do these before
+workstream 2's workflow is exercised for real, since `bump-chart-version.yaml` depends on all
+three.
+
+1. **`CHART_BUMP_PAT`**: create a second fine-grained PAT, scoped to **only**
+   `ivanklee86/tangle-deployments`, with repository permissions **Contents: Read and write** and
+   **Pull requests: Read and write**. Set an explicit expiration, same as workstream 5's token.
+   Add it as a secret named `CHART_BUMP_PAT` in `ivanklee86/tangle-deployments`'s own repo settings
+   (not `tangle`'s — this one is used entirely within `tangle-deployments`' own workflow). Used for
+   both the `create-pull-request` step and the `gh pr merge --auto` step in workstream 2's
+   workflow, for the two independent reasons documented there.
+2. **Branch protection on `main`**, requiring the `chart` status check
+   (`gh api --method PUT repos/ivanklee86/tangle-deployments/branches/main/protection` with
+   `required_status_checks: {strict: true, contexts: ["chart"]}`, `enforce_admins: false`) — see
+   workstream 1's steps for why this is load-bearing, not optional.
+3. **"Allow auto-merge" at the repo level** (`allow_auto_merge`, off by default) —
+   `gh api --method PATCH repos/ivanklee86/tangle-deployments -f allow_auto_merge=true`. Without
+   it, `gh pr merge --auto` fails outright with `GraphQL: Auto merge is not allowed for this
+   repository`, found live on the second test dispatch.
+
+**Rollback**: revoke `CHART_BUMP_PAT` and delete the secret (workstream 2's job starts failing
+visibly at the `create-pull-request`/merge step); branch protection and `allow_auto_merge` can each
+be reverted independently via the same API calls with the opposite values, though doing so
+reopens the "auto-merge doesn't actually wait for CI" gap from workstream 1.
 
 ## Deferred: collapse the duplicate version in `values.yaml`
 
