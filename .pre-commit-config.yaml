@@ -3,7 +3,7 @@
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
     - repo: https://github.com/pre-commit/pre-commit-hooks
-      rev: v5.0.0
+      rev: v6.0.0
       hooks:
           - id: trailing-whitespace
           - id: end-of-file-fixer
@@ -12,9 +12,31 @@ repos:
       rev: v0.5.1
       hooks:
           - id: go-fmt
+    - repo: https://github.com/DavidAnson/markdownlint-cli2
+      rev: v0.23.3
+      hooks:
+          - id: markdownlint-cli2
+    - repo: local
+      hooks:
+          # `language: system` hooks aren't run by pre-commit.ci (they're
+          # silently skipped there), so this is local, pre-push convenience
+          # only. The actual gate is the `ts` job in
+          # .github/workflows/ci.yaml, which runs `task ts:lint` on every
+          # PR touching web/. Mirroring the flat ESLint config here instead
+          # (pre-commit/mirrors-eslint) would mean hand-duplicating every
+          # plugin version from web/package.json into additional_dependencies
+          # and keeping the two in sync by hand.
+          - id: web-lint
+            name: web lint (prettier + eslint)
+            entry: bash -c 'cd web && npm run lint'
+            language: system
+            files: ^web/.*\.(ts|js|svelte|css|json)$
+            pass_filenames: false
 exclude: |
     (?x)(
         ^integration/kubernetes/example/manifests/1/templates/.*|
         ^integration/kubernetes/example/manifests/3/templates/.*|
         ^charts/tangle/templates/.*
     )
+ci:
+    skip: [web-lint]

@@ -23,6 +23,7 @@ Reuses exactly the package list [ADR-0003's plan](svelte-e2e-testing.md) (workst
 **Steps**
 
 1. In `.devcontainer/Dockerfile`, add (verbatim from ADR-0003's plan, keeping `PLAYWRIGHT_VERSION` in sync with `web/package.json`'s `playwright`/`@playwright/test` pins from workstream 3 below):
+
    ```dockerfile
    # Playwright (for web/ e2e tests and vitest-browser-svelte component tests) —
    # keep the version in sync with playwright/@playwright/test in web/package.json.
@@ -36,6 +37,7 @@ Reuses exactly the package list [ADR-0003's plan](svelte-e2e-testing.md) (workst
            fonts-liberation fonts-dejavu-core && \
        rm -rf /var/lib/apt/lists/*
    ```
+
    **Corrected during this plan's implementation** (2026-09-19) from ADR-0003's original list: `chromium-headless-shell` is a separate download from `chromium` — `@vitest/browser-playwright` launches the headless-shell binary specifically, and installing only `chromium` produces a `browserType.launch: Executable doesn't exist at .../chrome-headless-shell` error. Three more apt packages (`libcups2`, `libpango-1.0-0`, `libcairo2`) were also missing from ADR-0003's original researched list — surfaced by Playwright's own `Host system is missing dependencies` warning when actually launching a browser, not by the earlier `install`-only check. ADR-0003's plan doc, if implemented later, should pick up this corrected list rather than its own original one.
 2. `task devcontainer` to confirm the image still builds.
 3. Inside a container built from the new image, confirm a rendered component actually shows visible text (workstream 5 below is the real test of this, but a quick manual `npx playwright test` sanity smoke — even against an empty suite — confirms the binary + fonts are both present).
@@ -47,6 +49,7 @@ Reuses exactly the package list [ADR-0003's plan](svelte-e2e-testing.md) (workst
 **Verified compatibility** (`npm view <pkg> peerDependencies` / `npm ls`, 2026-09-19): `vitest-browser-svelte@3.1.0` requires `vitest >=5.0.0`; `vitest@5.0.1` requires `vite ^6.4.0 || ^7 || ^8`; this repo currently resolves `vite` to `6.2.6` under its `^6.0.0` pin. So this is a real upgrade, not just new packages.
 
 **`web/package.json` devDependencies changes** (exact pins, per `AGENTS.md`):
+
 - `vitest`: `^3.0.0` → `5.0.1`
 - `vite`: `^6.0.0` → `6.4.3`
 - `@vitest/browser`: add, `5.0.1` (must match `vitest`'s exact version)
@@ -134,6 +137,7 @@ In order of complexity — start with pure prop-driven components with no extern
 **Steps**
 
 1. Add a Playwright browser install step before the test step, **after** `task ts:install` has already run `npm install` (so `web/node_modules/playwright` exists):
+
    ```yaml
    - name: Install Playwright browser
      run: node node_modules/playwright/cli.js install --with-deps chromium chromium-headless-shell
@@ -141,6 +145,7 @@ In order of complexity — start with pure prop-driven components with no extern
    - name: Run unit tests
      run: task ts:test
    ```
+
    **Corrected during implementation** (2026-09-19): the original `npx --yes playwright@1.63.0 install --with-deps chromium` failed CI with `browserType.launch: Executable doesn't exist at .../chromium_headless_shell-1243/...` — it silently downloaded revision **1161** instead of **1243**. Root cause: this project depends on both `playwright` (pinned `1.63.0`) and `@playwright/test` (pinned `^1.45.3`, resolving to `1.51.1`), and both packages provide a same-named `playwright` CLI binary; `npx playwright@1.63.0` resolved to whichever locally-installed bin won the naming collision (`@playwright/test`'s older one) instead of strictly fetching `1.63.0`, so it installed the browser revision that *older* version expects. Invoking `node node_modules/playwright/cli.js` directly bypasses bin resolution entirely and always uses the exact `playwright` version declared in `web/package.json`. This only works once a project checkout with `node_modules` exists — it's not usable for the devcontainer Dockerfile step (workstream 2), which has no checkout yet at that build stage; whether that step's plain `npx playwright@${VERSION} install` is reliably safe in a truly clean environment (no competing bin to collide with) was not independently verified — treat it as a real risk, not a settled fact, and re-check if the devcontainer's cached browser revision ever mismatches what a later `npm install` expects.
    Keep `1.63.0` in sync with `web/package.json`'s `playwright`/`@playwright/test` pins (workstream 3) and the devcontainer's `PLAYWRIGHT_VERSION` (workstream 2).
 2. Insert this after `Install packages` and before `Lint code` (or after — order doesn't matter functionally, but running tests before lint gives a slightly faster failure signal for the more common failure mode).

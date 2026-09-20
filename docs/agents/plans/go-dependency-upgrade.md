@@ -13,7 +13,7 @@ Bump the Go toolchain and Tangle's direct Go dependencies to their latest versio
 ## Current → target
 
 | | Current | Target |
-|---|---|---|
+| --- | --- | --- |
 | Go toolchain (`go` directive in `go.mod`) | 1.26.3 | 1.27.x (latest patch at implementation time) |
 | `github.com/alitto/pond/v2` | 2.5.0 | 2.7.1 |
 | `github.com/go-chi/chi/v5` | 5.2.3 | 5.3.2 |

@@ -1,0 +1,19 @@
+config:
+    default: true
+    # AGENTS.md asks for full-length lines in docs (no hard-wrapping), and
+    # docs/adrs/*.md already runs lines past 1000 characters by design.
+    MD013: false
+    # docs/agents/plans/*.md quote real source snippets verbatim, and
+    # web/.prettierrc sets useTabs: true — those snippets are tab-indented
+    # by convention. Only flag stray hard tabs in prose, not in code fences.
+    MD010:
+        code_blocks: false
+    # docs/agents/plans/*.md use a bold "**Steps**"/similar label as an
+    # inline marker within a numbered workstream, not as a document heading
+    # (workstreams are already headings) — that's deliberate, not a missed
+    # heading.
+    MD036: false
+    # Most of docs/*.md (rendered by mkdocs-material, see mkdocs.yml's nav)
+    # deliberately don't repeat their nav title as an in-page H1 — the nav
+    # already supplies it. That's a convention, not a missed heading.
+    MD041: false

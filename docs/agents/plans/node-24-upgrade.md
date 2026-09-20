@@ -7,7 +7,7 @@ Move the repo's three Node.js version pins from 22 ("Jod") to 24 ("Krypton"), th
 ## Current → target
 
 | File | Current | Target |
-|---|---|---|
+| --- | --- | --- |
 | `Dockerfile:13` | `FROM node:22-alpine AS node` | `FROM node:24-alpine AS node` |
 | `.devcontainer/Dockerfile:1` | `ARG NODE_VERSION=22` | `ARG NODE_VERSION=24` |
 | `.github/workflows/ci.yaml:72` (`ts` job, `actions/setup-node@v4`) | `node-version: '22'` | `node-version: '24'` |
