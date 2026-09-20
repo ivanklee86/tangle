@@ -3,12 +3,18 @@ import { render } from 'vitest-browser-svelte';
 import Page from './+page.svelte';
 import { type ApplicationResponseStore } from '$lib/backend/data';
 
-vi.mock('$app/stores', async () => {
-	const { writable } = await import('svelte/store');
-	return {
-		page: writable({ url: new URL('http://localhost/diffs/') })
-	};
-});
+const { pageState } = vi.hoisted(() => ({
+	pageState: { url: new URL('http://localhost/diffs/') }
+}));
+
+vi.mock('$app/state', () => ({
+	page: pageState
+}));
+
+const goto = vi.fn();
+vi.mock('$app/navigation', () => ({
+	goto: (url: string) => goto(url)
+}));
 
 function mockDiffFetch() {
 	vi.stubGlobal(
@@ -55,6 +61,8 @@ const erroredApplications: ApplicationResponseStore = {
 describe('diffs +page.svelte', () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
+		goto.mockClear();
+		pageState.url = new URL('http://localhost/diffs/');
 	});
 
 	test('shows a loading message while data.applications is pending', async () => {
@@ -76,8 +84,39 @@ describe('diffs +page.svelte', () => {
 		await expect.element(screen.getByText(/boom/)).toBeVisible();
 	});
 
-	test('fetches diffs and renders tabs once applications resolve', async () => {
+	test('requires a target ref before fetching any diffs', async () => {
 		mockDiffFetch();
+
+		const screen = await render(Page, {
+			params: {},
+			data: { applications: Promise.resolve(resolvedApplications) }
+		});
+
+		await expect.element(screen.getByRole('heading', { name: 'Diffs', level: 2 })).toBeVisible();
+		await expect.element(screen.getByRole('button', { name: 'See diffs' })).toBeDisabled();
+		expect(fetch).not.toHaveBeenCalled();
+	});
+
+	test('enables the diffs submit once a target ref is filled in, and navigates on submit', async () => {
+		const screen = await render(Page, {
+			params: {},
+			data: { applications: Promise.resolve(resolvedApplications) }
+		});
+
+		const submit = screen.getByRole('button', { name: 'See diffs' });
+		await expect.element(submit).toBeDisabled();
+
+		await screen.getByPlaceholder('Git branch').fill('main');
+		await expect.element(submit).toBeEnabled();
+
+		await submit.click();
+
+		expect(goto).toHaveBeenCalledWith('/diffs?targetRef=main');
+	});
+
+	test('fetches diffs and renders tabs once a target ref is present', async () => {
+		mockDiffFetch();
+		pageState.url = new URL('http://localhost/diffs/?targetRef=main');
 
 		const screen = await render(Page, {
 			params: {},
@@ -90,6 +129,7 @@ describe('diffs +page.svelte', () => {
 
 	test('refetches diffs when a new data.applications arrives via client-side navigation', async () => {
 		mockDiffFetch();
+		pageState.url = new URL('http://localhost/diffs/?targetRef=main');
 
 		const { rerender, getByText } = await render(Page, {
 			params: {},

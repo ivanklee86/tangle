@@ -16,7 +16,8 @@
 		"lint": "prettier --check . && eslint .",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run && npm run test:e2e",
-		"test:e2e": "playwright test"
+		"test:e2e": "playwright test",
+		"screenshots": "node scripts/capture-readme-screenshots.mjs"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.3",

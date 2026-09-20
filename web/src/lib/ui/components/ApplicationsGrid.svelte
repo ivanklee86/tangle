@@ -1,6 +1,5 @@
 <script lang="ts">
 	import {
-		Alert,
 		Button,
 		Tabs,
 		TabItem,
@@ -22,7 +21,7 @@
 		type SortKey,
 		type SortState
 	} from '$lib/ui/sort';
-	import { ArgoCDHealthStatus, ArgoCDSyncStatus } from '$lib/ui/components';
+	import { ArgoCDHealthStatus, ArgoCDSyncStatus, ErrorAlert } from '$lib/ui/components';
 
 	interface Props {
 		applications: ApplicationResponseStore;
@@ -55,20 +54,15 @@
 </script>
 
 {#if applications.error}
-	<Alert color="red" class="bg-red-500 text-white">
-		<span class="font-medium">System error!</span>
-		<br />
-		{applications.errorResponse?.error}
-	</Alert>
+	<ErrorAlert message={applications.errorResponse?.error} />
 {:else}
 	<Tabs tabStyle="underline" class="ml-5 mr-5">
 		{#each filterOutZeroResults(applications.response.results) as argoCDApplications, index (argoCDApplications.name)}
-			<TabItem open={index === 0} disabled={argoCDApplications.applications.length === 0}>
+			<TabItem open={index === 0}>
 				{#snippet titleSlot()}
 					{argoCDApplications.name} ({argoCDApplications.applications.length})
 				{/snippet}
 				<Button href={argoCDApplications.link} target="_blank" class="mb-3">Take me there!</Button>
-				<br />
 				<Table hoverable={true}>
 					<TableHead>
 						<TableHeadCell aria-sort={ariaSort(argoCDApplications.name, 'name')}>

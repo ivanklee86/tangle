@@ -1,18 +1,16 @@
 <script lang="ts">
-	import { CheckCircleSolid, CloseCircleSolid } from 'flowbite-svelte-icons';
+	import { statusAppearance } from '$lib/ui/status';
 
 	interface Props {
 		healthStatus: string;
 	}
 
 	let { healthStatus }: Props = $props();
+
+	let appearance = $derived(statusAppearance(healthStatus));
 </script>
 
 <div class="flex">
-	{#if healthStatus == 'Healthy'}
-		<CheckCircleSolid class="w-5 h-5 me-2 text-green-500 dark:text-green-400" />
-	{:else}
-		<CloseCircleSolid class="w-5 h-5 me-2 text-red-500 dark:text-red-400" />
-	{/if}
+	<appearance.icon class="w-5 h-5 me-2 {appearance.class}" />
 	{healthStatus}
 </div>

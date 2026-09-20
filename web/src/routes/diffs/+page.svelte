@@ -1,7 +1,7 @@
 <script lang="ts">
 	import {
 		A,
-		Alert,
+		Button,
 		Heading,
 		List,
 		Li,
@@ -9,7 +9,7 @@
 		Tabs,
 		TabItem,
 		Progressbar,
-		GradientButton
+		Tooltip
 	} from 'flowbite-svelte';
 
 	import { ExclamationCircleSolid, RefreshOutline, BellRingSolid } from 'flowbite-svelte-icons';
@@ -18,14 +18,28 @@
 	import { type ApplicationsDiffsData, type ApplicationResponseStore } from '$lib/backend/data';
 	import { filterOutZeroResults } from '$lib/ui/utils';
 	import { fetchDiffs } from '$lib/backend/diffs';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { buildQuery } from '$lib/backend/url';
 	import TangleAPIClient from '$lib/backend/client';
-	import { AppManifests, ArgoCDHealthStatus, ArgoCDSyncStatus } from '$lib/ui/components';
+	import {
+		AppManifests,
+		ArgoCDHealthStatus,
+		ArgoCDSyncStatus,
+		DiffsForm,
+		ErrorAlert
+	} from '$lib/ui/components';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
-	let targetRef = $derived($page.url.searchParams.get('targetRef'));
+	let targetRef = $derived(page.url.searchParams.get('targetRef'));
+
+	function goToDiffs(labels: string, excludeLabels: string, targetRef: string): void {
+		const query = buildQuery({ targetRef, labels, excludeLabels });
+		goto(resolve(`/diffs${query}` as '/diffs'));
+	}
 
 	// Separate from the client `+page.ts`'s load() uses — this one drives the
 	// diff fan-out and reloadDiff, which aren't part of the load() lifecycle.
@@ -69,6 +83,14 @@
 			applications = result;
 
 			if (result.error) {
+				return;
+			}
+
+			if (!currentTargetRef) {
+				// No target ref means there's nothing to diff against — bail out
+				// before fetchDiffs, which otherwise fans out one diff-generation
+				// request per application to every ArgoCD instance (falling back
+				// to comparing each app's live ref against itself).
 				return;
 			}
 
@@ -117,80 +139,87 @@
 	<title>Tangle - Diffs</title>
 </svelte:head>
 
-{#if !applications}
-	<div class="flex justify-center m-10">
-		<P italic>Loading Applications...</P>
-	</div>
-{:else if applications.error}
-	<Alert color="red" class="bg-red-500 text-white">
-		<span class="font-medium">System error!</span>
-		<br />
-		{applications.errorResponse?.error}
-	</Alert>
-{:else if !diffsLoaded}
-	<div class="flex justify-center m-10">
-		<P italic>Loading Applications...</P>
-	</div>
-	{#if total > 0}
-		<div class="justify-center w-1/2 m-auto">
-			<Progressbar
-				progress={Math.round((progress / total) * 100)}
-				labelOutside="Getting Application diffs & manifests"
-			/>
+<Heading tag="h1" class="sr-only">Diffs</Heading>
+
+<div class="mt-4">
+	{#if !applications}
+		<div class="flex justify-center m-10">
+			<P italic>Loading Applications...</P>
 		</div>
-	{/if}
-{:else}
-	<Tabs tabStyle="underline" class="ml-5 mr-5">
-		{#each filterOutZeroResults(applications.response.results) as argoCDApplications, index (argoCDApplications.name)}
-			<TabItem open={index === 0} disabled={argoCDApplications.applications.length === 0}>
-				{#snippet titleSlot()}
-					{argoCDApplications.name}
-				{/snippet}
-				<Tabs>
-					{#each argoCDApplications.applications as application, appIndex (application.name)}
-						<TabItem open={appIndex === 0}>
-							{#snippet titleSlot()}
-								<div class="flex items-center">
-									{#if alertStatuses.includes(application.syncStatus) || application.health !== 'Healthy' || $diffData[argoCDApplications.name]?.[application.name].error || $diffData[argoCDApplications.name]?.[application.name].response.manifestGenerationError.length > 0}<ExclamationCircleSolid
-											class="w-5 h-5 me-2 text-rose-500 dark:text-rose-400"
-										/>
-									{:else if $diffData[argoCDApplications.name]?.[application.name].response.diffs.length > 0}
-										<BellRingSolid class="w-5 h-5 me-2 text-amber-500 dark:text-amber-400" />
-									{/if}
-									{application.name}
+	{:else if applications.error}
+		<ErrorAlert message={applications.errorResponse?.error} />
+	{:else if !targetRef}
+		<DiffsForm
+			initialLabels={page.url.searchParams.get('labels') ?? ''}
+			initialExcludeLabels={page.url.searchParams.get('excludeLabels') ?? ''}
+			onSubmit={goToDiffs}
+		/>
+	{:else if !diffsLoaded}
+		<div class="flex justify-center m-10">
+			<P italic>Loading diffs...</P>
+		</div>
+		{#if total > 0}
+			<div class="justify-center w-1/2 m-auto">
+				<Progressbar
+					progress={Math.round((progress / total) * 100)}
+					labelOutside="Getting Application diffs & manifests"
+				/>
+			</div>
+		{/if}
+	{:else}
+		<Tabs tabStyle="underline" class="ml-5 mr-5">
+			{#each filterOutZeroResults(applications.response.results) as argoCDApplications, index (argoCDApplications.name)}
+				<TabItem open={index === 0}>
+					{#snippet titleSlot()}
+						{argoCDApplications.name}
+					{/snippet}
+					<Tabs>
+						{#each argoCDApplications.applications as application, appIndex (application.name)}
+							<TabItem open={appIndex === 0}>
+								{#snippet titleSlot()}
+									<div class="flex items-center">
+										{#if alertStatuses.includes(application.syncStatus) || application.health !== 'Healthy' || $diffData[argoCDApplications.name]?.[application.name].error || $diffData[argoCDApplications.name]?.[application.name].response.manifestGenerationError.length > 0}<ExclamationCircleSolid
+												class="w-5 h-5 me-2 text-rose-500 dark:text-rose-400"
+											/>
+										{:else if $diffData[argoCDApplications.name]?.[application.name].response.diffs.length > 0}
+											<BellRingSolid class="w-5 h-5 me-2 text-amber-500 dark:text-amber-400" />
+										{/if}
+										{application.name}
+									</div>
+								{/snippet}
+								<Heading tag="h3" class="mb-2">Status</Heading>
+								<List tag="ul" class="list-none space-y-1 text-gray-500 dark:text-gray-400">
+									<Li icon>
+										<ArgoCDHealthStatus healthStatus={application.health} />
+									</Li>
+									<Li icon>
+										<ArgoCDSyncStatus syncStatus={application.syncStatus} />
+									</Li>
+								</List>
+								<div class="flex items-center justify-between mt-3">
+									<P>(<A href={application.url} target="_blank" class="text-xs">More Info</A>)</P>
+									<Button
+										outline
+										color="primary"
+										aria-label="Reload diff"
+										onclick={() =>
+											reloadDiff(
+												argoCDApplications.name,
+												application.name,
+												application.liveRef,
+												targetRef ? targetRef : application.liveRef
+											)}><RefreshOutline /></Button
+									>
+									<Tooltip>Reload diff</Tooltip>
 								</div>
-							{/snippet}
-							<Heading tag="h3">Status</Heading>
-							<List tag="ul" class="list-none space-y-1 text-gray-500 dark:text-gray-400">
-								<Li icon>
-									<ArgoCDHealthStatus healthStatus={application.health} />
-								</Li>
-								<Li icon>
-									<ArgoCDSyncStatus syncStatus={application.syncStatus} />
-								</Li>
-							</List>
-							<br />
-							<div class="align-bottom">
-								<P>(<A href={application.url} target="_blank" class="text-xs">More Info</A>)</P>
-								<GradientButton
-									class="absolute right-5"
-									outline
-									color="pinkToOrange"
-									onclick={() =>
-										reloadDiff(
-											argoCDApplications.name,
-											application.name,
-											application.liveRef,
-											targetRef ? targetRef : application.liveRef
-										)}><RefreshOutline /></GradientButton
-								>
-							</div>
-							<br />
-							<AppManifests diffData={$diffData[argoCDApplications.name]?.[application.name]} />
-						</TabItem>
-					{/each}
-				</Tabs>
-			</TabItem>
-		{/each}
-	</Tabs>
-{/if}
+								<div class="mt-4">
+									<AppManifests diffData={$diffData[argoCDApplications.name]?.[application.name]} />
+								</div>
+							</TabItem>
+						{/each}
+					</Tabs>
+				</TabItem>
+			{/each}
+		</Tabs>
+	{/if}
+</div>
