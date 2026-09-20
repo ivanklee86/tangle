@@ -52,7 +52,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
       - name: Install Task
-        uses: arduino/setup-task@v3.0.0
+        uses: ./.github/actions/setup-task
       - name: Install Go dependencies
         run: task go:install-ci
       - name: Generate Swagger docs

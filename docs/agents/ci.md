@@ -107,10 +107,13 @@ was also the first job with no path-based `if:` at all — `go` and `ts` now sha
 `filter`'s output:
 
 1. Install Go 1.27, Node 24, [Task](https://taskfile.dev), [k3d](https://k3d.io), and the `argocd`
-   CLI — both versions come from this job's own `env: K3D_VERSION`/`ARGOCD_VERSION` (`v5.9.0`/
-   `v3.5.3`), which `renovate.json`'s "k8s" group also tracks alongside `.devcontainer/Dockerfile`'s
-   copies, so a Renovate bump moves both files together instead of relying on a comment. No
-   separate Docker setup step — `ubuntu-latest` ships a recent enough Docker/Buildx already.
+   CLI — both k3d/argocd versions come from this job's own `env: K3D_VERSION`/`ARGOCD_VERSION`
+   (`v5.9.0`/`v3.5.3`), which `renovate.json`'s "k8s" group also tracks alongside
+   `.devcontainer/Dockerfile`'s copies, so a Renovate bump moves both files together instead of
+   relying on a comment. Task comes from the local `./.github/actions/setup-task` composite action
+   rather than `arduino/setup-task` directly — see
+   [ADR 0018](../adrs/0018-pin-and-cache-the-task-cli-in-ci.md). No separate Docker setup step —
+   `ubuntu-latest` ships a recent enough Docker/Buildx already.
 2. `task go:install-ci` — Go deps + CI tooling; `task go:generate` — regenerates the Swagger spec.
 3. `task services:cicd` (`Taskfile.yaml`) — the expensive step: tears down and recreates a k3d
    cluster, waits for a real ArgoCD install to become healthy, mints an ArgoCD API token, builds
@@ -125,10 +128,11 @@ was also the first job with no path-based `if:` at all — `go` and `ts` now sha
 6. Publish JUnit results (both the Go e2e suite and the frontend live suite) and upload them, plus
    the raw `coverage-e2e.out` profile, as build artifacts for the `report` job.
 
-Go module/tool-binary caching, npm caching, Playwright-browser caching, and k3d/argocd CLI caching
-(workstream 12) all apply here too, alongside the Docker layer cache — this is the one job that
-pays for all of them on every run, since it's the only job that also stands up a real k3d/ArgoCD
-cluster and builds the Docker image.
+Go module/tool-binary caching, npm caching, Playwright-browser caching, k3d/argocd CLI caching
+(workstream 12), and Task CLI caching ([ADR 0018](../adrs/0018-pin-and-cache-the-task-cli-in-ci.md))
+all apply here too, alongside the Docker layer cache — this is the one job that pays for all of
+them on every run, since it's the only job that also stands up a real k3d/ArgoCD cluster and builds
+the Docker image.
 
 The `go` job, by contrast, is now fully hermetic: it folds in what used to be the standalone
 `format` job (a `gofmt` check, first, before installing the rest of the Go toolchain) and runs only
@@ -177,6 +181,16 @@ comparing `octocov dump report` against each input file alone before landing thi
   [workstream 12](plans/ci-pipeline-restructure.md#12-ci-dependency-caching) landed this: Go
   module/build cache, Go tool-binary cache, npm cache, Playwright-browser cache, k3d/argocd CLI
   cache, and Docker layer caching via buildx + the GitHub Actions cache backend.
+- **Resolved**: the Task CLI was the one dependency workstream 12 didn't cover — every job
+  re-downloaded it, and, worse, `arduino/setup-task`'s default `version: 3.x` made each of them
+  resolve that range through an *anonymous* `api.github.com` tag listing (60 requests/hour, shared
+  across every repo building from the same runner IP), which is what started failing CI outright
+  with `API rate limit exceeded`. All six call sites now go through the local
+  [`./.github/actions/setup-task`](../../.github/actions/setup-task/action.yml) composite action:
+  an exact pinned version (which short-circuits the tag lookup entirely, so there's no API call to
+  rate-limit), an `actions/cache` restore of `${{ runner.tool_cache }}/task` so a hit skips the
+  download, and `repo-token` as a backstop if the pin is ever loosened
+  ([ADR 0018](../adrs/0018-pin-and-cache-the-task-cli-in-ci.md)).
 - **Resolved**: pre-commit.ci (a hosted third-party GitHub App) has been dropped — a self-hosted
   `pre-commit` job now runs the same hook suite via [prek](https://github.com/j178/prek) directly
   in `ci.yaml`, the same tool already used locally
