@@ -1,21 +1,90 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ],
-  "schedule": [
-    "every 2 weeks on friday"
-  ],
+  "extends": ["config:recommended"],
+  "schedule": ["on friday"],
+  "minimumReleaseAge": "5 days",
+  "minimumReleaseAgeBehaviour": "timestamp-optional",
   "packageRules": [
     {
-      "matchManagers": ["gomod"],
-      "groupName": "go.mod dependencies"
+      "matchDatasources": ["go"],
+      "groupName": "go"
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["golang", "ghcr.io/ivanklee86/devcontainer/go"],
+      "groupName": "go"
+    },
+    {
+      "matchDatasources": ["npm"],
+      "groupName": "ts"
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["node"],
+      "groupName": "ts"
+    },
+    {
+      "matchManagers": ["helmv3"],
+      "groupName": "k8s"
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": [
+        "rancher/kubectl",
+        "alpine/helm",
+        "derailed/k9s",
+        "quay.io/argoproj/argocd"
+      ],
+      "groupName": "k8s"
+    },
+    {
+      "matchDatasources": ["github-releases"],
+      "groupName": "k8s"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "ci"
     },
     {
       "matchManagers": ["devcontainer"],
       "groupName": "devcontainer dependencies",
       "automerge": true,
       "platformAutomerge": true
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true,
+      "platformAutomerge": true
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^tasks/go\\.yaml$/",
+        "/^Dockerfile$/",
+        "/^\\.devcontainer/Dockerfile$/"
+      ],
+      "matchStrings": ["go install (?<depName>[^\\s@]+)@(?<currentValue>[^\\s]+)"],
+      "datasourceTemplate": "go"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.devcontainer/Dockerfile$/"],
+      "matchStrings": [
+        "ARG (?:K3D|PLAYWRIGHT)_VERSION=(?<currentValue>.*) # (?<datasource>.*?)/(?<depName>.*?)\\s"
+      ]
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^tasks/k8s\\.yaml$/"],
+      "matchStrings": ["gateway-api/releases/download/(?<currentValue>v[0-9.]+)/"],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "kubernetes-sigs/gateway-api"
     }
   ]
 }
