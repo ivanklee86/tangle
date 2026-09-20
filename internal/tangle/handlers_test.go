@@ -4,21 +4,42 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/ivanklee86/tangle/internal/argocd"
+	"github.com/ivanklee86/tangle/internal/argocd/argocdfakes"
 )
 
-func TestHandlers(t *testing.T) {
-	err := godotenv.Load("../../.env")
-	if err != nil {
-		t.Fatal(err)
+// testArgoCDApplications and prodArgoCDApplications mirror the RBAC-scoped
+// views a real ArgoCD server gave the "test"/"prod" ArgoCDs configured in
+// integration/tangle.yaml before this file moved to argocdfakes — the
+// "default" project (test-1/test-2) and "my-project" (test-3/test-4)
+// subsets of argocdfakes.ExampleApplications().
+func testArgoCDApplications() []argocdfakes.FakeApplication {
+	return []argocdfakes.FakeApplication{
+		{Name: "test-1", Project: "default", Namespace: "argocd", Labels: map[string]string{"env": "test", "foo": "bar", "bazz": "buzz"}, LiveRevision: "main"},
+		{Name: "test-2", Project: "default", Namespace: "argocd", Labels: map[string]string{"env": "preprod", "foo": "bar", "bazz": "buzz"}, LiveRevision: "main"},
 	}
+}
 
+func prodArgoCDApplications() []argocdfakes.FakeApplication {
+	return []argocdfakes.FakeApplication{
+		{Name: "test-3", Project: "my-project", Namespace: "argocd", Labels: map[string]string{"env": "prod", "foo": "bar"}, LiveRevision: "main"},
+		{Name: "test-4", Project: "my-project", Namespace: "argocd", Labels: map[string]string{"env": "infra", "foo": "bar"}, LiveRevision: "main"},
+	}
+}
+
+// newTestTangle builds a real *Tangle (router/logger/middleware intact) and
+// then overwrites its ArgoCDs map with fakes — New()'s own wrapper
+// construction never gets called before that swap, so nothing it does with
+// the (unreachable) real ArgoCDClientOptions matters.
+func newTestTangle() *Tangle {
 	argocdConfig := make(map[string]TangleArgoCDConfig)
 	argocdConfig["test"] = TangleArgoCDConfig{
 		Address:         "localhost:8080",
@@ -39,6 +60,16 @@ func TestHandlers(t *testing.T) {
 		DoNotInstrument: true,
 	}
 
+	tangle := New(&config, "testing")
+	tangle.ArgoCDs = map[string]argocd.IArgoCDWrapper{
+		"test": argocdfakes.NewFakeWrapper(testArgoCDApplications()),
+		"prod": argocdfakes.NewFakeWrapper(prodArgoCDApplications()),
+	}
+
+	return tangle
+}
+
+func TestHandlers(t *testing.T) {
 	tests := []struct {
 		name       string
 		url        string
@@ -91,7 +122,7 @@ func TestHandlers(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			tangle := New(&config, "testing")
+			tangle := newTestTangle()
 
 			req, _ := http.NewRequest("GET", test.url, nil)
 
@@ -118,31 +149,6 @@ func TestHandlers(t *testing.T) {
 }
 
 func TestHandlersError(t *testing.T) {
-	err := godotenv.Load("../../.env")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	argocdConfig := make(map[string]TangleArgoCDConfig)
-	argocdConfig["test"] = TangleArgoCDConfig{
-		Address:         "localhost:8080",
-		Insecure:        true,
-		AuthTokenEnvVar: "ARGOCD_TOKEN",
-	}
-	argocdConfig["prod"] = TangleArgoCDConfig{
-		Address:         "https://localhost:8080",
-		Insecure:        true,
-		AuthTokenEnvVar: "ARGOCD_PROD_TOKEN",
-	}
-
-	config := TangleConfig{
-		Name:            "test-tangle",
-		Domain:          "localhost",
-		Port:            8081,
-		ArgoCDs:         argocdConfig,
-		DoNotInstrument: true,
-	}
-
 	tests := []struct {
 		name        string
 		url         string
@@ -157,7 +163,10 @@ func TestHandlersError(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			tangle := New(&config, "testing")
+			tangle := newTestTangle()
+			prodWrapper := argocdfakes.NewFakeWrapper(prodArgoCDApplications())
+			prodWrapper.ErrOnListApplicationsByLabels = errors.New("simulated connection error")
+			tangle.ArgoCDs["prod"] = prodWrapper
 
 			req, _ := http.NewRequest("GET", test.url, nil)
 
@@ -178,31 +187,6 @@ func TestHandlersError(t *testing.T) {
 }
 
 func TestDiffs(t *testing.T) {
-	err := godotenv.Load("../../.env")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	argocdConfig := make(map[string]TangleArgoCDConfig)
-	argocdConfig["test"] = TangleArgoCDConfig{
-		Address:         "localhost:8080",
-		PlainText:       true,
-		AuthTokenEnvVar: "ARGOCD_TOKEN",
-	}
-	argocdConfig["prod"] = TangleArgoCDConfig{
-		Address:         "localhost:8080",
-		PlainText:       true,
-		AuthTokenEnvVar: "ARGOCD_PROD_TOKEN",
-	}
-
-	config := TangleConfig{
-		Name:            "test-tangle",
-		Domain:          "localhost",
-		Port:            8081,
-		ArgoCDs:         argocdConfig,
-		DoNotInstrument: true,
-	}
-
 	tests := []struct {
 		name        string
 		url         string
@@ -220,7 +204,13 @@ func TestDiffs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			tangle := New(&config, "testing")
+			tangle := newTestTangle()
+			testWrapper := argocdfakes.NewFakeWrapper(testArgoCDApplications())
+			testWrapper.ManifestsByApp["test-1"] = &argocd.GetManifestsResponse{
+				LiveManifests:   []string{"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: example\n"},
+				TargetManifests: []string{"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: example\ndata:\n  updated: \"true\"\n"},
+			}
+			tangle.ArgoCDs["test"] = testWrapper
 
 			body, _ := json.Marshal(test.requestBody)
 			req, _ := http.NewRequest("POST", test.url, bytes.NewBuffer(body))

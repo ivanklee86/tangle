@@ -1,38 +1,24 @@
 package argocd
 
 import (
-	"context"
 	"testing"
 
-	"github.com/argoproj/argo-cd/v3/pkg/apiclient/application"
-	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
 
-func setup(t *testing.T) {
-	err := godotenv.Load("../../.env")
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
+// TestNewArgoCDClient/creates client with invalid options is the one
+// TestNewArgoCDClient case that doesn't need a live ArgoCD: ARGOCD_TOKEN1 is
+// a deliberately-nonexistent env var name, so NewArgoCDClient's
+// os.LookupEnv check fails before any network call is attempted — no
+// .env/t.Setenv needed, since nothing in this environment ever sets that
+// name. The "valid options" case moved to client_e2e_test.go: unlike this
+// one, it needs a real ArgoCD to dial successfully (see that file's comment).
 func TestNewArgoCDClient(t *testing.T) {
-	setup(t)
-
 	tests := []struct {
 		name    string
 		options *ArgoCDClientOptions
 		wantErr bool
 	}{
-		{
-			name: "creates client with valid options",
-			options: &ArgoCDClientOptions{
-				Address:         "localhost:8080",
-				PlainText:       true,
-				AuthTokenEnvVar: "ARGOCD_TOKEN",
-			},
-			wantErr: false,
-		},
 		{
 			name: "creates client with invalid options",
 			options: &ArgoCDClientOptions{
@@ -47,148 +33,6 @@ func TestNewArgoCDClient(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := NewArgoCDClient(tt.options)
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
-			assert.NotNil(t, got)
-		})
-	}
-}
-
-func TestArgoCDClient_List(t *testing.T) {
-	setup(t)
-
-	labelQueryInclude := "foo=bar"
-	labelQueryExclude := "foo=bar,env!=test"
-
-	tests := []struct {
-		name          string
-		options       *ArgoCDClientOptions
-		query         *application.ApplicationQuery
-		resultsLength int
-		wantErr       bool
-	}{
-		{
-			name: "lists applications successfully",
-			options: &ArgoCDClientOptions{
-				Address:         "localhost:8080",
-				PlainText:       true,
-				AuthTokenEnvVar: "ARGOCD_TOKEN",
-			},
-			query: &application.ApplicationQuery{
-				Selector: &labelQueryInclude,
-			},
-			resultsLength: 2,
-			wantErr:       false,
-		},
-		{
-			name: "lists applications with exclude labels",
-			options: &ArgoCDClientOptions{
-				Address:         "localhost:8080",
-				PlainText:       true,
-				AuthTokenEnvVar: "ARGOCD_TOKEN",
-			},
-			query: &application.ApplicationQuery{
-				Selector: &labelQueryExclude,
-			},
-			resultsLength: 1,
-			wantErr:       false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewArgoCDClient(tt.options)
-			assert.NoError(t, err)
-
-			got, err := client.List(context.Background(), tt.query)
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
-			assert.NotNil(t, got)
-			assert.Len(t, got.Items, tt.resultsLength)
-		})
-	}
-}
-
-func TestArgoCDClient_GetApplicationManifests(t *testing.T) {
-	setup(t)
-
-	applicationName := "test-1"
-	// revision := "main"
-
-	tests := []struct {
-		name    string
-		options *ArgoCDClientOptions
-		query   *application.ApplicationManifestQuery
-		wantErr bool
-	}{
-		{
-			name: "gets application manifests successfully",
-			options: &ArgoCDClientOptions{
-				Address:         "localhost:8080",
-				PlainText:       true,
-				AuthTokenEnvVar: "ARGOCD_TOKEN",
-			},
-			query: &application.ApplicationManifestQuery{
-				Name: &applicationName,
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewArgoCDClient(tt.options)
-			assert.NoError(t, err)
-
-			got, err := client.GetApplicationManifests(context.Background(), tt.query)
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
-			assert.NotNil(t, got)
-		})
-	}
-}
-
-func TestArgoCDClient_Get(t *testing.T) {
-	setup(t)
-	applicationName := "test-1"
-	refresh := "hard"
-
-	tests := []struct {
-		name    string
-		options *ArgoCDClientOptions
-		query   *application.ApplicationQuery
-		wantErr bool
-	}{
-		{
-			name: "gets application successfully",
-			options: &ArgoCDClientOptions{
-				Address:         "localhost:8080",
-				PlainText:       true,
-				AuthTokenEnvVar: "ARGOCD_TOKEN",
-			},
-			query: &application.ApplicationQuery{
-				Name:    &applicationName,
-				Refresh: &refresh,
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			client, err := NewArgoCDClient(tt.options)
-			assert.NoError(t, err)
-
-			got, err := client.Get(context.Background(), tt.query)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
