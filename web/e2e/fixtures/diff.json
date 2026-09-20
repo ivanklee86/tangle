@@ -1,0 +1,6 @@
+{
+	"liveManifests": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: example\ndata:\n  color: blue\n",
+	"targetManifests": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: example\ndata:\n  color: green\n",
+	"diffs": "--- live\n+++ target\n@@ -3,3 +3,3 @@\n-  color: blue\n+  color: green\n",
+	"manifestGenerationError": ""
+}
