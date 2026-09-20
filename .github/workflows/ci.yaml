@@ -61,12 +61,18 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: 1.27
+        cache: true   # default; explicit for clarity
     - name: Check formatting
       run: |
         gofmt -d .
         test -z "$(gofmt -l .)"
     - name: Install Task
       uses: arduino/setup-task@v2
+    - name: Cache Go tool binaries
+      uses: actions/cache@v6
+      with:
+        path: ~/go/bin
+        key: go-tools-${{ hashFiles('tasks/go.yaml') }}
     - name: Install all dependencies
       run: task go:install-ci
     - name: Generate OpenAPI spec
@@ -109,10 +115,21 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '24'
+        cache: 'npm'
+        cache-dependency-path: web/package-lock.json
     - name: Install Task
       uses: arduino/setup-task@v2
     - name: Install packages
       run: task ts:install
+    - name: Cache Playwright browser
+      id: playwright-cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/ms-playwright
+        # Literal version, not a hash of web/package.json — this needs to
+        # match exactly what's installed, and an unrelated package.json
+        # change shouldn't accidentally bust this cache.
+        key: playwright-${{ runner.os }}-1.63.0
     - name: Install Playwright browser
       # Invoke the locally installed `playwright` package directly rather
       # than `npx playwright@<version>` — this project also depends on
@@ -121,6 +138,7 @@ jobs:
       # the version requested, silently installing the wrong browser
       # revision. `node node_modules/playwright/cli.js` bypasses the bin
       # collision and always uses the exact version in web/package.json.
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
       run: node node_modules/playwright/cli.js install --with-deps chromium chromium-headless-shell
       working-directory: web
     - name: Run unit tests
@@ -167,17 +185,43 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: 1.27
+        cache: true   # default; explicit for clarity
     - name: Install Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '24'
+        cache: 'npm'
+        cache-dependency-path: web/package-lock.json
     - name: Install Task
       uses: arduino/setup-task@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+    - name: Expose GitHub Actions cache variables for buildx
+      uses: crazy-max/ghaction-github-runtime@v4
+    - name: Cache Go tool binaries
+      uses: actions/cache@v6
+      with:
+        path: ~/go/bin
+        key: go-tools-${{ hashFiles('tasks/go.yaml') }}
+    - name: Cache k3d/argocd CLIs
+      id: cli-tools-cache
+      uses: actions/cache@v6
+      with:
+        path: |
+          /usr/local/bin/k3d
+          /usr/local/bin/argocd
+        # Neither version is derived from a hashed file — both are hardcoded
+        # here and duplicated in .devcontainer/Dockerfile's K3D_VERSION arg
+        # and argocd base-image tag. Keep this key in sync if either pin
+        # is bumped.
+        key: cli-tools-k3d-v5.9.0-argocd-v3.5.3
     - name: Install k3d
       # Keep in sync with K3D_VERSION in .devcontainer/Dockerfile.
+      if: steps.cli-tools-cache.outputs.cache-hit != 'true'
       run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.9.0 bash
     - name: Install argocd
       # Keep in sync with the argocd CLI version in .devcontainer/Dockerfile.
+      if: steps.cli-tools-cache.outputs.cache-hit != 'true'
       run: |
         curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v3.5.3/argocd-linux-amd64
         sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
@@ -188,11 +232,20 @@ jobs:
       run: task go:generate
     - name: Bring up live stack
       run: task services:cicd
+      env:
+        DOCKER_BUILD_CACHE_FLAGS: --cache-from type=gha --cache-to type=gha,mode=max
     - name: Run Go e2e tests
       run: task go:test:e2e:ci
     - name: Install frontend packages
       run: task ts:install
+    - name: Cache Playwright browser
+      id: playwright-cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-1.63.0
     - name: Install Playwright browser
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
       run: node node_modules/playwright/cli.js install --with-deps chromium chromium-headless-shell
       working-directory: web
     - name: Run frontend live e2e suite
