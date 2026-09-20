@@ -3,17 +3,20 @@ import { render } from 'vitest-browser-svelte';
 import Page from './+page.svelte';
 import { type ApplicationResponseStore } from '$lib/backend/data';
 
-const invalidateAll = vi.fn();
+const { pageState } = vi.hoisted(() => ({
+	pageState: { url: new URL('http://localhost/applications/?labels=foo:bar') }
+}));
 
-vi.mock('$app/stores', async () => {
-	const { writable } = await import('svelte/store');
-	return {
-		page: writable({ url: new URL('http://localhost/applications/') })
-	};
-});
+vi.mock('$app/state', () => ({
+	page: pageState
+}));
+
+const invalidateAll = vi.fn();
+const goto = vi.fn();
 
 vi.mock('$app/navigation', () => ({
-	invalidateAll: () => invalidateAll()
+	invalidateAll: () => invalidateAll(),
+	goto: (url: string) => goto(url)
 }));
 
 function deferred<T>() {
@@ -44,7 +47,60 @@ const resolvedApplications: ApplicationResponseStore = {
 describe('applications +page.svelte', () => {
 	afterEach(() => {
 		invalidateAll.mockClear();
+		goto.mockClear();
 		vi.useRealTimers();
+		pageState.url = new URL('http://localhost/applications/?labels=foo:bar');
+	});
+
+	test('shows the label/exclude-label form instead of searching by default', async () => {
+		pageState.url = new URL('http://localhost/applications/');
+
+		const screen = await render(Page, {
+			params: {},
+			data: { applications: Promise.resolve(resolvedApplications) }
+		});
+
+		await expect
+			.element(screen.getByRole('heading', { name: 'Applications', level: 2 }))
+			.toBeVisible();
+		await expect.element(screen.getByRole('button', { name: 'See applications' })).toBeVisible();
+	});
+
+	test('searching navigates with the submitted labels', async () => {
+		pageState.url = new URL('http://localhost/applications/');
+
+		const screen = await render(Page, {
+			params: {},
+			data: { applications: Promise.resolve(resolvedApplications) }
+		});
+
+		const labelsInputs = screen.getByPlaceholder("Labels in format 'key:value'");
+		await labelsInputs.fill('foo:bar');
+		await screen.getByRole('button', { name: 'See applications' }).click();
+
+		expect(goto).toHaveBeenCalledWith('/applications?labels=foo%3Abar&searched=true');
+	});
+
+	test('searching with both fields empty still navigates with a searched marker', async () => {
+		pageState.url = new URL('http://localhost/applications/');
+
+		const screen = await render(Page, {
+			params: {},
+			data: { applications: Promise.resolve(resolvedApplications) }
+		});
+
+		await screen.getByRole('button', { name: 'See applications' }).click();
+
+		expect(goto).toHaveBeenCalledWith('/applications?searched=true');
+	});
+
+	test('skips the form and shows results when arriving with filters already in the URL', async () => {
+		const screen = await render(Page, {
+			params: {},
+			data: { applications: Promise.resolve(resolvedApplications) }
+		});
+
+		await expect.element(screen.getByText('alpha')).toBeVisible();
 	});
 
 	test('shows a spinner while data.applications is pending', async () => {
@@ -73,9 +129,8 @@ describe('applications +page.svelte', () => {
 		});
 		await expect.element(screen.getByText('alpha')).toBeVisible();
 
-		const refreshButton = screen.container.querySelector('button');
-		expect(refreshButton).not.toBeNull();
-		refreshButton!.click();
+		const refreshButton = screen.getByRole('button', { name: 'Toggle automatic refresh' });
+		await refreshButton.click();
 
 		await vi.advanceTimersByTimeAsync(10_000);
 

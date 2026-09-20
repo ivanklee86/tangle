@@ -45,10 +45,17 @@ tasks:
     desc: Run tests
     dir: web
     cmds:
-      - npm run test:unit
+      - npm run test:unit -- --run
+      - npm run test:e2e
 
   dev:
     desc: Run the development server
     dir: web
     cmds:
       - npm run dev
+
+  screenshots:
+    desc: Regenerate the README's web-UI screenshots from the running app (needs `task services` + tangle-server up)
+    dir: web
+    cmds:
+      - npm run screenshots

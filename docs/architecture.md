@@ -13,7 +13,8 @@ Tangle consists of two components:
         - [Prometheus](https://prometheus.io/) `/metrics` endpoint.
         - [httplog](https://prometheus.io/) for logging.
 - A static website written with [`Svelte`](https://svelte.dev/) and [`Typescript`](https://www.typescriptlang.org/).
-    - It uses [flowbite-svelte](https://flowbite-svelte.com/) as its design system.
+    - It uses [flowbite-svelte](https://flowbite-svelte.com/) and its own `app.css` theme tokens as its single
+      source of visual truth — see [ADR 0007](adrs/0007-flowbite-design-system-consistency.md).
 
 Additionally it uses the following tools to improve our development experience:
 
