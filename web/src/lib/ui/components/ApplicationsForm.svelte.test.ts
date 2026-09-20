@@ -4,35 +4,41 @@ import { userEvent } from 'vitest/browser';
 import ApplicationsForm from './ApplicationsForm.svelte';
 
 describe('ApplicationsForm', () => {
-	test('submits the entered labels when the button is clicked', async () => {
+	test('submits the labels and exclude labels added via LabelsInput when the button is clicked', async () => {
 		const onSubmit = vi.fn();
 		const screen = await render(ApplicationsForm, { onSubmit });
 
-		await screen.getByPlaceholder("Labels in format 'key:value'").fill('env:prod');
-		await screen.getByPlaceholder("Labels to exclude in format 'key:value'").fill('tier:test');
+		await screen.getByRole('textbox', { name: 'Labels key' }).fill('env');
+		await screen.getByRole('textbox', { name: 'Labels value' }).fill('prod');
+		await screen.getByRole('button', { name: 'Add Labels' }).click();
+
+		await screen.getByRole('textbox', { name: 'Exclude Labels key' }).fill('tier');
+		await screen.getByRole('textbox', { name: 'Exclude Labels value' }).fill('test');
+		await screen.getByRole('button', { name: 'Add Exclude Labels' }).click();
+
 		await screen.getByRole('button', { name: 'See applications' }).click();
 
 		expect(onSubmit).toHaveBeenCalledWith('env:prod', 'tier:test');
 	});
 
-	test('submits when Enter is pressed in a field, without a button click', async () => {
+	test('pressing Enter in a LabelsInput box adds a pair instead of submitting the form', async () => {
 		const onSubmit = vi.fn();
 		const screen = await render(ApplicationsForm, { onSubmit });
 
-		const labelsInput = screen.getByPlaceholder("Labels in format 'key:value'");
-		await labelsInput.fill('env:prod');
+		await screen.getByRole('textbox', { name: 'Labels key' }).fill('env');
+		await screen.getByRole('textbox', { name: 'Labels value' }).fill('prod');
 		await userEvent.keyboard('{Enter}');
 
-		expect(onSubmit).toHaveBeenCalledWith('env:prod', '');
+		await expect.element(screen.getByText('env:prod')).toBeVisible();
+		expect(onSubmit).not.toHaveBeenCalled();
 	});
 
-	test('disables the button and does not submit when labels are malformed', async () => {
+	test('submits with empty labels by default, since no pairs are required', async () => {
 		const onSubmit = vi.fn();
 		const screen = await render(ApplicationsForm, { onSubmit });
 
-		await screen.getByPlaceholder("Labels in format 'key:value'").fill('not-a-label');
+		await screen.getByRole('button', { name: 'See applications' }).click();
 
-		await expect.element(screen.getByRole('button', { name: 'See applications' })).toBeDisabled();
-		expect(onSubmit).not.toHaveBeenCalled();
+		expect(onSubmit).toHaveBeenCalledWith('', '');
 	});
 });

@@ -13,6 +13,10 @@ Tangle makes using with multiple ArgoCDs in a [hub and spoke](https://codefresh.
 
 For more information, check out our [documentation](https://ivanklee86.github.io/tangle/)!
 
+**Example: Setting the `env:test` label on the Home page**
+
+![Home](./docs/images/TangleHome.png)
+
 **Example: View all Applications with the `env:test` label**
 
 Visiting `/applications?labels=env:test`

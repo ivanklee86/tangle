@@ -4,7 +4,7 @@ Swagger documentation can be found at `/swagger`.
 
 ### Web UI
 
-The Web UI is accessible at `/`.
+The Web UI is accessible at `/`.  You can specify labels to include and exclude by filling in the key/value boxes and hitting enter or `+`.
 
 **/applications** takes the following URL parameters.  These can be hard-coded in your CI/CD system (e.g. based on environment variables).
 

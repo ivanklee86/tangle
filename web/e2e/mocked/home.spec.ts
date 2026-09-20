@@ -14,40 +14,51 @@ test.describe('home page', () => {
 		const applicationsForm = page.locator('form', {
 			has: page.getByRole('button', { name: 'See applications' })
 		});
-		await expect(applicationsForm.getByPlaceholder("Labels in format 'key:value'")).toBeVisible();
 		await expect(
-			applicationsForm.getByPlaceholder("Labels to exclude in format 'key:value'")
+			applicationsForm.getByRole('textbox', { name: 'Labels key', exact: true })
+		).toBeVisible();
+		await expect(
+			applicationsForm.getByRole('textbox', { name: 'Labels value', exact: true })
+		).toBeVisible();
+		await expect(
+			applicationsForm.getByRole('textbox', { name: 'Exclude Labels key' })
+		).toBeVisible();
+		await expect(
+			applicationsForm.getByRole('textbox', { name: 'Exclude Labels value' })
 		).toBeVisible();
 
 		const diffsForm = page.locator('form', {
 			has: page.getByRole('button', { name: 'See diffs' })
 		});
-		await expect(diffsForm.getByPlaceholder("Labels in format 'key:value'")).toBeVisible();
+		await expect(diffsForm.getByRole('textbox', { name: 'Labels key', exact: true })).toBeVisible();
+		await expect(
+			diffsForm.getByRole('textbox', { name: 'Labels value', exact: true })
+		).toBeVisible();
 		await expect(diffsForm.getByPlaceholder('Git branch')).toBeVisible();
 	});
 
-	test('a malformed label keeps the Applications submit disabled', async ({ page }) => {
+	test('a malformed key keeps the Applications add-label button disabled', async ({ page }) => {
 		const applicationsForm = page.locator('form', {
 			has: page.getByRole('button', { name: 'See applications' })
 		});
-		const submit = applicationsForm.getByRole('button', { name: 'See applications' });
+		const addButton = applicationsForm.getByRole('button', { name: 'Add Labels' });
 
-		await expect(submit).toBeEnabled();
-		await applicationsForm.getByPlaceholder("Labels in format 'key:value'").fill('nocolon');
-		await expect(submit).toBeDisabled();
+		await applicationsForm
+			.getByRole('textbox', { name: 'Labels key', exact: true })
+			.fill('env:staging');
+		await applicationsForm.getByRole('textbox', { name: 'Labels value', exact: true }).fill('prod');
+		await expect(addButton).toBeDisabled();
 	});
 
-	test('a malformed label keeps the Diffs submit disabled', async ({ page }) => {
+	test('a malformed key keeps the Diffs add-label button disabled', async ({ page }) => {
 		const diffsForm = page.locator('form', {
 			has: page.getByRole('button', { name: 'See diffs' })
 		});
-		const submit = diffsForm.getByRole('button', { name: 'See diffs' });
+		const addButton = diffsForm.getByRole('button', { name: 'Add Labels' });
 
-		await diffsForm.getByPlaceholder('Git branch').fill('main');
-		await expect(submit).toBeEnabled();
-
-		await diffsForm.getByPlaceholder("Labels in format 'key:value'").fill('nocolon');
-		await expect(submit).toBeDisabled();
+		await diffsForm.getByRole('textbox', { name: 'Labels key', exact: true }).fill('env:staging');
+		await diffsForm.getByRole('textbox', { name: 'Labels value', exact: true }).fill('prod');
+		await expect(addButton).toBeDisabled();
 	});
 
 	test('submitting Applications with valid labels navigates to /applications with the filter', async ({
@@ -56,7 +67,9 @@ test.describe('home page', () => {
 		const applicationsForm = page.locator('form', {
 			has: page.getByRole('button', { name: 'See applications' })
 		});
-		await applicationsForm.getByPlaceholder("Labels in format 'key:value'").fill('env:prod');
+		await applicationsForm.getByRole('textbox', { name: 'Labels key', exact: true }).fill('env');
+		await applicationsForm.getByRole('textbox', { name: 'Labels value', exact: true }).fill('prod');
+		await applicationsForm.getByRole('button', { name: 'Add Labels' }).click();
 		await applicationsForm.getByRole('button', { name: 'See applications' }).click();
 
 		await page.waitForURL(

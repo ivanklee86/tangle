@@ -1,10 +1,12 @@
-// Regenerates the two web-UI screenshots embedded in the root README.md
-// (TangleApplications.png, TangleDiffs.png) from the actual running app,
-// so they stay honest as the UI changes. TangleCLI.png is a terminal
-// screenshot of `tangle-cli` and is out of scope for this script.
+// Regenerates the three web-UI screenshots embedded in the root README.md
+// (TangleHome.png, TangleApplications.png, TangleDiffs.png) from the actual
+// running app, so they stay honest as the UI changes. TangleCLI.png is a
+// terminal screenshot of `tangle-cli` and is out of scope for this script.
 //
-// Precondition: a real backend must already be reachable at the URL in
-// `.env.development` (PUBLIC_BASE_URL, defaults to http://localhost:8081)
+// Precondition: TangleHome.png needs nothing but the dev server itself — the
+// home page's forms don't fetch anything until submitted. TangleApplications
+// .png and TangleDiffs.png need a real backend already reachable at the URL
+// in `.env.development` (PUBLIC_BASE_URL, defaults to http://localhost:8081)
 // with actual ArgoCD data behind it — this script does not stand up ArgoCD
 // itself. In this devcontainer that's `task services` (once) plus
 // `tangle-server` running (e.g. via `air`, see `.air.conf`). Run this from
@@ -25,17 +27,35 @@ const imagesDir = path.join(webDir, '..', 'docs', 'images');
 
 const shots = [
 	{
+		path: '/',
+		file: 'TangleHome.png',
+		// Needs no backend — the home page's forms don't fetch anything until
+		// submitted, so "ready" just means the Applications form has mounted.
+		ready: (page) => page.getByRole('heading', { name: 'Applications', level: 2 }),
+		// The home page always starts with empty label fields (unlike /diffs,
+		// which can seed its form from the URL) — drive the new key/value
+		// LabelsInput UI directly to get an `env:test` chip on screen.
+		interact: async (page) => {
+			await page.getByRole('textbox', { name: 'Labels key' }).first().fill('env');
+			await page.getByRole('textbox', { name: 'Labels value' }).first().fill('test');
+			await page.getByRole('button', { name: 'Add Labels' }).first().click();
+			await page.getByText('env:test').first().waitFor({ timeout: 5_000 });
+		}
+	},
+	{
 		path: '/applications/?labels=bazz:buzz',
 		file: 'TangleApplications.png',
 		// The "Applications" heading renders unconditionally (loading, error, or
 		// results), so waiting on it can't confirm real data loaded — wait for an
 		// actual application row instead.
-		ready: (page) => page.getByRole('table').getByRole('link').first()
+		ready: (page) => page.getByRole('table').getByRole('link').first(),
+		hint: 'is the backend (tangle-server + ArgoCD, see `task services`) actually running and reachable?'
 	},
 	{
 		path: '/diffs/?labels=env:test&targetRef=test_gitops',
 		file: 'TangleDiffs.png',
-		ready: (page) => page.getByRole('heading', { name: 'Status', level: 3 })
+		ready: (page) => page.getByRole('heading', { name: 'Status', level: 3 }),
+		hint: 'is the backend (tangle-server + ArgoCD, see `task services`) actually running and reachable?'
 	}
 ];
 
@@ -103,10 +123,12 @@ async function main() {
 			try {
 				await shot.ready(page).waitFor({ timeout: 15_000 });
 			} catch {
-				throw new Error(
-					`Timed out waiting for real content on ${shot.path} — is the backend (tangle-server ` +
-						`+ ArgoCD, see \`task services\`) actually running and reachable?`
-				);
+				const hint = shot.hint ?? 'check the dev server output above for errors.';
+				throw new Error(`Timed out waiting for real content on ${shot.path} — ${hint}`);
+			}
+
+			if (shot.interact) {
+				await shot.interact(page);
 			}
 
 			const outPath = path.join(imagesDir, shot.file);

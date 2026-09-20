@@ -6,3 +6,4 @@ export { default as ArgoCDSyncStatus } from './ArgoCDSyncStatus.svelte';
 export { default as ErrorAlert } from './ErrorAlert.svelte';
 export { default as ApplicationsForm } from './ApplicationsForm.svelte';
 export { default as DiffsForm } from './DiffsForm.svelte';
+export { default as LabelsInput } from './LabelsInput.svelte';

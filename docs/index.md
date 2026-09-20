@@ -11,6 +11,10 @@ Tangle makes using with multiple ArgoCDs in a [hub and spoke](https://codefresh.
 - Working equally well for your CI/CD tooling (i.e. available as JSON APIs to consume from your tools) and for your humans (via a website that's easy to embed into existing tools).
 - Does all those things with mechanisms (i.e. worker pools) to limit load on ArgoCD components
 
+**Example: Setting the `env:test` label on the Home page**
+
+![Home](./images/TangleHome.png)
+
 **Example: View all Applications with the `env:test` label**
 
 Visiting `/applications?labels=env:test`
