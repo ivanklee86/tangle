@@ -7,14 +7,9 @@ on:
   pull_request:
 
 permissions:
+  contents: read
   checks: write
   pull-requests: write
-  # For octocov's artifact:// datastore (workstream 10): it reads/deletes
-  # prior coverage-report artifacts via the REST Actions-artifacts API
-  # (authenticated with GITHUB_TOKEN, not the separate runtime-token upload
-  # path actions/upload-artifact uses), which needs this scope explicitly —
-  # defining any `permissions:` block sets every unlisted scope to `none`.
-  actions: write
 
 jobs:
   filter:
@@ -42,6 +37,8 @@ jobs:
             - '.github/workflows/ci.yaml'
           ts:
             - 'web/**'
+            - 'Taskfile.yaml'
+            - 'tasks/ts.yaml'
             - '.github/workflows/ci.yaml'
           docs:
             - 'docs/**'
@@ -54,6 +51,18 @@ jobs:
     needs: [filter]
     if: needs.filter.outputs.go == 'true'
     runs-on: ubuntu-latest
+    # Job-level permissions replace the workflow-level block entirely for
+    # this job (they don't merge), so every scope go's steps use has to be
+    # re-listed here. actions: write is scoped to just this job — it's only
+    # for octocov's artifact:// datastore (workstream 10), which reads/
+    # deletes prior coverage-report artifacts via the REST Actions-artifacts
+    # API (authenticated with GITHUB_TOKEN, not the separate runtime-token
+    # upload path actions/upload-artifact uses) — no other job needs it.
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+      actions: write
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -87,7 +96,10 @@ jobs:
       with:
         files: report.xml
     - name: Report coverage via octocov
-      uses: k1LoW/octocov-action@v1
+      # Pinned to the exact commit v1 (currently v1.5.2) resolves to, not the
+      # mutable tag — this step runs with actions: write, so a repointed tag
+      # could swap in code that runs with that elevated token.
+      uses: k1LoW/octocov-action@a167dc0dee441b7ffc45e1b862ab55ec0d87f278 # v1.5.2
       with:
         config: .octocov.yml
         version: v0.79.0
@@ -254,13 +266,17 @@ jobs:
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always()
       with:
-        files: report-e2e.xml
+        files: |
+          report-e2e.xml
+          web/test-results/junit-live.xml
     - name: Save JUnit report.
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: e2e-junit-report
-        path: ./report-e2e.xml
+        path: |
+          ./report-e2e.xml
+          web/test-results/junit-live.xml
 
   report:
     needs: [go, ts, e2e]

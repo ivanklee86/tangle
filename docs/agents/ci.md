@@ -93,43 +93,54 @@ the only job in `ci.yaml` with no path-based `if:`:
 2. `task go:install-ci` — Go deps + CI tooling; `task go:generate` — regenerates the Swagger spec.
 3. `task services:cicd` (`Taskfile.yaml`) — the expensive step: tears down and recreates a k3d
    cluster, waits for a real ArgoCD install to become healthy, mints an ArgoCD API token, builds
-   the `tangle` Docker image (including the frontend build), and runs it against that live ArgoCD
-   on the host network.
-4. `task go:test:e2e:ci` — the `//go:build e2e` Go tests, plus coverage (`report-e2e.xml`,
+   the `tangle` Docker image via buildx with the GitHub Actions cache backend (including the
+   frontend build), and runs it against that live ArgoCD on the host network.
+4. `task go:test:e2e:ci` — the `//go:build e2e` Go tests (only the `TestE2E_`-prefixed ones — a
+   plain `-tags=e2e` build still compiles every untagged unit/integration test alongside them, so
+   `-run '^TestE2E_'` keeps them out of this job's own report), plus coverage (`report-e2e.xml`,
    `coverage-e2e.out`/`.html`, kept separate from the `go` job's own report/coverage filenames).
 5. Install the frontend's npm packages and pinned Playwright browser, then
    `task ts:test:e2e:live` — the live-stack Playwright suite against the container from step 3.
-6. Publish JUnit results and upload them as a build artifact for the `report` job.
+6. Publish JUnit results (both the Go e2e suite and the frontend live suite) and upload them as
+   build artifacts for the `report` job.
+
+Go module/tool-binary caching, npm caching, Playwright-browser caching, and k3d/argocd CLI caching
+(workstream 12) all apply here too, alongside the Docker layer cache — this is the one job that
+pays for all of them on every run, since it's the one job with no path-based `if:`.
 
 The `go` job, by contrast, is now fully hermetic: it folds in what used to be the standalone
 `format` job (a `gofmt` check, first, before installing the rest of the Go toolchain) and runs only
 `internal/argocd/argocdfakes`-backed unit/integration tests — no Docker, k3d, or ArgoCD CLI install
-at all. `ts` similarly runs unit tests and the mocked (network-stubbed) Playwright suite, installing
-a pinned-version Playwright Chromium build (invoked via `node node_modules/playwright/cli.js`
-rather than `npx`, to dodge a bin-name collision with `@playwright/test`'s own bundled
-`playwright`). `docs` only needs `uv` to build the mkdocs site.
+at all. Coverage reporting is [octocov](https://github.com/k1LoW/octocov) (ADR 0010), not Codecov —
+no external SaaS account or `CODECOV_TOKEN`, PR comments and its `artifact://` datastore both
+authenticated with the workflow's own token. `ts` similarly runs unit tests and the mocked
+(network-stubbed) Playwright suite, installing a pinned-version Playwright Chromium build (invoked
+via `node node_modules/playwright/cli.js` rather than `npx`, to dodge a bin-name collision with
+`@playwright/test`'s own bundled `playwright`). `docs` only needs `uv` to build the mkdocs site.
 
 ## Things worth revisiting
 
 - **Resolved**: no job dependencies/ordering — `filter` now gates `go`/`ts`/`docs`, and `format`'s
   fail-fast concern is moot now that it's folded into `go` as its first step.
-- **Resolved**: no caching of Go modules, npm packages, or the k3d/ArgoCD CLI downloads — planned
-  in [the CI pipeline restructure plan](plans/ci-pipeline-restructure.md#12-ci-dependency-caching)
-  (workstream 12), **not yet implemented** as of this writing.
-- **Open**: the `go` job still uses Codecov (`jandelgado/gcov2lcov-action` + `codecov/codecov-action`
-  + `CODECOV_TOKEN`) rather than octocov — that swap is
-  [ADR 0010](../adrs/0010-replace-codecov-with-octocov.md)/workstream 10, **not yet implemented**.
-  A durable, publicly-embeddable coverage badge (a separate `octocov-central` repository) is
-  [ADR 0011](../adrs/0011-octocov-central-reporting-and-badges-repository.md)/workstream 11,
-  likewise not yet implemented.
+- **Resolved**: no caching of Go modules, npm packages, or the k3d/ArgoCD CLI downloads —
+  [workstream 12](plans/ci-pipeline-restructure.md#12-ci-dependency-caching) landed this: Go
+  module/build cache, Go tool-binary cache, npm cache, Playwright-browser cache, k3d/argocd CLI
+  cache, and Docker layer caching via buildx + the GitHub Actions cache backend.
+- **Resolved**: the `go` job now uses octocov instead of Codecov — no more `jandelgado/gcov2lcov-action`,
+  `codecov/codecov-action`, or `CODECOV_TOKEN` ([ADR 0010](../adrs/0010-replace-codecov-with-octocov.md)/workstream 10).
+- **Mostly done**: a durable, publicly-embeddable coverage badge and dashboard
+  ([ADR 0011](../adrs/0011-octocov-central-reporting-and-badges-repository.md)/workstream 11) —
+  `ivanklee86/octocov-central` exists, its scheduled workflow works, and GitHub Pages serves it live
+  at `https://ivanklee86.github.io/octocov-central/`. **Open**: the dashboard is still empty and no
+  badge exists yet, since both need `tangle`'s `main` branch to have run the `go` job at least once
+  (octocov's `report.if: is_default_branch`) — the coverage badge hasn't been added to this repo's
+  `README.md` yet, pending that.
 - **Accepted trade-off, not an oversight**: `e2e` still stands up a whole k3d + ArgoCD cluster and
-  rebuilds the Docker image on every run — the slowest step by a wide margin, and now the one job
-  every PR always waits on regardless of what changed. [ADR 0009](../adrs/0009-ci-pipeline-test-taxonomy-and-conditional-jobs.md)
-  explicitly accepts this: the goal is full test-pyramid coverage for both languages, and overall
-  CI wall-clock time is secondary to that. Workstream 12's caching (once implemented) will make the
-  pieces of that bring-up cheaper to rebuild — Go module/tool caching, npm caching, Playwright
-  browser caching, k3d/argocd CLI caching, and Docker layer caching via buildx + the GitHub Actions
-  cache backend — but doesn't remove the cluster bring-up itself.
+  rebuilds the Docker image on every run — the slowest step by a wide margin, and the one job every
+  PR always waits on regardless of what changed. [ADR 0009](../adrs/0009-ci-pipeline-test-taxonomy-and-conditional-jobs.md)
+  explicitly accepts this: the goal is full test-pyramid coverage for both languages, and overall CI
+  wall-clock time is secondary to that. Workstream 12's caching makes the pieces of that bring-up
+  cheaper to rebuild but doesn't remove the cluster bring-up itself.
 - `release-docs.yaml` triggers on every push to `main`, independent of whether `docs/` changed.
 - `release.yaml`'s `goreleaser` job re-runs `task go:generate` (Swagger) even though the release
   is cut from a tag that already passed `ci.yaml` on `main`.

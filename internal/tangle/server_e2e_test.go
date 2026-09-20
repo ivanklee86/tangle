@@ -46,12 +46,16 @@ func newE2ETangle(t *testing.T) *Tangle {
 	return New(loadedConfig, "testing")
 }
 
-// TestServerE2EApplications exercises applicationsHandler against a live
+// TestE2E_ServerApplications exercises applicationsHandler against a live
 // ArgoCD seeded from integration/kubernetes/example/ — all four
 // applications, split "default"/"my-project" across the "test"/"prod"
 // ArgoCDs configured in integration/tangle.yaml, with the same
 // label/exclude-label matrix TestHandlers asserts against fakes.
-func TestServerE2EApplications(t *testing.T) {
+//
+// Every top-level test in this file is prefixed TestE2E_ (matching
+// internal/argocd/client_e2e_test.go's TestE2E_*) so `-run '^TestE2E_'`
+// (tasks/go.yaml's test:e2e/test:e2e:ci) can select just these.
+func TestE2E_ServerApplications(t *testing.T) {
 	tests := []struct {
 		name       string
 		url        string
@@ -104,7 +108,7 @@ func TestServerE2EApplications(t *testing.T) {
 // flushed — see the CLI tests, which exercise that exact path through the
 // full router). A new test shouldn't freshly depend on that accident when a
 // clean example (test-4) makes the same point about real diff generation.
-func TestServerE2EDiffs(t *testing.T) {
+func TestE2E_ServerDiffs(t *testing.T) {
 	tests := []struct {
 		name   string
 		argocd string

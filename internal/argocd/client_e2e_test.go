@@ -23,14 +23,20 @@ func setup(t *testing.T) {
 	}
 }
 
-// TestNewArgoCDClient_ValidOptions is split out from the unit-tested
+// TestE2E_NewArgoCDClient_ValidOptions is split out from the unit-tested
 // TestNewArgoCDClient (client_test.go, no build tag — always compiled, so a
 // same-named function here would collide when building with -tags=e2e).
 // Unlike the "invalid options" case, which only exercises this package's own
 // missing-token-env-var validation, a valid ARGOCD_TOKEN still needs a real
 // ArgoCD server to dial successfully — NewClientOrDie/NewApplicationClientOrDie
 // do an eager handshake — so this case belongs at the e2e layer.
-func TestNewArgoCDClient_ValidOptions(t *testing.T) {
+//
+// Every top-level test in this file is prefixed TestE2E_ (matching
+// internal/tangle/server_e2e_test.go's TestE2E_Server*) so `-run '^TestE2E_'`
+// (tasks/go.yaml's test:e2e/test:e2e:ci) can select just these, instead of
+// also re-running every untagged unit/integration test that -tags=e2e still
+// compiles alongside them.
+func TestE2E_NewArgoCDClient_ValidOptions(t *testing.T) {
 	setup(t)
 
 	got, err := NewArgoCDClient(&ArgoCDClientOptions{
@@ -42,7 +48,7 @@ func TestNewArgoCDClient_ValidOptions(t *testing.T) {
 	assert.NotNil(t, got)
 }
 
-func TestArgoCDClient_List(t *testing.T) {
+func TestE2E_ArgoCDClient_List(t *testing.T) {
 	setup(t)
 
 	labelQueryInclude := "foo=bar"
@@ -100,7 +106,7 @@ func TestArgoCDClient_List(t *testing.T) {
 	}
 }
 
-func TestArgoCDClient_GetApplicationManifests(t *testing.T) {
+func TestE2E_ArgoCDClient_GetApplicationManifests(t *testing.T) {
 	setup(t)
 
 	applicationName := "test-1"
@@ -141,7 +147,7 @@ func TestArgoCDClient_GetApplicationManifests(t *testing.T) {
 	}
 }
 
-func TestArgoCDClient_Get(t *testing.T) {
+func TestE2E_ArgoCDClient_Get(t *testing.T) {
 	setup(t)
 	applicationName := "test-1"
 	refresh := "hard"
