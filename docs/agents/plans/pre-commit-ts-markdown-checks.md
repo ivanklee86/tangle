@@ -2,7 +2,7 @@
 
 Status: implemented · 2026-09-20
 
-`.pre-commit-config.yaml` currently only checks whitespace/EOF/YAML (`pre-commit/pre-commit-hooks`) and Go formatting (`dnephin/pre-commit-golang`). Nothing runs against `web/`'s TypeScript/Svelte code or the repo's Markdown (`README.md`, `CONTRIBUTING.md`, `docs/**/*.md`, including ADRs and plans) before a commit lands. This plan adds both, informed by two constraints specific to this repo:
+Before this change, `.pre-commit-config.yaml` only checked whitespace/EOF/YAML (`pre-commit/pre-commit-hooks`) and Go formatting (`dnephin/pre-commit-golang`). Nothing ran against `web/`'s TypeScript/Svelte code or the repo's Markdown (`README.md`, `CONTRIBUTING.md`, `docs/**/*.md`, including ADRs and plans) before a commit lands. This plan adds both, informed by two constraints specific to this repo:
 
 - **pre-commit.ci is active** (badge in `README.md:3`), which auto-runs hooks on PRs and auto-updates `rev`s weekly. pre-commit.ci does not support `language: system` (or `script`) hooks — it silently skips them — so any hook that shells out to the project's own `npm` scripts only provides local, pre-push feedback; it can't be the thing enforcing the check in CI.
 - **TS is already linted in real CI.** `.github/workflows/ci.yaml`'s `ts` job runs `task ts:lint` (`npm run check` + `npm run lint`, i.e. `svelte-check` + `prettier --check` + `eslint`) on every PR touching `web/`. That's the actual gate. The pre-commit hook's job is just to catch the same issues *before* a developer pushes, cheaply.
