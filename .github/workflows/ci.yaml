@@ -9,6 +9,12 @@ on:
 permissions:
   checks: write
   pull-requests: write
+  # For octocov's artifact:// datastore (workstream 10): it reads/deletes
+  # prior coverage-report artifacts via the REST Actions-artifacts API
+  # (authenticated with GITHUB_TOKEN, not the separate runtime-token upload
+  # path actions/upload-artifact uses), which needs this scope explicitly —
+  # defining any `permissions:` block sets every unlisted scope to `none`.
+  actions: write
 
 jobs:
   filter:
@@ -74,12 +80,11 @@ jobs:
       if: always()
       with:
         files: report.xml
-    - name: Generate lcov coverage report.
-      uses: jandelgado/gcov2lcov-action@v1.1.1
-    - name: Upload results to Codecov
-      uses: codecov/codecov-action@v5
+    - name: Report coverage via octocov
+      uses: k1LoW/octocov-action@v1
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+        config: .octocov.yml
+        version: v0.79.0
     - name: Save coverage report.
       uses: actions/upload-artifact@v4
       if: always()

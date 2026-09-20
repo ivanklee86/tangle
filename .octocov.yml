@@ -1,0 +1,13 @@
+coverage:
+  paths:
+    - coverage.out
+report:
+  datastores:
+    - artifact://${GITHUB_REPOSITORY}
+  if: is_default_branch
+diff:
+  datastores:
+    - artifact://${GITHUB_REPOSITORY}
+  if: is_pull_request
+comment:
+  if: is_pull_request
