@@ -16,7 +16,7 @@
 </script>
 
 <svelte:head>
-	<title>Tangle - Home</title>
+	<title>Home | Tangle</title>
 </svelte:head>
 
 <Heading tag="h1" class="sr-only">Tangle</Heading>

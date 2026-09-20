@@ -76,7 +76,7 @@
 </script>
 
 <svelte:head>
-	<title>Tangle - Applications</title>
+	<title>Applications | Tangle</title>
 </svelte:head>
 
 <Heading tag="h1" class="sr-only">Applications</Heading>
