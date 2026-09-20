@@ -1,11 +1,84 @@
 package client
 
 import (
+	"errors"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/ivanklee86/tangle/internal/argocd"
+	"github.com/ivanklee86/tangle/internal/argocd/argocdfakes"
+	"github.com/ivanklee86/tangle/internal/tangle"
 )
+
+// newFakeTangleServer mirrors cmd/tangle-cli/main_test.go's helper of the
+// same name — duplicated rather than shared because this file's package
+// (client) and cmd/tangle-cli are different packages, and the helper is
+// small enough that a shared test-support package isn't worth it. This
+// package's tests previously hit a hardcoded "localhost:8081", relying on
+// nothing actually listening there and only "passing" because of a stale Go
+// test cache — see docs/agents/plans/go-major-dependency-migration.md's
+// Outcome section for how that was found.
+func newFakeTangleServer(t *testing.T) *httptest.Server {
+	t.Helper()
+
+	argocdConfig := make(map[string]tangle.TangleArgoCDConfig)
+	argocdConfig["test"] = tangle.TangleArgoCDConfig{
+		Address:         "localhost:8080",
+		PlainText:       true,
+		AuthTokenEnvVar: "ARGOCD_TOKEN",
+	}
+	argocdConfig["prod"] = tangle.TangleArgoCDConfig{
+		Address:         "localhost:8080",
+		PlainText:       true,
+		AuthTokenEnvVar: "ARGOCD_PROD_TOKEN",
+	}
+
+	config := tangle.TangleConfig{
+		Name:            "test-tangle",
+		Domain:          "localhost",
+		Port:            8081,
+		ArgoCDs:         argocdConfig,
+		DoNotInstrument: true,
+	}
+
+	realTangle := tangle.New(&config, "testing")
+
+	testWrapper := argocdfakes.NewFakeWrapper([]argocdfakes.FakeApplication{
+		{Name: "test-1", Project: "default", Namespace: "argocd", Labels: map[string]string{"env": "test", "foo": "bar", "bazz": "buzz"}, LiveRevision: "main"},
+		{Name: "test-2", Project: "default", Namespace: "argocd", Labels: map[string]string{"env": "preprod", "foo": "bar", "bazz": "buzz"}, LiveRevision: "main"},
+	})
+	testWrapper.ManifestsByApp["test-1"] = &argocd.GetManifestsResponse{
+		LiveManifests:   []string{"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: example-1\n"},
+		TargetManifests: []string{"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: example-1\ndata:\n  updated: \"true\"\n"},
+	}
+	testWrapper.ManifestsByApp["test-2"] = &argocd.GetManifestsResponse{
+		LiveManifests:   []string{"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: example-2\n"},
+		TargetManifests: []string{"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: example-2\ndata:\n  updated: \"true\"\n"},
+	}
+
+	prodWrapper := argocdfakes.NewFakeWrapper([]argocdfakes.FakeApplication{
+		{Name: "test-3", Project: "my-project", Namespace: "argocd", Labels: map[string]string{"env": "prod", "foo": "bar"}, LiveRevision: "main"},
+		{Name: "test-4", Project: "my-project", Namespace: "argocd", Labels: map[string]string{"env": "infra", "foo": "bar"}, LiveRevision: "main"},
+	})
+	prodWrapper.ErrOnGetManifests["test-3"] = errors.New("rpc error: code = Unknown desc = failed to execute helm template command: broken values.yaml")
+	prodWrapper.ManifestsByApp["test-4"] = &argocd.GetManifestsResponse{
+		LiveManifests:   []string{"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: example-4\n"},
+		TargetManifests: []string{"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: example-4\ndata:\n  updated: \"true\"\n"},
+	}
+
+	realTangle.ArgoCDs = map[string]argocd.IArgoCDWrapper{
+		"test": testWrapper,
+		"prod": prodWrapper,
+	}
+
+	server := httptest.NewServer(realTangle.Server.Handler)
+	t.Cleanup(server.Close)
+
+	return server
+}
 
 func TestGenerateApplicationsUrl(t *testing.T) {
 	tests := []struct {
@@ -204,6 +277,9 @@ func TestGenerateDiffUrl(t *testing.T) {
 }
 
 func TestGetApplications(t *testing.T) {
+	server := newFakeTangleServer(t)
+	fakeDomain := strings.TrimPrefix(server.URL, "http://")
+
 	tests := []struct {
 		name        string
 		domain      string
@@ -215,7 +291,7 @@ func TestGetApplications(t *testing.T) {
 	}{
 		{
 			name:        "get all applications",
-			domain:      "localhost:8081",
+			domain:      fakeDomain,
 			insecure:    true,
 			labels:      map[string]string{},
 			lengthTest:  2,
@@ -224,7 +300,7 @@ func TestGetApplications(t *testing.T) {
 		},
 		{
 			name:     "get test applications",
-			domain:   "localhost:8081",
+			domain:   fakeDomain,
 			insecure: true,
 			labels: map[string]string{
 				"env": "test",
@@ -250,6 +326,7 @@ func TestGetApplications(t *testing.T) {
 			if test.expectError {
 				assert.Error(t, err)
 			} else {
+				assert.NoError(t, err)
 				for _, result := range resp.Results {
 					switch result.Name {
 					case "test":
@@ -264,6 +341,9 @@ func TestGetApplications(t *testing.T) {
 }
 
 func TestGetApplicationsWithRetries(t *testing.T) {
+	server := newFakeTangleServer(t)
+	fakeDomain := strings.TrimPrefix(server.URL, "http://")
+
 	tests := []struct {
 		name        string
 		domain      string
@@ -273,14 +353,14 @@ func TestGetApplicationsWithRetries(t *testing.T) {
 	}{
 		{
 			name:        "get all applications",
-			domain:      "localhost:8081",
+			domain:      fakeDomain,
 			insecure:    true,
 			options:     nil,
 			expectError: false,
 		},
 		{
 			name:     "with retries",
-			domain:   "localhost:8081",
+			domain:   fakeDomain,
 			insecure: true,
 			options: &ClientOptions{
 				Retries: 3,
@@ -289,7 +369,7 @@ func TestGetApplicationsWithRetries(t *testing.T) {
 		},
 		{
 			name:     "with custom period",
-			domain:   "localhost:8081",
+			domain:   fakeDomain,
 			insecure: true,
 			options: &ClientOptions{
 				Retries: 3,
@@ -299,7 +379,7 @@ func TestGetApplicationsWithRetries(t *testing.T) {
 		},
 		{
 			name:     "with invalid retries",
-			domain:   "localhost:8081",
+			domain:   fakeDomain,
 			insecure: true,
 			options: &ClientOptions{
 				Retries: 6,
@@ -331,6 +411,9 @@ func TestGetApplicationsWithRetries(t *testing.T) {
 }
 
 func TestGetDiffs(t *testing.T) {
+	server := newFakeTangleServer(t)
+	fakeDomain := strings.TrimPrefix(server.URL, "http://")
+
 	tests := []struct {
 		name        string
 		domain      string
@@ -344,7 +427,7 @@ func TestGetDiffs(t *testing.T) {
 	}{
 		{
 			name:        "get diff",
-			domain:      "localhost:8081",
+			domain:      fakeDomain,
 			insecure:    true,
 			argocd:      "test",
 			application: "test-1",
@@ -355,7 +438,7 @@ func TestGetDiffs(t *testing.T) {
 		},
 		{
 			name:        "get diff with outofsync app",
-			domain:      "localhost:8081",
+			domain:      fakeDomain,
 			insecure:    true,
 			argocd:      "test",
 			application: "test-2",
@@ -382,6 +465,9 @@ func TestGetDiffs(t *testing.T) {
 }
 
 func TestGetDiffsWithRetries(t *testing.T) {
+	server := newFakeTangleServer(t)
+	fakeDomain := strings.TrimPrefix(server.URL, "http://")
+
 	tests := []struct {
 		name        string
 		domain      string
@@ -396,7 +482,7 @@ func TestGetDiffsWithRetries(t *testing.T) {
 	}{
 		{
 			name:        "no options",
-			domain:      "localhost:8081",
+			domain:      fakeDomain,
 			insecure:    true,
 			argocd:      "test",
 			application: "test-1",
@@ -408,7 +494,7 @@ func TestGetDiffsWithRetries(t *testing.T) {
 		},
 		{
 			name:        "retries",
-			domain:      "localhost:8081",
+			domain:      fakeDomain,
 			insecure:    true,
 			argocd:      "test",
 			application: "test-1",
@@ -420,7 +506,7 @@ func TestGetDiffsWithRetries(t *testing.T) {
 		},
 		{
 			name:        "retries and custom retries",
-			domain:      "localhost:8081",
+			domain:      fakeDomain,
 			insecure:    true,
 			argocd:      "test",
 			application: "test-1",
@@ -432,7 +518,7 @@ func TestGetDiffsWithRetries(t *testing.T) {
 		},
 		{
 			name:        "invalid_config",
-			domain:      "localhost:8081",
+			domain:      fakeDomain,
 			insecure:    true,
 			argocd:      "test",
 			application: "test-1",

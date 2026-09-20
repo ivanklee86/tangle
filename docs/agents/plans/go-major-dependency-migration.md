@@ -163,15 +163,41 @@ err = config.Load(env.Provider(".", env.Opt{
 ## Outcome
 
 Implemented 2026-09-20. `go build ./...`, `go vet ./...`, `gofmt -l .`, `golangci-lint run` (0 issues),
-and `go test ./internal/... ./cmd/...` all pass; `go.mod`/`go.sum` are tidy. `pkg/client`'s
-`TestGetApplications` fails in this environment, but it's pre-existing and unrelated — it hits a live
-`localhost:8081` server whose ArgoCD gRPC unix socket was already closed before this work started (a
-"connection error: ... use of closed network connection" from the running server's logs, confirmed by
-stashing this change entirely and observing the same environment state). The httplog v3 request-logging
-pipeline was manually verified by running the built server and hitting `/health`, `/metrics`, and
-`/api/applications`: JSON output carries the `version`/`env` tags via `.With(...)`, `/health` and
-`/metrics` are correctly silent (the `Skip` replacement for `QuietDownRoutes` works), and the 500 from
-`/api/applications` produced a structured `error.message` log line through `RequestLogger`. The koanf
-env v2 migration is covered by a new `TestConfig/Environment_variable_overrides_file_config` case in
-`internal/tangle/loader_test.go` using `t.Setenv`. `task docker:build` and the live-cluster
-`task services:cicd` suite were not run as part of this pass — worth doing before this ships as a PR.
+and `go test ./...` (all packages, `-count=1`) all pass; `go.mod`/`go.sum` are tidy. The httplog v3
+request-logging pipeline was manually verified by running the built server and hitting `/health`,
+`/metrics`, and `/api/applications`: JSON output carries the `version`/`env` tags via `.With(...)`,
+`/health` and `/metrics` are correctly silent (the `Skip` replacement for `QuietDownRoutes` works), and
+the 500 from `/api/applications` produced a structured `error.message` log line through `RequestLogger`.
+The koanf env v2 migration is covered by a new `TestConfig/Environment_variable_overrides_file_config`
+case in `internal/tangle/loader_test.go` using `t.Setenv`.
+
+**Two pre-existing, unrelated bugs surfaced by this change** (both fixed here, not by the plan's original
+scope — this go.mod/go.sum edit is what exposed them):
+
+1. `pkg/client/client_test.go`'s `TestGetApplications` and its siblings (`TestGetApplicationsWithRetries`,
+   `TestGetDiffs`, `TestGetDiffsWithRetries`) hardcoded `localhost:8081` with nothing anywhere in the repo
+   ever starting a listener there — no `TestMain`, no `httptest.Server`, and the CI `go` job (unlike the
+   separate `e2e` job) never runs `task services:cicd`. They "passed" in CI purely because
+   `actions/setup-go@v5`'s `cache: true` persists Go's test result cache keyed off `go.sum`, and `go.sum`
+   hadn't changed in a long time — so `go test` kept replaying a stale cached "ok" instead of actually
+   re-executing. This `go.sum` edit changed the cache key, forced a real run, and the true
+   connection-refused/nil-`resp`-panic behavior surfaced for the first time in PR #211's CI
+   (`pkg/client/client_test.go:253` derefs `resp.Results` without checking `err`). Confirmed by diffing
+   this same job's log against `main`'s last green run at the same commit both branches shared. Fixed by
+   giving `pkg/client/client_test.go` its own `newFakeTangleServer` helper (a third copy of the same
+   helper `cmd/tangle-cli/main_test.go` and `internal/cli/tanglecli_test.go` already use — `tangle.New()`
+   run in-process behind `httptest.NewServer`, fake ArgoCD wrappers), and adding the missing
+   `assert.NoError(t, err)` before dereferencing `resp`.
+2. `internal/tangle/handlers.go`'s `applicationManifestsHandler` didn't `return` after writing the
+   error response for a `GetManifests` failure, so it fell through and nil-dereferenced
+   `generatedManifests.LiveManifests` (nil on error) on every single manifest-generation error. This had
+   been silently recovered by chi's `Recoverer` on every occurrence without failing a test, because the
+   error response was already fully written to the client *before* the panic — Recoverer sees the status
+   already set and skips writing a second response, so the caller always got the correct output despite
+   the server panicking (and logging a full stack trace) on the backend every time. Fixed by adding the
+   missing `return`; covered by a new `TestDiffsError` case in `internal/tangle/handlers_test.go` that
+   asserts `assert.NotPanics` around the handler call.
+
+`task docker:build` and the live-cluster `task services:cicd`/`e2e` suite were not run as part of this
+pass (the `go` job's unit/integration suite no longer needs a live cluster at all after the fixes above)
+— worth confirming once more before this ships, since the `e2e` job is a separate, always-run gate.
