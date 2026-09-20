@@ -10,9 +10,12 @@ artifacts when a GitHub Release is published.
 
 ## Pipeline
 
-`ci.yaml` builds out a full test pyramid — fast, path-conditional unit/integration checks for Go
-and the frontend, plus one always-run e2e job against a real ArgoCD — per
-[ADR 0009](../adrs/0009-ci-pipeline-test-taxonomy-and-conditional-jobs.md):
+`ci.yaml` builds out a full test pyramid — fast, always-run unit/integration checks for Go and the
+frontend, plus one always-run e2e job against a real ArgoCD — per
+[ADR 0009](../adrs/0009-ci-pipeline-test-taxonomy-and-conditional-jobs.md) and
+[ADR 0017](../adrs/0017-always-run-go-and-ts-ci-jobs.md) (which dropped `go`/`ts`'s original
+path-conditional gating once `e2e`'s always-run design made it stop saving any developer wait
+time):
 
 ```mermaid
 flowchart TB
@@ -25,16 +28,14 @@ flowchart TB
 
     subgraph ci_wf["ci.yaml"]
         direction TB
-        filter_job["filter<br/>dorny/paths-filter"]
-        go_job["go (if: go paths changed)<br/>gofmt · lint · unit + integration tests · coverage"]
-        ts_job["ts (if: web/** changed)<br/>vitest · mocked Playwright · eslint · sveltekit build"]
+        filter_job["filter<br/>dorny/paths-filter (docs only)"]
+        go_job["go (always runs)<br/>gofmt · lint · unit + integration tests · coverage"]
+        ts_job["ts (always runs)<br/>vitest · mocked Playwright · eslint · sveltekit build"]
         docs_job["docs (if: docs/** changed)<br/>mkdocs build (task python:test)"]
         pre_commit_job["pre-commit (always runs)<br/>prek run --all-files (SKIP=web-lint)"]
         e2e_job["e2e (always runs)<br/>real k3d+ArgoCD · Go live tests · live Playwright suite"]
         report_job["report (always runs)<br/>unified JUnit + centralized octocov coverage"]
 
-        filter_job --> go_job
-        filter_job --> ts_job
         filter_job --> docs_job
         go_job --> report_job
         ts_job --> report_job
@@ -59,31 +60,37 @@ flowchart TB
     release_pub --> goreleaser_job
 ```
 
-`go`/`ts`/`docs` are gated on `filter`'s path outputs and skip cleanly (green, skipped — not
-pending) when their paths aren't touched; a skipped job still satisfies branch-protection required
-checks naming it. `e2e` has no `if:` — it always runs, since it's the one place real ArgoCD/browser
-coverage happens for both languages. `pre-commit` likewise has no `if:` — most of its hooks
-(`trailing-whitespace`, `check-yaml`, `markdownlint-cli2`, `renovate-config-validator`) are
-repo-wide with no single ecosystem path to filter on; it replaced the hosted pre-commit.ci service
-with a self-hosted [prek](https://github.com/j178/prek) run once the repo standardized on prek
-locally ([ADR 0014](../adrs/0014-drop-precommit-ci-run-prek-in-actions.md)) — `web-lint` stays
-skipped (`SKIP=web-lint`) since `ts`'s own `task ts:lint` already gates it for real. `report`
+`docs` is the only job still gated on `filter`'s path output, and skips cleanly (green, skipped —
+not pending) when `docs/**` (excluding `docs/agents/**`) isn't touched; a skipped job still
+satisfies branch-protection required checks naming it. `go` and `ts` used to be gated the same way,
+but [ADR 0017](../adrs/0017-always-run-go-and-ts-ci-jobs.md) dropped that once `e2e`'s always-run
+design meant skipping them no longer saved any developer wait time, only runner-minutes — so `go`,
+`ts`, `e2e`, and `pre-commit` all now have no `if:` and run on every push and PR. `e2e` remains the
+one place real ArgoCD/browser coverage happens for both languages. `pre-commit` has no `if:` for a
+different reason — most of its hooks (`trailing-whitespace`, `check-yaml`, `markdownlint-cli2`,
+`renovate-config-validator`) are repo-wide with no single ecosystem path to filter on; it replaced
+the hosted pre-commit.ci service with a self-hosted [prek](https://github.com/j178/prek) run once
+the repo standardized on prek locally
+([ADR 0014](../adrs/0014-drop-precommit-ci-run-prek-in-actions.md)) — `web-lint` stays skipped
+(`SKIP=web-lint`) since `ts`'s own `task ts:lint` already gates it for real. `report`'s
 `needs: [go, ts, e2e]` with `if: always()` (deliberately not `pre-commit`, which produces no JUnit
-output to merge), so it
-still runs and produces a combined result even when `go`/`ts` were skipped — including its
-coverage report, since `go`/`e2e` upload their raw coverage profiles as artifacts rather than each
-running [octocov](https://github.com/k1LoW/octocov) (ADR 0010) itself; `report` is the one place
-that runs, downloading and merging whichever of the two are actually available.
+output to merge) means it still runs and produces a combined result even if one of its three inputs
+fails outright — that's now the only reason `if: always()` matters here, since `go`/`ts` no longer
+skip for path reasons the way they did under ADR 0009. Its coverage report still works the same
+way: `go`/`e2e` upload their raw coverage profiles as artifacts rather than each running
+[octocov](https://github.com/k1LoW/octocov) (ADR 0010) itself; `report` is the one place that runs,
+downloading and merging whichever of the two are actually available.
 
 ## The test pyramid
 
-Both languages now split unit/integration (fast, path-conditional, no live dependencies) from e2e
-(slow, always-run, real ArgoCD):
+Both languages now split unit/integration (fast, always-run, no live dependencies) from e2e (slow,
+always-run, real ArgoCD) — per [ADR 0017](../adrs/0017-always-run-go-and-ts-ci-jobs.md), the
+unit/integration layer is no longer path-conditional either:
 
 | Layer | Go | TS | Runs in | Gated on |
 | --- | --- | --- | --- | --- |
-| Unit | `pkg/client`, `internal/tangle` (server/loader/manifests), `internal/cli/output_test.go` | `*.spec.ts`, `*.svelte.test.ts` (vitest) | `go` / `ts` | Path filter |
-| Integration (mock/fixture-backed) | `internal/argocd` (via `internal/argocd/argocdfakes`), `internal/tangle/handlers_test.go`, CLI round-trip tests (via `httptest.NewServer`) | `web/e2e/mocked/*.spec.ts` (Playwright, network-mocked via `page.route`) | `go` / `ts` | Path filter |
+| Unit | `pkg/client`, `internal/tangle` (server/loader/manifests), `internal/cli/output_test.go` | `*.spec.ts`, `*.svelte.test.ts` (vitest) | `go` / `ts` | Always runs |
+| Integration (mock/fixture-backed) | `internal/argocd` (via `internal/argocd/argocdfakes`), `internal/tangle/handlers_test.go`, CLI round-trip tests (via `httptest.NewServer`) | `web/e2e/mocked/*.spec.ts` (Playwright, network-mocked via `page.route`) | `go` / `ts` | Always runs |
 | E2E (real ArgoCD, real browser) | `internal/argocd/client_e2e_test.go`, `internal/tangle/server_e2e_test.go` (`//go:build e2e`) | `web/e2e/live/*.spec.ts` (Playwright, real cluster, `playwright.live.config.ts`) | `e2e` | Always runs |
 
 `go test ./...` (no build tag) needs no `.env`, live ArgoCD, or Docker — it's a pure, fast
@@ -94,8 +101,10 @@ the live suite runs separately via `task ts:test:e2e:live` (no local dev server 
 
 ## The `e2e` job: real ArgoCD, not mocks
 
-`e2e` is the only job that runs against a real cluster rather than a fake/mocked ArgoCD API, and
-the only job in `ci.yaml` with no path-based `if:`:
+`e2e` is the only job that runs against a real cluster rather than a fake/mocked ArgoCD API. It
+was also the first job with no path-based `if:` at all — `go` and `ts` now share that (per
+[ADR 0017](../adrs/0017-always-run-go-and-ts-ci-jobs.md)); only `docs` still skips based on
+`filter`'s output:
 
 1. Install Go 1.27, Node 24, [Task](https://taskfile.dev), [k3d](https://k3d.io), and the `argocd`
    CLI — both versions come from this job's own `env: K3D_VERSION`/`ARGOCD_VERSION` (`v5.9.0`/
@@ -118,7 +127,8 @@ the only job in `ci.yaml` with no path-based `if:`:
 
 Go module/tool-binary caching, npm caching, Playwright-browser caching, and k3d/argocd CLI caching
 (workstream 12) all apply here too, alongside the Docker layer cache — this is the one job that
-pays for all of them on every run, since it's the one job with no path-based `if:`.
+pays for all of them on every run, since it's the only job that also stands up a real k3d/ArgoCD
+cluster and builds the Docker image.
 
 The `go` job, by contrast, is now fully hermetic: it folds in what used to be the standalone
 `format` job (a `gofmt` check, first, before installing the rest of the Go toolchain) and runs only
@@ -142,8 +152,8 @@ partial version:
 1. Download every `*-junit-report` artifact (`go`, `ts`, `e2e` — whichever ran) into one directory
    and publish them as a single "Unified Test Results" check.
 2. Download every `*-coverage-profile` artifact — `go`'s `coverage.out` and `e2e`'s
-   `coverage-e2e.out`, if present (a skipped `go` job just leaves that one missing, not erroring;
-   `e2e` always runs, so there's always at least its own) — into one directory.
+   `coverage-e2e.out`, if present (a `go` job that fails outright just leaves that one missing,
+   not erroring; `e2e` always runs, so there's always at least its own) — into one directory.
 3. Run [octocov](https://github.com/k1LoW/octocov) (ADR 0010) once, pointed at both files via
    `.octocov.yml`'s `coverage.paths:`. octocov merges overlapping coverage itself (folding
    duplicate-covered lines rather than double-counting), so the resulting PR comment/diff reflects
@@ -160,8 +170,9 @@ comparing `octocov dump report` against each input file alone before landing thi
 
 ## Things worth revisiting
 
-- **Resolved**: no job dependencies/ordering — `filter` now gates `go`/`ts`/`docs`, and `format`'s
-  fail-fast concern is moot now that it's folded into `go` as its first step.
+- **Resolved**: no job dependencies/ordering — `filter` now gates `docs` (`go`/`ts` always run,
+  per [ADR 0017](../adrs/0017-always-run-go-and-ts-ci-jobs.md)), and `format`'s fail-fast concern
+  is moot now that it's folded into `go` as its first step.
 - **Resolved**: no caching of Go modules, npm packages, or the k3d/ArgoCD CLI downloads —
   [workstream 12](plans/ci-pipeline-restructure.md#12-ci-dependency-caching) landed this: Go
   module/build cache, Go tool-binary cache, npm cache, Playwright-browser cache, k3d/argocd CLI

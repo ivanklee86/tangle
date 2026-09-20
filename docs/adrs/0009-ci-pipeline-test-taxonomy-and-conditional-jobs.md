@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "proposed; path-conditional gating for go/ts superseded by 0017"
 date: 2026-09-20
 decision-makers: ["Ivan Lee"]
 consulted: []
