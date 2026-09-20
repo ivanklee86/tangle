@@ -136,7 +136,7 @@
 </script>
 
 <svelte:head>
-	<title>Tangle - Diffs</title>
+	<title>Diffs | Tangle</title>
 </svelte:head>
 
 <Heading tag="h1" class="sr-only">Diffs</Heading>
