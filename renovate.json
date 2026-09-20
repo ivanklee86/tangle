@@ -16,6 +16,12 @@
       "enabled": false
     },
     {
+      "description": "k8s.io/* and the gitops-engine replace mirror argo-cd v3.5.3's own vendoring pins; only a deliberate argo-cd bump should move them",
+      "matchDatasources": ["go"],
+      "matchPackageNames": ["k8s.io/**", "github.com/argoproj/argo-cd/gitops-engine"],
+      "enabled": false
+    },
+    {
       "matchManagers": ["dockerfile"],
       "matchPackageNames": ["golang", "ghcr.io/ivanklee86/devcontainer/go"],
       "groupName": "go"
