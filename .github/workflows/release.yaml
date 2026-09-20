@@ -67,3 +67,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_HOMBREW_AUTH_TOKEN: ${{ secrets.HOMEBREW_AUTH_TOKEN }}
+
+  notify-tangle-deployments:
+    runs-on: ubuntu-latest
+    if: github.event.release.prerelease == false
+    steps:
+      - name: Dispatch chart bump
+        run: |
+          gh api repos/ivanklee86/tangle-deployments/dispatches \
+            -f event_type=tangle-release \
+            -f "client_payload[version]=${{ github.event.release.tag_name }}"
+        env:
+          GH_TOKEN: ${{ secrets.TANGLE_DEPLOYMENTS_DISPATCH_TOKEN }}
