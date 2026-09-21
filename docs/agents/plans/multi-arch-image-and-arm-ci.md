@@ -511,7 +511,11 @@ No configuration change needed. `docker/setup-qemu-action` is matched by the exi
 
 **Update branch protection**, in the same change window as the merge. Two things move:
 
-- Matrixing renames `go` → `go (amd64)`/`go (arm64)` and `e2e` → `e2e (amd64)`/`e2e (arm64)`. A
+- Matrixing renames `go` → `go (amd64)`/`go (arm64)` and `e2e` → `e2e (amd64)`/`e2e (arm64)`.
+  Those names come from an explicit `name:` on each job — without one, GitHub derives the check
+  name from every matrix dimension (`go (amd64, ubuntu-latest)`), embedding the runner label in a
+  name branch protection depends on, so a later `ubuntu-latest` bump would rename a required check
+  all over again. A
   required-check rule naming `go` or `e2e` stops being satisfiable by anything. It fails closed —
   PRs block rather than merge unchecked — but it blocks *every* PR until the rule lists the new
   names.

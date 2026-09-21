@@ -30,6 +30,11 @@ jobs:
             - '.github/workflows/ci.yaml'
 
   go:
+    # Explicit, or GitHub derives the check name from *every* matrix
+    # dimension — `go (amd64, ubuntu-latest)` — which embeds the runner
+    # label in a name branch protection depends on. A future
+    # ubuntu-latest bump would then silently rename a required check.
+    name: go (${{ matrix.arch }})
     strategy:
       # An arm64-only failure should still report the amd64 result, and vice
       # versa — telling the two apart is the entire diagnostic value of the
@@ -213,6 +218,8 @@ jobs:
         prek-version: 0.5.3
 
   e2e:
+    # See the go job — pins the check name against the runner label.
+    name: e2e (${{ matrix.arch }})
     strategy:
       # Same shape as the go job's matrix, and for the same reason. The arch
       # values are Go's GOARCH spellings deliberately — the argocd install
