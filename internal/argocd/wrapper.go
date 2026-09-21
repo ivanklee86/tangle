@@ -19,6 +19,8 @@ type IArgoCDWrapper interface {
 	GetManifests(ctx context.Context, applicationName string, liveRef string, targetRef string) (*GetManifestsResponse, error)
 	GetUrl() string
 	GetScheme() string
+	// Close releases the underlying ArgoCD connection.
+	Close() error
 }
 
 type ArgoCDWrapperOptions struct {
@@ -189,4 +191,8 @@ func (a *ArgoCDWrapper) GetUrl() string {
 
 func (a *ArgoCDWrapper) GetScheme() string {
 	return a.ApplicationClient.GetScheme()
+}
+
+func (a *ArgoCDWrapper) Close() error {
+	return a.ApplicationClient.Close()
 }

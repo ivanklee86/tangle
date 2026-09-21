@@ -127,3 +127,9 @@ func matchesLabels(candidate map[string]string, includeLabels map[string]string,
 }
 
 var _ argocd.IArgoCDWrapper = (*FakeWrapper)(nil)
+
+// Close satisfies argocd.IArgoCDWrapper. There's no connection behind a fake,
+// so there's nothing to release.
+func (f *FakeWrapper) Close() error {
+	return nil
+}
