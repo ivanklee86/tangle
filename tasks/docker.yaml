@@ -14,6 +14,16 @@ tasks:
       # builder.
       - docker buildx build -f Dockerfile -t tangle --load ${DOCKER_BUILD_CACHE_FLAGS:-} .
 
+  build:multiarch:
+    desc: Cross-build the image for both release architectures (verification only — no load, no push).
+    cmds:
+      # No --load, deliberately: the local image store can't hold a
+      # multi-platform result, so this builds both and discards the output.
+      # Needs a docker-container builder (`docker buildx create --use`) —
+      # the default `docker` driver refuses --platform with more than one
+      # entry, which is the same reason CI needs setup-buildx-action.
+      - docker buildx build -f Dockerfile --platform linux/amd64,linux/arm64 ${DOCKER_BUILD_CACHE_FLAGS:-} .
+
   shell:
     desc: Run shell in Docker container.
     cmds:

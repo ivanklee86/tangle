@@ -15,7 +15,9 @@ frontend, plus one always-run e2e job against a real ArgoCD — per
 [ADR 0009](../adrs/0009-ci-pipeline-test-taxonomy-and-conditional-jobs.md) and
 [ADR 0017](../adrs/0017-always-run-go-and-ts-ci-jobs.md) (which dropped `go`/`ts`'s original
 path-conditional gating once `e2e`'s always-run design made it stop saving any developer wait
-time):
+time). Both Go layers of that pyramid run twice, on amd64 and arm64, since the published container
+image is a two-platform manifest list
+([ADR 0024](../adrs/0024-multi-arch-container-image-and-arm-ci.md)):
 
 ```mermaid
 flowchart TB
@@ -29,11 +31,12 @@ flowchart TB
     subgraph ci_wf["ci.yaml"]
         direction TB
         filter_job["filter<br/>dorny/paths-filter (docs only)"]
-        go_job["go (always runs)<br/>gofmt · lint · unit + integration tests · coverage"]
+        go_job["go (matrix: amd64, arm64)<br/>gofmt · lint · unit + integration tests · coverage"]
         ts_job["ts (always runs)<br/>vitest · mocked Playwright · eslint · sveltekit build"]
         docs_job["docs (if: docs/** changed)<br/>mkdocs build (task python:test)"]
         pre_commit_job["pre-commit (always runs)<br/>prek run --all-files (SKIP=web-lint)"]
-        e2e_job["e2e (always runs)<br/>real k3d+ArgoCD · Go live tests · live Playwright suite"]
+        e2e_job["e2e (matrix: amd64, arm64)<br/>real k3d+ArgoCD · Go live tests · live Playwright suite"]
+        image_job["image (always runs)<br/>buildx cross-build linux/amd64+arm64 · no push"]
         report_job["report (always runs)<br/>unified JUnit + centralized octocov coverage"]
 
         filter_job --> docs_job
@@ -48,7 +51,7 @@ flowchart TB
 
     subgraph release_wf["release.yaml"]
         direction LR
-        docker_job["docker<br/>build + push ghcr.io image"]
+        docker_job["docker<br/>buildx cross-build + push<br/>two-platform ghcr.io manifest list"]
         goreleaser_job["goreleaser<br/>swagger generate → goreleaser release --clean"]
     end
 
@@ -104,7 +107,8 @@ the live suite runs separately via `task ts:test:e2e:live` (no local dev server 
 `e2e` is the only job that runs against a real cluster rather than a fake/mocked ArgoCD API. It
 was also the first job with no path-based `if:` at all — `go` and `ts` now share that (per
 [ADR 0017](../adrs/0017-always-run-go-and-ts-ci-jobs.md)); only `docs` still skips based on
-`filter`'s output:
+`filter`'s output. It runs as a two-leg matrix (`ubuntu-latest` and `ubuntu-24.04-arm`), so
+everything below happens twice, once per architecture:
 
 1. Install Go 1.27, Node 24, [Task](https://taskfile.dev), [k3d](https://k3d.io), and the `argocd`
    CLI — both k3d/argocd versions come from this job's own `env: K3D_VERSION`/`ARGOCD_VERSION`
@@ -113,7 +117,10 @@ was also the first job with no path-based `if:` at all — `go` and `ts` now sha
    relying on a comment. Task comes from the local `./.github/actions/setup-task` composite action
    rather than `arduino/setup-task` directly — see
    [ADR 0018](../adrs/0018-pin-and-cache-the-task-cli-in-ci.md). No separate Docker setup step —
-   `ubuntu-latest` ships a recent enough Docker/Buildx already.
+   both runner images ship a recent enough Docker/Buildx already. k3d's `install.sh` picks its own
+   architecture, but the `argocd` download does not, so the asset name is built from `matrix.arch`
+   (`argocd-linux-amd64` / `argocd-linux-arm64`) — which is why the matrix uses Go's `GOARCH`
+   spellings rather than `x64`/`aarch64`.
 2. `task go:install-ci` — Go deps + CI tooling; `task go:generate` — regenerates the Swagger spec.
 3. `task services:cicd` (`Taskfile.yaml`) — the expensive step: tears down and recreates a k3d
    cluster, waits for a real ArgoCD install to become healthy, mints an ArgoCD API token, builds
@@ -125,8 +132,9 @@ was also the first job with no path-based `if:` at all — `go` and `ts` now sha
    `coverage-e2e.out`/`.html`, kept separate from the `go` job's own report/coverage filenames).
 5. Install the frontend's npm packages and pinned Playwright browser, then
    `task ts:test:e2e:live` — the live-stack Playwright suite against the container from step 3.
-6. Publish JUnit results (both the Go e2e suite and the frontend live suite) and upload them, plus
-   the raw `coverage-e2e.out` profile, as build artifacts for the `report` job.
+6. Publish JUnit results (both the Go e2e suite and the frontend live suite) to a per-leg check —
+   `E2E Test Results (amd64)` / `(arm64)` — and, on the amd64 leg only, upload them plus the raw
+   `coverage-e2e.out` profile as build artifacts for the `report` job.
 
 Go module/tool-binary caching, npm caching, Playwright-browser caching, k3d/argocd CLI caching
 (workstream 12), and Task CLI caching ([ADR 0018](../adrs/0018-pin-and-cache-the-task-cli-in-ci.md))
@@ -137,8 +145,10 @@ the Docker image.
 The `go` job, by contrast, is now fully hermetic: it folds in what used to be the standalone
 `format` job (a `gofmt` check, first, before installing the rest of the Go toolchain) and runs only
 `internal/argocd/argocdfakes`-backed unit/integration tests — no Docker, k3d, or ArgoCD CLI install
-at all. It uploads its own raw `coverage.out` alongside the rendered `coverage.html`, but doesn't
-run octocov itself (see the `report` job below). `ts` similarly runs unit tests and the mocked
+at all. That hermeticity is what makes its own amd64/arm64 matrix nearly free: a second leg needs
+no new setup, only a second runner. It uploads its own raw `coverage.out` alongside the rendered
+`coverage.html` — from the amd64 leg only, since coverage is a property of the source rather than
+the runner — but doesn't run octocov itself (see the `report` job below). `ts` similarly runs unit tests and the mocked
 (network-stubbed) Playwright suite, installing a pinned-version Playwright Chromium build (invoked
 via `node node_modules/playwright/cli.js` rather than `npx`, to dodge a bin-name collision with
 `@playwright/test`'s own bundled `playwright`). Both `ts` and `e2e` install frontend packages via
@@ -153,6 +163,42 @@ needs `uv` to build the mkdocs site.
 `language: script` in `dnephin/pre-commit-golang`, so prek doesn't provision one itself), then
 [`j178/prek-action`](https://github.com/j178/prek-action) (SHA-pinned) runs the rest of
 `.pre-commit-config.yaml`'s hooks — no Node/npm install, since `web-lint` is skipped here.
+
+## The `image` job: guarding the cross-build
+
+`image` is the only job that builds the container image for *both* platforms, and the only one that
+exercises cross-compilation at all. That distinction matters and is easy to lose: the `e2e` arm64
+leg does build an arm64 image, but it builds it natively, where buildx's `BUILDPLATFORM` equals
+`TARGETPLATFORM` and the Dockerfile's `GOOS`/`GOARCH` args are a no-op. Only an amd64 runner
+emitting `linux/arm64` actually takes the path `release.yaml` takes. Without this job, a Dockerfile
+change that breaks that path passes every PR check and fails at release time, after a tag exists
+and a GitHub Release is already published.
+
+It's deliberately cheap: `push: false`, its own `type=gha` cache scope (`image-multiarch`, so it
+doesn't fight `e2e`'s per-arch scopes), and — because the Dockerfile pins both build stages to
+`--platform=$BUILDPLATFORM` — no emulated compilation. QEMU is registered only for the runtime
+stage's single `adduser`, which has to run on the target platform. It is also absent from
+`report`'s `needs:`, since it produces no JUnit or coverage artifact to merge.
+
+## Architecture-scoped cache keys
+
+Three `actions/cache` keys hold **compiled binaries** and are shared across jobs that now run on
+two architectures. Each needs `runner.arch` in the key; `runner.os` is `Linux` on both and does not
+discriminate. This is the detail most likely to be undone by a future edit that doesn't know it
+matters, and the failure mode is indirect — a cache *hit* that skips an install step, then an
+`exec format error` minutes later in a seemingly unrelated place:
+
+| Key | Caches | Written by |
+| --- | --- | --- |
+| `go-tools-<os>-<arch>-<hash>` | `~/go/bin` (Go CI tooling) | `go` and `e2e`, both legs each — four writers |
+| `cli-tools-<arch>-k3d-…-argocd-…` | `/usr/local/bin/k3d`, `/usr/local/bin/argocd` | `e2e`, both legs |
+| `playwright-<os>-<arch>-1.63.0` | `~/.cache/ms-playwright` (browser binaries) | `ts` (amd64) and `e2e`, both legs |
+
+`e2e`'s buildx layer cache needs the same treatment for the same reason, via a scope rather than a
+key: `scope=e2e-${{ matrix.arch }}`, so the two legs don't export mutually useless layers over each
+other or over `image`'s two-platform cache. `./.github/actions/setup-task` already keys on
+`runner.arch` ([ADR 0018](../adrs/0018-pin-and-cache-the-task-cli-in-ci.md)), and `actions/setup-go`
+and `actions/setup-node` include OS and arch in their own keys, so those three need nothing.
 
 ## The `report` job: unified tests and coverage
 
@@ -198,6 +244,20 @@ comparing `octocov dump report` against each input file alone before landing thi
   rate-limit), an `actions/cache` restore of `${{ runner.tool_cache }}/task` so a hit skips the
   download, and `repo-token` as a backstop if the pin is ever loosened
   ([ADR 0018](../adrs/0018-pin-and-cache-the-task-cli-in-ci.md)).
+- **Resolved**: the published container image was `linux/amd64` only, and nothing in CI ever ran on
+  ARM — `go` and `e2e` are now two-leg amd64/arm64 matrices, `image` guards the cross-build, and
+  `release.yaml` pushes a two-platform manifest list
+  ([ADR 0024](../adrs/0024-multi-arch-container-image-and-arm-ci.md)). Three cache keys had to
+  become architecture-scoped along the way (see above).
+- **Open**: ARM coverage stops at the Go layers. `ts` deliberately stays amd64-only — vitest and
+  the network-mocked Playwright suite produce architecture-independent results, and the real
+  browser on a real arm64 kernel is already covered by `e2e`'s live suite — but that's a judgment
+  call worth re-examining if the frontend ever grows a native dependency that ships in its output.
+- **Accepted trade-off**: the pipeline's runner-minutes roughly doubled (two full k3d + ArgoCD
+  bring-ups per run, plus the `image` build). That's free only while this repository is public,
+  where `ubuntu-24.04-arm` costs nothing; it would need rethinking if it ever goes private. Wall
+  clock is also now hostage to arm64 runner availability — the legs run concurrently, so normally
+  no slower, but a queued arm64 pool delays every PR, and `e2e` was already the critical path.
 - **Resolved**: pre-commit.ci (a hosted third-party GitHub App) has been dropped — a self-hosted
   `pre-commit` job now runs the same hook suite via [prek](https://github.com/j178/prek) directly
   in `ci.yaml`, the same tool already used locally
