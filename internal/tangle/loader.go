@@ -2,8 +2,8 @@ package tangle
 
 import (
 	"errors"
-	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/knadh/koanf/parsers/yaml"
@@ -15,6 +15,10 @@ import (
 
 const EnvVarPrefix string = "TANGLE_"
 
+// ConfigPathEnvVar names the YAML config file. LoadConfig reads it directly, so it is deliberately
+// not a key in TangleConfig.
+const ConfigPathEnvVar string = EnvVarPrefix + "CONFIG_PATH"
+
 type LoadConfigOptions struct {
 	Path string
 }
@@ -23,7 +27,7 @@ func LoadConfig(config *koanf.Koanf, options LoadConfigOptions) (*TangleConfig, 
 	// Look up config file
 	configPath := ""
 	if len(options.Path) == 0 {
-		value, exists := os.LookupEnv(fmt.Sprintf("%sCONFIG_PATH", EnvVarPrefix))
+		value, exists := os.LookupEnv(ConfigPathEnvVar)
 		if !exists {
 			return nil, errors.New("configuration path not set")
 		}
@@ -45,17 +49,36 @@ func LoadConfig(config *koanf.Koanf, options LoadConfigOptions) (*TangleConfig, 
 		return nil, err
 	}
 
+	// Kubernetes injects <SERVICE>_SERVICE_HOST, <SERVICE>_PORT and
+	// <SERVICE>_PORT_<port>_<proto>_ADDR (and friends) into every pod sharing a namespace with a
+	// Service, so a Service named "tangle" collides head-on with this prefix:
+	// TANGLE_PORT_8080_TCP_ADDR would otherwise unflatten into a map at "port", where an int is
+	// expected. Ignore any TANGLE_ variable that doesn't name a real config key, plus any whose
+	// value has the injected Docker-link shape — TANGLE_PORT does name a real key.
+	ignoredEnvVars := []string{}
 	err = config.Load(env.Provider(".", env.Opt{
 		Prefix: EnvVarPrefix,
 		TransformFunc: func(k, v string) (string, any) {
 			key := strings.ReplaceAll(strings.ToLower(
 				strings.TrimPrefix(k, EnvVarPrefix)), "_", ".")
-			return key, v
+
+			if k == ConfigPathEnvVar {
+				return "", nil
+			}
+
+			canonical, exists := resolveConfigKey(key)
+			if !exists || kubernetesServiceLinkValue.MatchString(v) {
+				ignoredEnvVars = append(ignoredEnvVars, k)
+				return "", nil
+			}
+
+			return canonical, v
 		},
 	}), nil)
 	if err != nil {
 		return nil, err
 	}
+	slices.Sort(ignoredEnvVars)
 
 	// Unmarshall into config
 	var tangleConfig TangleConfig
@@ -63,6 +86,8 @@ func LoadConfig(config *koanf.Koanf, options LoadConfigOptions) (*TangleConfig, 
 	if err != nil {
 		return nil, err
 	}
+
+	tangleConfig.IgnoredEnvVars = ignoredEnvVars
 
 	return &tangleConfig, nil
 }
