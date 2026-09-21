@@ -153,3 +153,20 @@ func TestConfigPathEnvVar(t *testing.T) {
 		assert.Empty(t, loadedConfig.IgnoredEnvVars)
 	})
 }
+
+func TestConfigFileKeys(t *testing.T) {
+	// Every key documented in docs/configuration.md has to match its koanf tag, or setting it
+	// does nothing at all. `manifestWorkers` was documented — and set in this fixture — for a
+	// tag spelled `manifestsWorkers`, so GetManifests parallelism silently stayed at its default.
+	t.Run("Tuning keys in the config file reach the struct", func(t *testing.T) {
+		_, loadedConfig, err := loadTestConfig(t)
+
+		assert.Nil(t, err)
+		assert.Equal(t, 8081, loadedConfig.Port)
+		assert.Equal(t, 20, loadedConfig.ListWorkers)
+		assert.Equal(t, 10, loadedConfig.ManifestsWorkers)
+		assert.Equal(t, 10, loadedConfig.HardRefreshWorkers)
+		// Not in the fixture, so it falls back to the struct default.
+		assert.Equal(t, TangleConfigDefaults.Timeout, loadedConfig.Timeout)
+	})
+}

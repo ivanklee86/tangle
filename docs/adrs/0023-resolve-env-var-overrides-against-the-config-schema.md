@@ -157,6 +157,9 @@ chart is consumed by users who may be running an older revision of it.
   `github.com/knadh/koanf/providers/env/v2@v2.0.1`
 - Implementation: `internal/tangle/envkeys.go`, `internal/tangle/loader.go`; regression coverage in
   `internal/tangle/loader_test.go` (`TestEnvironmentVariables`)
-- Follow-up, not addressed here: `docs/configuration.md` documents the parallelism setting as
-  `manifestWorkers`, but the struct tag is `manifestsWorkers` — the documented spelling silently
-  does nothing. `integration/tangle.yaml` has the same typo.
+- Found while writing the schema resolver, fixed alongside it: `docs/configuration.md` documented
+  the parallelism setting as `manifestWorkers` and `integration/tangle.yaml` set it, but the struct
+  tag is `manifestsWorkers` — so `GetManifests` parallelism silently stayed at its default of 5 for
+  anyone following the docs. The tag is canonical (changing it would break configs that already
+  work), so the doc and the fixture were corrected to match it, and `TestConfigFileKeys` now asserts
+  the file's tuning keys reach the struct so the two can't drift again.
