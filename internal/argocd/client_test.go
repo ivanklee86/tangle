@@ -315,6 +315,38 @@ func TestArgoCDClient_ConcurrentFailuresShareOneReconnect(t *testing.T) {
 	assert.Equal(t, 1, dead.closer.count(), "the dead connection should be closed exactly once")
 }
 
+// Generation collapsing only holds when the replacement dial succeeds. A failed
+// one leaves no current connection, so the callers behind it each dial rather
+// than being handed a shared replacement — and, more importantly, rather than
+// being locked out of recovery by a redial that happened to fail.
+func TestArgoCDClient_FailedRedialDoesNotCollapseLaterAttempts(t *testing.T) {
+	client, script := newTestClient(t,
+		okConn(unavailable()),
+		failedDial(fmt.Errorf("argocd is unreachable")),
+		okConn(nil),
+	)
+
+	stale, err := client.connection()
+	assert.NoError(t, err)
+
+	_, err = client.reconnect(stale)
+	assert.Error(t, err)
+	assert.Equal(t, 2, script.count())
+
+	// A second caller still holding the stale connection dials for itself,
+	// because the failed redial left nothing current to hand it.
+	fresh, err := client.reconnect(stale)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(2), fresh.generation)
+	assert.Equal(t, 3, script.count())
+
+	// ...and once one succeeds, collapsing applies again.
+	same, err := client.reconnect(stale)
+	assert.NoError(t, err)
+	assert.Equal(t, fresh, same)
+	assert.Equal(t, 3, script.count())
+}
+
 func TestArgoCDClient_SurfacesBothErrorsWhenRedialingFails(t *testing.T) {
 	lost := unavailable()
 	dialErr := fmt.Errorf("argocd is unreachable")

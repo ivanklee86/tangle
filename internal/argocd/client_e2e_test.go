@@ -11,6 +11,7 @@ import (
 	"github.com/argoproj/argo-cd/v3/pkg/apiclient/application"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // setup loads the live ArgoCD auth tokens `task argocd:token` mints into
@@ -267,7 +268,9 @@ func TestE2E_ArgoCDClient_ReconnectsAfterConnectionLoss(t *testing.T) {
 	assert.Equal(t, uint64(1), stale.generation)
 
 	original := newSockets(before, socketsInTempDir(t))
-	assert.Len(t, original, 1, "the client should own exactly one gRPC-Web proxy socket")
+	// require, not assert: the assertions below index into this slice, so an
+	// unexpected length has to stop the test rather than panic it.
+	require.Len(t, original, 1, "the client should own exactly one gRPC-Web proxy socket")
 
 	fresh, err := argoCDClient.reconnect(stale)
 	assert.NoError(t, err)
@@ -303,7 +306,7 @@ func TestE2E_ArgoCDClient_CloseReleasesTheProxy(t *testing.T) {
 	assert.NoError(t, err)
 
 	added := newSockets(before, socketsInTempDir(t))
-	assert.Len(t, added, 1)
+	require.Len(t, added, 1, "the client should own exactly one gRPC-Web proxy socket")
 
 	assert.NoError(t, client.Close())
 	assert.NoFileExists(t, added[0], "Close should stop the gRPC-Web proxy and unlink its socket")

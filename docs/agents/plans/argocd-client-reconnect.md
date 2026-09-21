@@ -144,10 +144,15 @@ func callWithReconnect[T any](ctx context.Context, c *ArgoCDClient, method strin
 Two properties that matter:
 
 - **One retry, never a loop.** If the retry also fails, that error is what the caller gets.
-- **Generation collapsing.** `reconnect` takes the connection the caller actually used and, under the mutex,
-  redials only if `c.conn` is still that same pointer; otherwise it hands back whatever is current. This matters
-  because `ListApplicationsByLabels` and `GetManifests` fan out over pond pools, so a dead transport surfaces as
-  N simultaneous `Unavailable`s — without the check, N redials and N new proxies.
+- **Generation collapsing, when the replacement dial succeeds.** `reconnect` takes the connection the caller
+  actually used and, under the mutex, redials only if `c.conn` is still that same pointer; otherwise it hands
+  back whatever is current. This matters because `ListApplicationsByLabels` and `GetManifests` fan out over
+  pond pools, so a dead transport surfaces as N simultaneous `Unavailable`s — without the check, N redials and
+  N new proxies. The guarantee is conditional: a *failed* redial leaves no current connection, so the callers
+  behind it each dial for themselves. That is the right trade (being locked out of recovery because one redial
+  failed is worse than a few redundant dials) but it means collapsing bounds a burst around a working
+  replacement, not a burst during an outage — which is the deferred rate limit's job, not this one's.
+  `TestArgoCDClient_FailedRedialDoesNotCollapseLaterAttempts` pins both halves.
 
 A rate limit on redialing is deliberately *not* here — see [Follow-ups](#follow-ups-deferred). Note that
 generation collapsing does not substitute for one: it bounds concurrent redials sharing a connection, but once
@@ -160,8 +165,19 @@ Latency budget worth knowing: argo already installs `grpc_retry.UnaryClientInter
 default. So a call against a dead transport already burns ~2-3s before we see it, and our retry adds a dial plus
 one more attempt. Both sit under chi's `middleware.Timeout(config.Timeout)`.
 
-All three RPCs are reads and safe to repeat. `Get` with `Refresh: "hard"` has a side effect but is idempotent —
-it queues another hard refresh, which is what the caller wanted anyway.
+Two of the three RPCs are pure reads and free to repeat. `Get` with `Refresh: "hard"` — which `GetManifests`
+issues before generating manifests — is not: ArgoCD patches the application's refresh annotation
+(`argo.RefreshApp`) and then forces an uncached `queryRepoServer` comparison
+(`server/application/application.go`). Retrying it therefore repeats real work on the instance we are
+deliberately throttling elsewhere.
+
+We retry it anyway, with the cost stated rather than waved away. Repeating a hard refresh is *repeatable*, not
+free: the second supersedes the first, so the end state is the same, but one extra forced repo-server
+comparison happens. It costs nothing in the `Unavailable` case, where the RPC never left this process — only a
+connection dropped while ArgoCD was already working (`Canceled`) can duplicate the work. Excluding it from the
+retry path would mean the diffs page fails outright exactly when the reconnect would have saved it, which is
+the failure this whole change exists to remove, and the hard-refresh pool already bounds how many can be in
+flight. The call site in `wrapper.go` carries a comment saying so.
 
 In-flight RPCs on the old connection are aborted when we close it. We only close a connection we have already
 seen fail, and any sibling RPC that gets caught lands in its own `callWithReconnect`, sees `Unavailable`, finds
@@ -207,9 +223,13 @@ Unit (`internal/argocd/client_test.go`, fake dial, no ArgoCD):
 
 E2E (`internal/argocd/client_e2e_test.go`, live ArgoCD via `task services:cicd`):
 
-1. **The reported bug.** With a working client, close the underlying transport out from under it — a test-only
-    helper that closes the closer while leaving `c.conn` in place, which is exactly the idle-timeout state — then
-    assert the next `List` succeeds. If this test fails, the bug is back.
+1. **The reported bug.** With a working client, replace the connection underneath it and assert the next `List`
+    succeeds, then that the previous `/tmp/argocd-*.sock` is gone. *Shipped differently from the original plan:*
+    this calls `reconnect(stale)` directly rather than closing the transport and letting an `Unavailable`
+    trigger it. Closing a connection from outside yields `Canceled`, not the `Unavailable` a real idle timeout
+    produces, and that error cannot be provoked from outside the SDK — so this test covers the recovery, and
+    the unit tests cover the classification that leads into it. A stale caller racing the reconnect is checked
+    here too.
 2. `Close` on a live client removes its `/tmp/argocd-*.sock` (snapshot the matching paths before and after).
     This is the only direct evidence that workstream 2 actually releases the proxy.
 

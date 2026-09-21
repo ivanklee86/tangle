@@ -172,6 +172,12 @@ func (c *ArgoCDClient) connectLocked(reason string) (*connection, error) {
 // got there first it returns that one instead of dialing again: a dead transport
 // fails every in-flight RPC at once, and the pond pools in ArgoCDWrapper mean
 // there can be a dozen of them, which should cost one dial between them.
+//
+// That collapsing only applies once a replacement dial has succeeded. A failed
+// one leaves no current connection, so the callers behind it each dial for
+// themselves. That's deliberate: being locked out of recovery because one redial
+// failed would be worse than a few redundant dials, and bounding them is the
+// rate limit deferred in docs/adrs/0025-reconnect-the-argocd-grpc-client.md.
 func (c *ArgoCDClient) reconnect(stale *connection) (*connection, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
