@@ -194,7 +194,7 @@ set on `tangle-deployments`.
 Two changes to the above, made 2026-09-21 after watching three automated bumps land
 (`tangle-deployments` [#25](https://github.com/ivanklee86/tangle-deployments/pull/25), with the
 one-time catch-up of the drift it left behind in
-[#26](https://github.com/ivanklee86/tangle-deployments/pull/26)).
+[#27](https://github.com/ivanklee86/tangle-deployments/pull/27)).
 
 1. **The bump writes `values.yaml`'s `image.tag` too, and the follow-up above is resolved the
    opposite way from how it was framed.** Bumping `Chart.yaml` alone was never enough: the chart's
@@ -279,9 +279,9 @@ one-time catch-up of the drift it left behind in
   (`CHART_BUMP_PAT` for opening the PR — finding 2), [#18](https://github.com/ivanklee86/tangle-deployments/pull/18)
   (`CHART_BUMP_PAT` for the merge too — the actual fix for finding 3, superseding #14's approach),
   [#25](https://github.com/ivanklee86/tangle-deployments/pull/25) (`values.yaml`'s `image.tag` and
-  the switch to minor bumps — see "Revised" above), [#26](https://github.com/ivanklee86/tangle-deployments/pull/26)
-  (the one-time `image.tag` catch-up for the drift the missing bump left behind, alongside two
-  unrelated chart fixes)
+  the switch to minor bumps — see "Revised" above), [#27](https://github.com/ivanklee86/tangle-deployments/pull/27)
+  (the one-time `image.tag` catch-up for the drift the missing bump left behind, alongside an
+  unrelated `manifestsWorkers` key fix; replaces #26, auto-closed by a branch rename)
 - Related: [ADR 0013](0013-renovate-weekly-grouped-updates.md) — the automerge-non-major policy
   this ADR's auto-merge choice mirrors, applied here to a fully mechanical bump instead of a
   Renovate PR
