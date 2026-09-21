@@ -22,6 +22,10 @@ type TangleConfig struct {
 	ManifestsWorkers   int `koanf:"manifestsWorkers"`
 	HardRefreshWorkers int `koanf:"hardRefreshWorkers"`
 
+	// IgnoredEnvVars names the TANGLE_-prefixed environment variables that were present but
+	// don't map to a configuration key. Set by LoadConfig, logged once at startup.
+	IgnoredEnvVars []string
+
 	// Internal configuration (for testing)
 	DoNotInstrument bool
 }

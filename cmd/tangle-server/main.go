@@ -16,7 +16,7 @@ var version = "dev"
 func main() {
 	config, err := tangle.LoadConfig(k, tangle.LoadConfigOptions{})
 	if err != nil {
-		log.Fatalf("Cannot load configuraiton. Error: %s", err)
+		log.Fatalf("Cannot load configuration. Error: %s", err)
 	}
 
 	tangle := tangle.New(config, version)

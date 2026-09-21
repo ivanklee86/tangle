@@ -86,6 +86,13 @@ func New(config *TangleConfig, version string) *Tangle {
 	}
 	tangle.Log = logger
 
+	// Surface TANGLE_-prefixed variables that name no config key — most often Kubernetes'
+	// injected Service link vars, which a "tangle" Service puts in this pod's environment.
+	if len(config.IgnoredEnvVars) > 0 {
+		logger.Warn("Ignoring environment variables that do not map to a configuration key.",
+			slog.Any("ignoredEnvVars", config.IgnoredEnvVars))
+	}
+
 	// Create ArgoCD clients
 	wrappers := make(map[string]argocd.IArgoCDWrapper)
 	for key, value := range config.ArgoCDs {

@@ -72,6 +72,18 @@ registered as Prometheus `GaugeFunc`/`CounterFunc` collectors labeled `pool` + `
 [`koanf`](https://github.com/knadh/koanf) layers, last wins: struct defaults → YAML at
 `TANGLE_CONFIG_PATH` → `TANGLE_`-prefixed env vars (`_` → `.`). ArgoCD auth tokens are never in the
 config file — each instance names an env var (`authTokenEnvVar`) read at client construction.
+
+Env var names are resolved against `TangleConfig`'s `koanf` tags, reflected into a key tree at
+startup (`internal/tangle/envkeys.go`): a variable that names no key is dropped and recorded in
+`IgnoredEnvVars`, which `New` logs once at `WARN`, and one that does is rewritten to the tag's
+own spelling (`TANGLE_LISTWORKERS` → `listWorkers`) so it overrides the file's key instead of
+landing beside it. Map keys under `argocds` pass through as written
+(`TANGLE_ARGOCDS_TEST_ADDRESS` → `argocds.test.address`), so an ArgoCD instance name containing
+`_` can't be targeted this way. The filter exists because Kubernetes injects
+`<SERVICE>_PORT_<port>_<proto>_ADDR`-style vars for every Service in the pod's namespace, and a
+Service named `tangle` collides with this prefix — see
+[ADR 0023](../adrs/0023-resolve-env-var-overrides-against-the-config-schema.md).
+
 The CLI uses [`cobra`](https://github.com/spf13/cobra)/[`viper`](https://github.com/spf13/viper)
 with the same `TANGLE_` prefix.
 
