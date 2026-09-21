@@ -94,7 +94,9 @@ Chosen option: **`repository_dispatch`, feeding a PR-based bump workflow gated b
    parallel ones). **Revised during implementation** (see "Found during a live test" below): this
    half also needs a second fine-grained PAT, scoped to `tangle-deployments` itself
    (`CHART_BUMP_PAT`, `Contents` + `Pull requests: Read and write`), used for *both* opening the PR
-   and merging it — the default `GITHUB_TOKEN` turned out not to work for either.
+   and merging it — the default `GITHUB_TOKEN` turned out not to work for either. **Revised again
+   after three automated releases** (see "Revised: `image.tag` and minor bumps" below): the bump
+   also has to write `values.yaml`'s `image.tag`, and the chart `version` bump is minor, not patch.
 3. `tangle-deployments` also gets a minimal CI workflow (new) that runs `task template:default`
    and `task tests` (`helm template` + `kubeconform`, already defined in its `Taskfile.yaml`) on
    every pull request — the safety net the bump PR relies on, and a gap worth closing regardless
@@ -108,21 +110,23 @@ Chosen option: **`repository_dispatch`, feeding a PR-based bump workflow gated b
    from step 4 is what actually cuts the chart release and updates the `gh-pages` index from here
    on, and the old manual "cut a release by hand to trigger packaging" step goes away entirely.
 
-Chart `version` handling deliberately stays narrow: the automation only ever patch-bumps it,
-because bumping `appVersion` is itself a chart content change and Helm/`chart-releaser-action` both
+Chart `version` handling deliberately stays narrow: the automation only ever patch-bumps it
+(**superseded — it minor-bumps; see "Revised: `image.tag` and minor bumps" below**), because
+bumping `appVersion` is itself a chart content change and Helm/`chart-releaser-action` both
 require *some* version bump to register a new release — it does not try to infer minor/major chart
 version changes from what changed in `tangle`, since the two have already diverged in practice and
 the maintainer already bumps the chart's own semver by hand when the chart's templates change
 independent of a `tangle` release.
 
-Left out of this decision, tracked as a follow-up rather than bundled in: collapsing
-`values.yaml`'s explicit `image.tag: "v0.1.0"` override so it falls back to the chart's own
-`{{ .Chart.AppVersion }}` default (the comment above it already says that's the intent), which
-would remove the second, Renovate-tracked copy of the version this ADR's automation makes
-redundant. Doing that safely requires first confirming `ghcr.io/ivanklee86/tangle` actually
-publishes an image tag matching whatever exact string ends up in `appVersion` (with or without the
-`v` prefix — the two currently disagree: `appVersion: "0.1.0"` vs. `image.tag: "v0.1.0"`), so it's
-left as a separately verified change rather than assumed safe here.
+Left out of this decision, tracked as a follow-up rather than bundled in (**now resolved, the other
+way round — see below**): collapsing `values.yaml`'s explicit `image.tag: "v0.1.0"` override so it
+falls back to the chart's own `{{ .Chart.AppVersion }}` default (the comment above it already says
+that's the intent), which would remove the second, Renovate-tracked copy of the version this ADR's
+automation makes redundant. Doing that safely requires first confirming
+`ghcr.io/ivanklee86/tangle` actually publishes an image tag matching whatever exact string ends up
+in `appVersion` (with or without the `v` prefix — the two currently disagree: `appVersion: "0.1.0"`
+vs. `image.tag: "v0.1.0"`), so it's left as a separately verified change rather than assumed safe
+here.
 
 ### Consequences
 
@@ -185,6 +189,46 @@ Net effect on the design: `CHART_BUMP_PAT` is used for both the `create-pull-req
 needed in the end. Branch protection (`chart` required) and `allow_auto_merge: true` are both now
 set on `tangle-deployments`.
 
+### Revised: `image.tag` and minor bumps
+
+Two changes to the above, made 2026-09-21 after watching three automated bumps land
+(`tangle-deployments` [#25](https://github.com/ivanklee86/tangle-deployments/pull/25), with the
+one-time catch-up of the drift it left behind in
+[#26](https://github.com/ivanklee86/tangle-deployments/pull/26)).
+
+1. **The bump writes `values.yaml`'s `image.tag` too, and the follow-up above is resolved the
+   opposite way from how it was framed.** Bumping `Chart.yaml` alone was never enough: the chart's
+   deployment template renders
+   `image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"`,
+   and `values.yaml` *pins* `image.tag`, so the `.Chart.AppVersion` fallback never applies and the
+   published chart deploys whatever image the last hand-edit left there. Three automated releases
+   ran before anyone noticed: `appVersion` reached `"0.3.0"` while `image.tag` sat at `"v0.1.0"`.
+
+   The verification the follow-up asked for was done and came back **negative**:
+   `ghcr.io/ivanklee86/tangle` publishes v-prefixed tags *only* (`v0.0.0` … `v0.3.0`, read from the
+   registry's own tag list), so the `appVersion` string (`0.3.0`, `v` stripped) is not a pullable
+   tag and collapsing the override onto `.Chart.AppVersion` would break the chart outright. It
+   would need either the template to re-add the `v` prefix or `tangle` to publish unprefixed tags;
+   neither is worth doing to delete one line. So the second copy of the version stays, and the
+   automation keeps it in sync instead — writing the **raw** dispatch tag (`v0.3.0`), not
+   `appVersion`.
+
+   Mechanically this is a targeted `awk` substitution on the `tag:` line inside the top-level
+   `image:` block, *not* `yq -i` as used for `Chart.yaml`. `yq -i` round-trips the whole document:
+   on `Chart.yaml` (nine plain lines) that is invisible, but on `values.yaml` it strips every blank
+   line and re-anchors the commented-out example blocks to their parent's indentation, turning a
+   one-line bump into a ~60 line diff. `yq` is still used immediately afterwards to *read the value
+   back and fail the run if it didn't land*, so a future `values.yaml` restructure that the `awk`
+   no longer matches is loud rather than a PR that silently bumps nothing.
+
+2. **The chart `version` bump is minor, not patch** (`{$NF+=1}` → `{$2+=1; $3=0}`, so `0.0.16` →
+   `0.1.0`). The original narrow rule reasoned only about *needing some bump at all* for
+   `chart-releaser-action` to publish; it picked patch as the smallest that satisfies that. In
+   practice a `tangle` release is a new set of app features, and the chart revision that ships it
+   is what consumers upgrade to get them — minor is the honest signal, and it keeps patch free to
+   mean what it should: a chart-only fix, still bumped by hand. The rest of the original rule
+   stands: nothing tries to infer *major* chart bumps from what changed in `tangle`.
+
 ## Pros and Cons of the Options
 
 ### `repository_dispatch` (chosen)
@@ -233,7 +277,11 @@ set on `tangle-deployments`.
   release-trigger retarget), [#14](https://github.com/ivanklee86/tangle-deployments/pull/14)
   (first, incomplete fix attempt for finding 3 above), [#16](https://github.com/ivanklee86/tangle-deployments/pull/16)
   (`CHART_BUMP_PAT` for opening the PR — finding 2), [#18](https://github.com/ivanklee86/tangle-deployments/pull/18)
-  (`CHART_BUMP_PAT` for the merge too — the actual fix for finding 3, superseding #14's approach)
+  (`CHART_BUMP_PAT` for the merge too — the actual fix for finding 3, superseding #14's approach),
+  [#25](https://github.com/ivanklee86/tangle-deployments/pull/25) (`values.yaml`'s `image.tag` and
+  the switch to minor bumps — see "Revised" above), [#26](https://github.com/ivanklee86/tangle-deployments/pull/26)
+  (the one-time `image.tag` catch-up for the drift the missing bump left behind, alongside two
+  unrelated chart fixes)
 - Related: [ADR 0013](0013-renovate-weekly-grouped-updates.md) — the automerge-non-major policy
   this ADR's auto-merge choice mirrors, applied here to a fully mechanical bump instead of a
   Renovate PR
