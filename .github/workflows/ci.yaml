@@ -30,7 +30,25 @@ jobs:
             - '.github/workflows/ci.yaml'
 
   go:
-    runs-on: ubuntu-latest
+    # Explicit, or GitHub derives the check name from *every* matrix
+    # dimension — `go (amd64, ubuntu-latest)` — which embeds the runner
+    # label in a name branch protection depends on. A future
+    # ubuntu-latest bump would then silently rename a required check.
+    name: go (${{ matrix.arch }})
+    strategy:
+      # An arm64-only failure should still report the amd64 result, and vice
+      # versa — telling the two apart is the entire diagnostic value of the
+      # matrix, and fail-fast would throw it away exactly when it matters.
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            # Free for public repositories. There is no `ubuntu-latest-arm`;
+            # the version has to be named explicitly.
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v7
@@ -49,7 +67,12 @@ jobs:
       uses: actions/cache@v6
       with:
         path: ~/go/bin
-        key: go-tools-${{ hashFiles('tasks/go.yaml') }}
+        # os/arch is load-bearing, not decoration: ~/go/bin holds compiled
+        # binaries and this key is shared with the e2e job, across four
+        # matrix legs on two architectures. Without it, whichever leg saves
+        # first hands its binaries to every other leg, and the symptom is an
+        # `exec format error` deep into an unrelated job.
+        key: go-tools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tasks/go.yaml') }}
     - name: Install all dependencies
       run: task go:install-ci
     - name: Generate OpenAPI spec
@@ -63,9 +86,21 @@ jobs:
       if: always()
       with:
         files: report.xml
+        # Explicit and unique. The action's default is the literal string
+        # `Test Results`, and go and e2e both used to take that default — so
+        # two check runs already shared one name, and four would now. The
+        # report job's `Unified Test Results` stays the canonical merged
+        # view; these are the per-leg detail views, and they're how an
+        # arm64-only failure stays debuggable without entering that merge.
+        check_name: Go Test Results (${{ matrix.arch }})
     - name: Save coverage report.
       uses: actions/upload-artifact@v7
-      if: always()
+      # amd64 only, here and on the two uploads below: both legs run the same
+      # suite over the same source, and the report job merges fixed artifact
+      # names (see .octocov.yml's coverage.paths). Coverage is a property of
+      # the source, not the runner, so there is nothing to merge from the
+      # arm64 leg — and uploading it would collide on artifact name.
+      if: always() && matrix.arch == 'amd64'
       with:
         name: go-coverage-report
         path: ./coverage.html
@@ -74,13 +109,13 @@ jobs:
       # moved there so it can merge this with e2e's own coverage-e2e.out
       # into one combined report instead of only ever seeing go's slice.
       uses: actions/upload-artifact@v7
-      if: always()
+      if: always() && matrix.arch == 'amd64'
       with:
         name: go-coverage-profile
         path: ./coverage.out
     - name: Save JUnit report.
       uses: actions/upload-artifact@v7
-      if: always()
+      if: always() && matrix.arch == 'amd64'
       with:
         name: go-junit-report
         path: ./report.xml
@@ -108,7 +143,11 @@ jobs:
         # Literal version, not a hash of web/package.json — this needs to
         # match exactly what's installed, and an unrelated package.json
         # change shouldn't accidentally bust this cache.
-        key: playwright-${{ runner.os }}-1.63.0
+        #
+        # runner.arch matters as much as the version: this key is shared
+        # with e2e, whose arm64 leg caches arm64 browser binaries, and
+        # runner.os is `Linux` on both architectures.
+        key: playwright-${{ runner.os }}-${{ runner.arch }}-1.63.0
     - name: Install Playwright browser
       # Invoke the locally installed `playwright` package directly rather
       # than `npx playwright@<version>` — this project also depends on
@@ -179,7 +218,20 @@ jobs:
         prek-version: 0.5.3
 
   e2e:
-    runs-on: ubuntu-latest
+    # See the go job — pins the check name against the runner label.
+    name: e2e (${{ matrix.arch }})
+    strategy:
+      # Same shape as the go job's matrix, and for the same reason. The arch
+      # values are Go's GOARCH spellings deliberately — the argocd install
+      # below substitutes them straight into a release-asset name.
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     env:
       # Single source of truth for both CLI versions in this job (cache key
       # and install steps below all reference these instead of repeating the
@@ -212,7 +264,8 @@ jobs:
       uses: actions/cache@v6
       with:
         path: ~/go/bin
-        key: go-tools-${{ hashFiles('tasks/go.yaml') }}
+        # See the go job's copy of this key — same cache, same reason.
+        key: go-tools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tasks/go.yaml') }}
     - name: Cache k3d/argocd CLIs
       id: cli-tools-cache
       uses: actions/cache@v6
@@ -220,16 +273,27 @@ jobs:
         path: |
           /usr/local/bin/k3d
           /usr/local/bin/argocd
-        key: cli-tools-k3d-${{ env.K3D_VERSION }}-argocd-${{ env.ARGOCD_VERSION }}
+        # runner.arch is not optional here: without it the arm64 leg would
+        # restore amd64 binaries, *hit* the cache, skip both install steps
+        # below, and then fail with `exec format error` several minutes
+        # later, after the cluster bring-up.
+        key: cli-tools-${{ runner.arch }}-k3d-${{ env.K3D_VERSION }}-argocd-${{ env.ARGOCD_VERSION }}
     - name: Install k3d
+      # No arch handling needed — install.sh detects it, and k3d publishes a
+      # k3d-linux-arm64 asset.
       if: steps.cli-tools-cache.outputs.cache-hit != 'true'
       run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=${{ env.K3D_VERSION }} bash
     - name: Install argocd
       if: steps.cli-tools-cache.outputs.cache-hit != 'true'
       run: |
-        curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/${{ env.ARGOCD_VERSION }}/argocd-linux-amd64
-        sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
-        rm argocd-linux-amd64
+        # argo-cd names its release assets by GOARCH (argocd-linux-amd64,
+        # argocd-linux-arm64), which is exactly what matrix.arch holds —
+        # that's why the matrix uses GOARCH spellings rather than, say,
+        # x64/aarch64.
+        asset=argocd-linux-${{ matrix.arch }}
+        curl -sSL -o "$asset" https://github.com/argoproj/argo-cd/releases/download/${{ env.ARGOCD_VERSION }}/"$asset"
+        sudo install -m 555 "$asset" /usr/local/bin/argocd
+        rm "$asset"
     - name: Install all dependencies
       run: task go:install-ci
     - name: Generate OpenAPI spec
@@ -237,7 +301,11 @@ jobs:
     - name: Bring up live stack
       run: task services:cicd
       env:
-        DOCKER_BUILD_CACHE_FLAGS: --cache-from type=gha --cache-to type=gha,mode=max
+        # Per-arch scope: the two matrix legs build different-architecture
+        # layers, and the image job caches a two-platform build. Sharing
+        # buildx's default `buildkit` scope would have all three evicting
+        # each other on every run.
+        DOCKER_BUILD_CACHE_FLAGS: --cache-from type=gha,scope=e2e-${{ matrix.arch }} --cache-to type=gha,scope=e2e-${{ matrix.arch }},mode=max
     - name: Run Go e2e tests
       run: task go:test:e2e:ci
     - name: Install frontend packages
@@ -247,7 +315,9 @@ jobs:
       uses: actions/cache@v6
       with:
         path: ~/.cache/ms-playwright
-        key: playwright-${{ runner.os }}-1.63.0
+        # See the ts job's copy — same cache, and this is the job that puts
+        # arm64 browser binaries in it.
+        key: playwright-${{ runner.os }}-${{ runner.arch }}-1.63.0
     - name: Install Playwright browser
       if: steps.playwright-cache.outputs.cache-hit != 'true'
       run: node node_modules/playwright/cli.js install --with-deps chromium chromium-headless-shell
@@ -261,9 +331,14 @@ jobs:
         files: |
           report-e2e.xml
           web/test-results/junit-live.xml
+        # See the go job's check_name comment. The arm64 leg's own JUnit
+        # output is fully visible in its own check — it just doesn't enter
+        # the report job's merge.
+        check_name: E2E Test Results (${{ matrix.arch }})
     - name: Save JUnit report.
       uses: actions/upload-artifact@v7
-      if: always()
+      # amd64 only, here and below — see the go job's uploads.
+      if: always() && matrix.arch == 'amd64'
       with:
         name: e2e-junit-report
         path: |
@@ -275,10 +350,41 @@ jobs:
       # surfaced anywhere; today it's generated and then never looked at
       # again once it leaves this job.
       uses: actions/upload-artifact@v7
-      if: always()
+      if: always() && matrix.arch == 'amd64'
       with:
         name: e2e-coverage-profile
         path: ./coverage-e2e.out
+
+  image:
+    # Builds exactly what release.yaml publishes, minus the push — and it is
+    # the only job that exercises *cross*-compilation at all. The e2e arm64
+    # leg builds the image natively, where BUILDPLATFORM == TARGETPLATFORM,
+    # so GOOS/GOARCH are a no-op there. Without this job, a Dockerfile change
+    # that breaks the cross-build passes every PR check and fails at release
+    # time, after a tag exists and a GitHub Release is already published.
+    #
+    # Not in the report job's needs: it produces no JUnit or coverage
+    # artifact, so waiting on a Docker build would buy that job nothing.
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+    - name: Set up QEMU
+      # Only for the runtime stage's `adduser`, which runs on the target
+      # platform — see the Dockerfile. Every compile stage cross-compiles.
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: arm64
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+    - name: Build both architectures
+      uses: docker/build-push-action@v7
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: false
+        cache-from: type=gha,scope=image-multiarch
+        cache-to: type=gha,scope=image-multiarch,mode=max
 
   report:
     needs: [go, ts, e2e]

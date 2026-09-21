@@ -21,6 +21,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      - name: Set up QEMU
+        # Solely for the runtime stage's `adduser`, which runs on the target
+        # platform. Every compile stage in the Dockerfile is pinned to
+        # $BUILDPLATFORM and cross-compiles, so no build work is emulated.
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        # Not optional housekeeping: the default `docker` driver cannot
+        # produce a multi-platform result, so the `platforms:` input below
+        # fails the build without this rather than being quietly ignored.
+        uses: docker/setup-buildx-action@v4
+
       - name: Log in to the Container registry
         uses: docker/login-action@v4
         with:
@@ -38,6 +52,11 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          # A manifest list carries the same tags a single-platform image
+          # did — the registry hands each node its own architecture at pull
+          # time — so metadata-action's config and tangle-deployments'
+          # image.tag bump (ADR 0021) need no change.
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
