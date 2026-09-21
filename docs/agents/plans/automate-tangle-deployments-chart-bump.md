@@ -89,6 +89,10 @@ Helm version string) and the `kubeconform` URL (needs a `customManagers` regex e
 
 **New file: `.github/workflows/bump-chart-version.yaml`**
 
+> Since revised in place — the workflow also bumps `values.yaml`'s `image.tag`, and the chart
+> `version` bump is minor rather than patch. See ADR 0021's "Revised: `image.tag` and minor bumps";
+> the snippet below is the plan as originally written.
+
 ```yaml
 name: Bump chart version
 
@@ -344,6 +348,12 @@ be reverted independently via the same API calls with the opposite values, thoug
 reopens the "auto-merge doesn't actually wait for CI" gap from workstream 1.
 
 ## Deferred: collapse the duplicate version in `values.yaml`
+
+**Resolved 2026-09-21, the other way round — see ADR 0021's "Revised: `image.tag` and minor
+bumps".** The check below was run and came back negative: `ghcr.io/ivanklee86/tangle` publishes
+v-prefixed tags only, so `appVersion` (`v` stripped) is not a pullable tag and the override cannot
+simply be removed. The duplicate stays and `bump-chart-version.yaml` now writes it as well, using
+the raw dispatch tag. Leaving the original text below for the reasoning it records.
 
 Not part of this plan (see ADR 0021's "Left out of this decision"). `charts/tangle/values.yaml`'s
 `image.tag: "v0.1.0"` duplicates `Chart.yaml`'s `appVersion` — the chart template already falls
