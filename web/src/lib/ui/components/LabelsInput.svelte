@@ -149,7 +149,7 @@
 	<div class="flex items-start gap-2">
 		<Input
 			type="text"
-			placeholder="key"
+			placeholder="Key"
 			aria-label="{label} key"
 			aria-invalid={isDuplicate || (attemptedAdd && draftKey.length === 0)}
 			aria-describedby={hintId}
@@ -161,7 +161,7 @@
 		<span aria-hidden="true" class="pt-2 font-mono text-gray-500 dark:text-gray-400">:</span>
 		<Input
 			type="text"
-			placeholder="value"
+			placeholder="Value"
 			aria-label="{label} value"
 			aria-invalid={attemptedAdd && draftValue.length === 0}
 			aria-describedby={hintId}

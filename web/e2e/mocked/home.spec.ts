@@ -23,7 +23,7 @@ test.describe('home page', () => {
 		await expect(page.getByRole('textbox', { name: `${INCLUDE} value` })).toBeVisible();
 		await expect(page.getByRole('textbox', { name: `${EXCLUDE} key` })).toBeVisible();
 		await expect(page.getByRole('textbox', { name: `${EXCLUDE} value` })).toBeVisible();
-		await expect(page.getByPlaceholder('branch, tag or commit')).toBeVisible();
+		await expect(page.getByPlaceholder('Branch, tag or commit')).toBeVisible();
 
 		await expect(page.getByRole('button', { name: 'See applications' })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'See diffs' })).toBeVisible();
@@ -57,9 +57,36 @@ test.describe('home page', () => {
 		await expect(seeDiffs).toBeDisabled();
 		await expect(page.getByText('Enter a target ref to enable diffs')).toBeVisible();
 
-		await page.getByPlaceholder('branch, tag or commit').fill('release-25');
+		await page.getByPlaceholder('Branch, tag or commit').fill('release-25');
 
 		await expect(seeDiffs).toBeEnabled();
+	});
+
+	// ADR 0003 records that a Flowbite upgrade once shipped an Input whose left
+	// icon sat on top of its placeholder, and that real browser checks are what
+	// caught it. Flowbite positions a `left` snippet over the field without
+	// padding the input, so this measures the geometry rather than trusting a
+	// class name.
+	test('the target ref box does not print its text under the branch icon', async ({ page }) => {
+		const input = page.getByPlaceholder('Branch, tag or commit');
+		await expect(input).toBeVisible();
+
+		// Measured, not asserted on a class name. The icon is 16px wide and sits
+		// about 12px in, so text starting before its right edge lands on top of
+		// it — which is what an unpadded Flowbite `left` snippet produces.
+		const { padding, iconRight } = await input.evaluate((el) => {
+			const field = el as HTMLInputElement;
+			const icon = field.closest('div')?.querySelector('svg');
+			const fieldLeft = field.getBoundingClientRect().left;
+			const iconBox = icon?.getBoundingClientRect();
+			return {
+				padding: parseFloat(getComputedStyle(field).paddingInlineStart),
+				iconRight: iconBox ? iconBox.right - fieldLeft : 0
+			};
+		});
+
+		expect(iconRight).toBeGreaterThan(0);
+		expect(padding).toBeGreaterThanOrEqual(iconRight);
 	});
 
 	test('the link preview reflects the query as it is built', async ({ page }) => {
@@ -111,7 +138,7 @@ test.describe('home page', () => {
 		await page.getByRole('textbox', { name: `${INCLUDE} key` }).fill('env');
 		await page.getByRole('textbox', { name: `${INCLUDE} value` }).fill('prod');
 		await page.getByRole('button', { name: 'Add label' }).click();
-		await page.getByPlaceholder('branch, tag or commit').fill('release-25');
+		await page.getByPlaceholder('Branch, tag or commit').fill('release-25');
 		await page.getByRole('button', { name: 'See diffs' }).click();
 
 		await page.waitForURL(

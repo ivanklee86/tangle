@@ -372,5 +372,6 @@
 	targetRefMode="hidden"
 	applyLabel="See applications"
 	hrefFor={applicationsHref}
+	showCli
 	onApply={applyQuery}
 />

@@ -307,20 +307,40 @@ narrow"), on request.
 Home showed only the link and the drawer only the CLI, so which representation you got depended on which screen
 you happened to build the query on.
 
-They don't both apply everywhere, though. `generate-manifests` is the CLI's version of the *diffs* flow — it
-renders manifests and compares them against a ref — and it is the only subcommand `tangle-cli` has. There is no
-equivalent for listing applications, so:
+All three placements show both. An earlier pass left the CLI off the Applications drawer, reasoning that
+`generate-manifests` is the CLI's version of the *diffs* flow — it renders manifests and compares them against
+a ref — and that there is no subcommand for merely listing applications. That was the wrong call: the label
+selector is the reusable part, and the Applications drawer is precisely where someone tunes it before putting
+it in a pipeline. Withholding the command there made the two drawers gratuitously different.
 
-| Placement | Shows |
+The wrinkle it was trying to avoid is real but smaller than it looked, and is handled by saying the right thing
+in each place. `generate-manifests` needs a `--target-ref`, and without one it compares every application's
+live ref against itself — the empty-by-construction fan-out
+[ADR 0008](../adrs/0008-gate-searches-behind-explicit-user-action.md) was written about. So when the ref is
+missing, the note under the command depends on whether this editor can set one:
+
+| Placement | When the ref is missing |
 | --- | --- |
-| Home | Link and CLI — it's where both flows start |
-| Applications drawer | Link only — offering `generate-manifests` here would hand someone a command that does something else |
-| Diffs drawer | Link and CLI |
+| Home, Diffs drawer | "Add a target ref — without one there is nothing to compare against." The field is right there. |
+| Applications drawer | "Add `--target-ref` in CI to pick what these applications are compared against." There is no field, because listing applications doesn't use a ref. |
 
-On Home the CLI command is shown from the start and gains `--target-ref` as soon as one is typed; until then it
-carries a note saying a ref is needed, because without one `generate-manifests` compares every application's
-live ref against itself — the empty-by-construction fan-out [ADR 0008](../adrs/0008-gate-searches-behind-explicit-user-action.md)
-was written about.
+`QueryPreview` takes `targetRefEditable` for exactly that distinction — same missing piece, two different
+things to tell someone.
 
 `QueryDrawer` takes `hrefFor` and `showCli` from the page rather than inferring either from `targetRefMode`, so
 the preview states where *this* page would go instead of guessing from an unrelated prop.
+
+**Placeholders read as sentence case** — `Key`, `Value`, `Branch, tag or commit`.
+
+**The target-ref input printed its first character on top of the branch icon.** Flowbite positions a `left`
+snippet over the field but doesn't pad the input for it, so the text started at 10px against an icon whose
+right edge is 26px. Fixed with `ps-10`.
+
+[ADR 0003](../adrs/0003-svelte-e2e-testing-strategy.md) records that a Flowbite upgrade once shipped this exact
+regression — an Input left-icon overlapping its placeholder — and that real browser checks were what caught it.
+It now has a guard that measures the geometry rather than trusting a class name: the input's
+`padding-inline-start` must clear the icon's right edge. Confirmed to fail without the fix.
+
+**One flaky e2e fixed while here.** The two "a bare visit fetches nothing" tests registered a counting route and
+then navigated, so a still-in-flight request from `beforeEach`'s own page load could land in the tally. They now
+go to `about:blank` first. It failed once in a full-suite run and passed in isolation, which is the signature.

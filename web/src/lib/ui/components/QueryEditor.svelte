@@ -60,14 +60,19 @@
 					>
 				{/if}
 			</Label>
+			<!--
+				ps-10 clears the leading icon. Flowbite positions a `left` snippet
+				over the field but doesn't pad the input for it, so without this the
+				first character sits on top of the branch glyph.
+			-->
 			<Input
 				id="{uid}-target"
 				type="text"
-				placeholder="branch, tag or commit"
+				placeholder="Branch, tag or commit"
 				required={targetRefMode === 'required'}
 				aria-describedby={targetHelpId}
 				bind:value={targetRef}
-				class="font-mono"
+				class="ps-10 font-mono"
 			>
 				{#snippet left()}
 					<CodeBranchOutline class="h-4 w-4 text-gray-500 dark:text-gray-400" />

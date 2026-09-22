@@ -114,7 +114,12 @@
 		<div class="grow space-y-5 overflow-y-auto px-6 py-5">
 			<QueryEditor bind:labels bind:excludeLabels bind:targetRef {targetRefMode} />
 
-			<QueryPreview href={hrefFor(draft)} query={draft} cli={showCli} />
+			<QueryPreview
+				href={hrefFor(draft)}
+				query={draft}
+				cli={showCli}
+				targetRefEditable={targetRefMode !== 'hidden'}
+			/>
 		</div>
 
 		<div

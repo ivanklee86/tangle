@@ -7,18 +7,22 @@
 		/** The URL this query opens — the page's own href, so it differs per placement. */
 		href: string;
 		query: Query;
-		/**
-		 * Whether to show the tangle-cli equivalent.
-		 *
-		 * `generate-manifests` is the CLI's version of the *diffs* flow — it
-		 * renders manifests and compares them. There is no subcommand that just
-		 * lists applications, so offering it beside an Applications query would
-		 * hand someone a command that does something else.
-		 */
+		/** Whether to show the tangle-cli equivalent alongside the link. */
 		cli?: boolean;
+		/**
+		 * Whether this placement lets you edit the target ref.
+		 *
+		 * `generate-manifests` is the only subcommand tangle-cli has, and it
+		 * needs a ref. Where the ref is editable, an empty one is something to
+		 * fill in here; where it isn't — the Applications editor has no ref
+		 * field, because listing applications doesn't use one — the flag is
+		 * something to add in CI instead. Same missing piece, two different
+		 * things to tell someone.
+		 */
+		targetRefEditable?: boolean;
 	}
 
-	let { href, query, cli = false }: Props = $props();
+	let { href, query, cli = false, targetRefEditable = true }: Props = $props();
 
 	let hasTargetRef = $derived(query.targetRef.trim().length > 0);
 </script>
@@ -41,9 +45,14 @@
 					construction. Say so rather than hand over a command that
 					quietly does nothing useful.
 				-->
-				<Helper class="mt-1"
-					>Add a target ref — without one there is nothing to compare against.</Helper
-				>
+				<Helper class="mt-1">
+					{#if targetRefEditable}
+						Add a target ref — without one there is nothing to compare against.
+					{:else}
+						Add <code class="font-mono">--target-ref</code> in CI to pick what these applications are
+						compared against.
+					{/if}
+				</Helper>
 			{/if}
 		</div>
 	{/if}

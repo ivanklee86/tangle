@@ -110,6 +110,10 @@ test.describe('diffs page', () => {
 	// every Argo CD, so a bare visit must not start it.
 	test.describe('the search gate', () => {
 		test('opens the editor and fetches nothing with no query at all', async ({ page }) => {
+			// Start from a blank page first: beforeEach already navigated with a
+			// query, and counting from here would otherwise race that page load's
+			// own request into the tally.
+			await page.goto('about:blank');
 			let requests = 0;
 			await page.route('**/api/applications*', (route) => {
 				requests += 1;

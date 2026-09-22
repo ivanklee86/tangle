@@ -109,15 +109,16 @@ test.describe('applications page', () => {
 		await page.waitForURL((url) => url.pathname.startsWith('/diffs'));
 	});
 
-	// generate-manifests is the CLI's version of the diffs flow — it renders
-	// and compares manifests. There is no subcommand that just lists
-	// applications, so offering it here would hand someone a command that does
-	// something other than what they are looking at.
-	test('the drawer previews the link, and no CLI command', async ({ page }) => {
+	// The label selector is the reusable part, and this drawer is where it gets
+	// tuned — so the CI command belongs here too. tangle-cli's only subcommand
+	// is generate-manifests, which needs a ref this editor has no field for, so
+	// the note points at the flag rather than at a box to fill in.
+	test('the drawer previews both the link and the CI command', async ({ page }) => {
 		await page.getByRole('button', { name: 'Edit query' }).click();
 
 		await expect(page.getByText('/applications?labels=foo%3Abar')).toBeVisible();
-		await expect(page.getByText('tangle-cli')).toBeHidden();
+		await expect(page.getByText('tangle-cli generate-manifests --label foo=bar')).toBeVisible();
+		await expect(page.getByText('--target-ref', { exact: false })).toBeVisible();
 	});
 
 	// ADR 0008: a bare nav click must not fan a label-less search out to every
@@ -125,6 +126,10 @@ test.describe('applications page', () => {
 	test('opens the query editor instead of searching when the URL has no query', async ({
 		page
 	}) => {
+		// Start from a blank page first: beforeEach already navigated with a
+		// query, and counting from here would otherwise race that page load's
+		// own request into the tally.
+		await page.goto('about:blank');
 		let requests = 0;
 		await page.route('**/api/applications*', (route) => {
 			requests += 1;
