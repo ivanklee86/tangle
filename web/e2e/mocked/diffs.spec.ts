@@ -28,6 +28,62 @@ test.describe('diffs page', () => {
 		await expect(page.getByRole('heading', { name: 'frontend', level: 2 })).toBeVisible();
 	});
 
+	// The application names once rendered browser-default black on gray-800,
+	// because app.html set a background for both modes but no text colour and
+	// these spans inherited it. Asserted as a contrast ratio rather than a class
+	// name: the palette work (ADR 0026's sibling, the indigo move) was all about
+	// text staying readable, and a class can be present and still fail.
+	test('sidebar application names are readable against their background', async ({ page }) => {
+		const name = page.getByRole('button', { name: /frontend/ });
+		await expect(name).toBeVisible();
+
+		const ratio = await name.evaluate((el) => {
+			// Resolve colours through a canvas rather than parsing the string:
+			// Tailwind v4 emits oklch(), and a regex that assumes rgb() reads
+			// those three numbers as RGB bytes and reports nonsense.
+			const toRgb = (value: string): number[] => {
+				const canvas = document.createElement('canvas');
+				canvas.width = 1;
+				canvas.height = 1;
+				const ctx = canvas.getContext('2d')!;
+				ctx.fillStyle = '#000';
+				ctx.fillRect(0, 0, 1, 1);
+				ctx.fillStyle = value;
+				ctx.fillRect(0, 0, 1, 1);
+				return [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3);
+			};
+
+			const channel = (v: number) => {
+				const c = v / 255;
+				return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+			};
+			const luminance = (rgb: number[]) =>
+				0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2]);
+
+			// Walk up for the nearest painted background — a row is transparent
+			// until it is hovered or selected.
+			let node: HTMLElement | null = el as HTMLElement;
+			let background = 'rgba(0, 0, 0, 0)';
+			while (node) {
+				const value = getComputedStyle(node).backgroundColor;
+				if (value !== 'rgba(0, 0, 0, 0)' && value !== 'transparent') {
+					background = value;
+					break;
+				}
+				node = node.parentElement;
+			}
+
+			const textLuminance = luminance(toRgb(getComputedStyle(el).color));
+			const backgroundLuminance = luminance(toRgb(background));
+			const lighter = Math.max(textLuminance, backgroundLuminance);
+			const darker = Math.min(textLuminance, backgroundLuminance);
+			return (lighter + 0.05) / (darker + 0.05);
+		});
+
+		// WCAG AA for body text.
+		expect(ratio).toBeGreaterThanOrEqual(4.5);
+	});
+
 	test('selecting another application swaps the detail pane', async ({ page }) => {
 		await page.getByRole('button', { name: /backend/ }).click();
 

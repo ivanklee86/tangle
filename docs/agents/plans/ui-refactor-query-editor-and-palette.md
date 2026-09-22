@@ -344,3 +344,29 @@ It now has a guard that measures the geometry rather than trusting a class name:
 **One flaky e2e fixed while here.** The two "a bare visit fetches nothing" tests registered a counting route and
 then navigated, so a still-in-flight request from `beforeEach`'s own page load could land in the tally. They now
 go to `about:blank` first. It failed once in a full-suite run and passed in isolation, which is the signature.
+
+## Follow-up: unreadable text on Diffs, and the root cause behind it
+
+The Diffs sidebar's application names rendered black on `gray-800` in dark mode.
+
+The cause was global, not local: `app.html` set `bg-white dark:bg-gray-800` on `<body>` and **no text colour at
+all**, so the default was browser black in both modes. Every readable piece of text in the app had been carrying
+its own explicit colour classes, or came from a Flowbite component that supplied them — the sidebar's names were
+the first thing to simply inherit, and inheriting got them black. The body now carries
+`text-gray-900 dark:text-gray-100`, which fixes the class of bug rather than the one instance.
+
+The sidebar's trailing counts were also a single uniform grey. They now read differently per outcome —
+additions green, removals red, `error` red and semibold, pending muted italic, and an unchanged application
+saying "no changes" rather than a bare `0` — so the list can be scanned without parsing each row.
+
+### The guard, and the bug in the guard
+
+This was the second visual defect found by eye rather than by a test (after the target-ref icon overlap), so it
+has one: a mocked e2e that computes the actual contrast ratio between a sidebar name and its nearest painted
+background, asserting WCAG AA's 4.5:1. Confirmed to fail at 2.04:1 with the fix reverted.
+
+**The first version of that guard was itself wrong**, and said so loudly: it reported 1.03:1 against the
+*fixed* page. Tailwind v4 emits `oklch()`, and the regex pulled `0.967 0.003 264.542` out and treated those as
+RGB bytes. The test now resolves both colours by painting them to a 1×1 canvas and reading the pixel back,
+which the browser does correctly for any colour syntax. Worth remembering for any future style assertion in
+this repo: computed colours here are not `rgb()`.

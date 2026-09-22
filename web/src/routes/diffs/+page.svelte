@@ -228,16 +228,24 @@
 									onclick={() => (selectedKey = rowKey(row))}
 								>
 									{@render outcomeDot(row)}
-									<span class="grow truncate">{row.name}</span>
-									<span class="shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400">
+									<span class="grow truncate text-gray-900 dark:text-gray-100">{row.name}</span>
+									<!--
+										Each outcome reads differently, so the list can be
+										scanned without stopping to parse every row: additions
+										and removals in their own colours, a failure called a
+										failure, and anything still running kept quiet so it
+										doesn't compete with results that are in.
+									-->
+									<span class="shrink-0 font-mono text-xs">
 										{#if row.outcome === 'pending'}
-											pending
+											<span class="text-gray-400 italic dark:text-gray-500">pending</span>
 										{:else if row.outcome === 'error'}
-											error
+											<span class="font-semibold text-red-600 dark:text-red-400">error</span>
 										{:else if row.outcome === 'changed'}
-											+{row.stats.added} −{row.stats.removed}
+											<span class="text-green-600 dark:text-green-400">+{row.stats.added}</span>
+											<span class="text-red-600 dark:text-red-400">−{row.stats.removed}</span>
 										{:else}
-											0
+											<span class="text-gray-400 dark:text-gray-500">no changes</span>
 										{/if}
 									</span>
 								</button>

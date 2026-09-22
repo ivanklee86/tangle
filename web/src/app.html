@@ -5,7 +5,16 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		%sveltekit.head%
 	</head>
-	<body class="bg-white dark:bg-gray-800" data-sveltekit-preload-data="hover">
+	<!--
+		A text colour for both modes, not just a background. Without one the
+		default is browser black, so anything that inherits rather than setting
+		its own colour renders black on gray-800 in dark mode — which is how the
+		Diffs sidebar's application names ended up unreadable.
+	-->
+	<body
+		class="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+		data-sveltekit-preload-data="hover"
+	>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>
