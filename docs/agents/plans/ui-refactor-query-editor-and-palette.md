@@ -1,6 +1,6 @@
 # UI refactor: one query editor, indigo palette, rebuilt Applications and Diffs
 
-Status: in progress · 2026-09-22 — stages 1 and 2 shipped, 3-6 outstanding
+Status: in progress · 2026-09-22 — stages 1-4 shipped, 5-6 outstanding
 
 Implements the design canvas "Tangle UI — Final design"
 (artifact `1f510fad-3738-4e6b-9f5a-cc8f6789bd15`, page *Final design*). The canvas's *Exploration* page holds the
@@ -189,6 +189,35 @@ Two corrections made while building:
 `ApplicationsForm` and `DiffsForm` still exist, because `/applications` and `/diffs` still use them. They go in
 Stage 3, along with their tests.
 
-**Stages 3-6 — outstanding.** `QueryBar`, `QueryDrawer`, and the rebuilt Applications and Diffs pages are the
-bulk of the visible change and none of it has started. The pages currently render as they did before, on the
-new palette and status badges.
+**Stage 3 — done.** `QueryBar` (H1, summary, query chips, Edit query, Copy link, and a snippet for the page's
+own action) and `QueryDrawer` (the `QueryEditor` in a Flowbite `Drawer`, with a working copy of the query, a
+change count, Discard/Apply, and the `tangle-cli` preview). The drawer edits a copy and re-seeds on open, so
+discarding leaves the page's query alone and a discarded edit doesn't reappear next time.
+
+**Stage 4 — done.** Applications is one table across every instance with an Argo CD column, replacing the
+tab-per-instance layout. Facet toolbar (Needs attention / All, health and sync groups with counts, name filter,
+auto-refresh toggle and period), sortable columns, sticky header, per-row *Open in Argo CD*, footer counts, and
+both empty states — query matched nothing, and filters hid everything. Pagination, group-by and the per-row Diff
+button are gone; *Diff these applications* carries the whole query to `/diffs`. `ApplicationsForm` and
+`ApplicationsGrid` are deleted.
+
+Decision 1 shipped as planned: `+page.ts` returns `applications: undefined` for an empty query and fetches
+nothing, and the page opens the drawer. `load.spec.ts` had three tests asserting that `load` always fetched —
+rewritten to assert the opposite, since the whole point of ADR 0008 is that it must not.
+
+Four corrections made while building:
+
+- **`sort.ts` was typed to `ApplicationLinks`,** which has no instance, so the Argo CD column couldn't be
+  sorted. It is now generic over a narrow `SortableApplication`, with `instance` added to `SortKey`.
+- **Two "Clear filters" buttons.** With every row filtered out, the empty state and the table footer both
+  offered one — an ambiguous accessible name and a worse answer than one button. The footer's only renders
+  while something is still on screen.
+- **The loading region had an `aria-label` and no text.** A live region announces its *contents*, so a label
+  alone leaves a screen reader with nothing to read; it now carries `sr-only` text.
+- **Two e2e races and a hidden checkbox.** `allTextContents()` doesn't auto-wait, so the row-order assertion
+  read an empty table; and Flowbite's `Toggle` hides the real checkbox behind a styled span, so Playwright's
+  actionability check never passes without `force`.
+
+**Stages 5-6 — outstanding.** The Diffs page is untouched: it still uses `DiffsForm` and the nested
+ArgoCD → application tab layout, on the new palette. The split pane, grouped sidebar with result badges,
+breadcrumb, three tabs and progress footer are all still to build, as is the live-stack Playwright pass.

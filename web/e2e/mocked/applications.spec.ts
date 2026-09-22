@@ -4,42 +4,48 @@ import { mockTangleAPI } from '../fixtures';
 test.describe('applications page', () => {
 	test.beforeEach(async ({ page }) => {
 		await mockTangleAPI(page);
-		await page.goto('/applications/?labels=foo:bar&refresh=false');
+		await page.goto('/applications/?labels=foo:bar');
 	});
 
-	test('renders one tab per ArgoCD with the application count', async ({ page }) => {
-		await expect(page.getByRole('tab', { name: 'test (2)' })).toBeVisible();
-		await expect(page.getByRole('tab', { name: 'prod (2)' })).toBeVisible();
+	// One table across every instance, replacing the tab-per-instance layout:
+	// the question people arrive with is "what in my fleet needs attention",
+	// and a tab strip answers that one instance at a time.
+	test('lists every instance in one table with an Argo CD column', async ({ page }) => {
+		for (const name of ['frontend', 'backend', 'gateway', 'worker']) {
+			await expect(page.getByRole('cell', { name, exact: true })).toBeVisible();
+		}
+
+		await expect(page.getByRole('cell', { name: 'test', exact: true }).first()).toBeVisible();
+		await expect(page.getByRole('cell', { name: 'prod', exact: true }).first()).toBeVisible();
 	});
 
-	test("switching tabs shows that ArgoCD's own table", async ({ page }) => {
-		await expect(page.getByRole('cell', { name: 'frontend' })).toBeVisible();
-		await expect(page.getByRole('cell', { name: 'gateway' })).not.toBeVisible();
-
-		await page.getByRole('tab', { name: 'prod (2)' }).click();
-
-		await expect(page.getByRole('cell', { name: 'gateway' })).toBeVisible();
-		await expect(page.getByRole('cell', { name: 'frontend' })).not.toBeVisible();
+	test('summarises the fleet and the query in the header', async ({ page }) => {
+		await expect(page.getByRole('heading', { name: 'Applications', level: 1 })).toBeVisible();
+		await expect(page.getByText('4 applications across 2 instances')).toBeVisible();
+		await expect(page.getByText('foo:bar')).toBeVisible();
 	});
 
-	test('sorting the Applications column toggles ascending then descending', async ({ page }) => {
-		const sortButton = page.locator('th').first().getByRole('button');
+	test('defaults to worst-first so the degraded applications lead', async ({ page }) => {
+		// allTextContents() doesn't auto-wait, so wait for the table to fill
+		// before reading it — otherwise this races the streamed load and reads
+		// an empty list.
+		await expect(page.locator('tbody tr')).toHaveCount(4);
 
-		await expect(sortButton).toHaveText('Applications');
-		// Unsorted (API order): frontend, backend.
-		const rows = page.locator('tbody tr');
-		await expect(rows.nth(0)).toContainText('frontend');
-		await expect(rows.nth(1)).toContainText('backend');
+		const names = await page.locator('tbody tr td:first-child').allTextContents();
+
+		expect(names.slice(0, 2).sort()).toEqual(['backend', 'worker']);
+	});
+
+	test('sorting the Application column toggles ascending then descending', async ({ page }) => {
+		const sortButton = page.getByRole('button', { name: /^Application/ });
 
 		await sortButton.click();
-		await expect(sortButton).toHaveText('Applications ▲');
-		await expect(rows.nth(0)).toContainText('backend');
-		await expect(rows.nth(1)).toContainText('frontend');
+		await expect(sortButton).toHaveText('Application ▲');
+		await expect(page.locator('tbody tr').first()).toContainText('backend');
 
 		await sortButton.click();
-		await expect(sortButton).toHaveText('Applications ▼');
-		await expect(rows.nth(0)).toContainText('frontend');
-		await expect(rows.nth(1)).toContainText('backend');
+		await expect(sortButton).toHaveText('Application ▼');
+		await expect(page.locator('tbody tr').first()).toContainText('worker');
 	});
 
 	test('health and sync statuses render as badges with text and an icon', async ({ page }) => {
@@ -50,37 +56,89 @@ test.describe('applications page', () => {
 		const frontendRow = page.locator('tbody tr', { hasText: 'frontend' });
 		await expect(frontendRow.getByText('Healthy')).toBeVisible();
 		await expect(frontendRow.getByText('Synced')).toBeVisible();
-		await expect(frontendRow.locator('svg')).toHaveCount(2);
+		// Each badge carries its own icon, so the status survives being read
+		// without colour. Counted per badge rather than per row — the row also
+		// holds the external-link icon on the Argo CD button.
+		await expect(frontendRow.getByText('Healthy').locator('svg')).toHaveCount(1);
+		await expect(frontendRow.getByText('Synced').locator('svg')).toHaveCount(1);
 
 		const backendRow = page.locator('tbody tr', { hasText: 'backend' });
 		await expect(backendRow.getByText('Degraded')).toBeVisible();
 		await expect(backendRow.getByText('OutOfSync')).toBeVisible();
-		await expect(backendRow.locator('svg')).toHaveCount(2);
 	});
 
 	test('drift and breakage do not share a badge colour', async ({ page }) => {
 		// OutOfSync is drift, Degraded is breakage. If they ever render the
 		// same, a fleet of healthy-but-unsynced applications reads as an
 		// outage — the reason the palette moved off coral in the first place.
-		const outOfSync = page.locator('tbody tr', { hasText: 'backend' }).getByText('OutOfSync');
-		const degraded = page.locator('tbody tr', { hasText: 'backend' }).getByText('Degraded');
+		const row = page.locator('tbody tr', { hasText: 'backend' });
 
-		const colourOf = async (locator: ReturnType<typeof page.getByText>) =>
-			locator.evaluate((el) => getComputedStyle(el.closest('span') ?? el).backgroundColor);
+		const colourOf = async (text: string) =>
+			row
+				.getByText(text)
+				.evaluate((el) => getComputedStyle(el.closest('span') ?? el).backgroundColor);
 
-		expect(await colourOf(outOfSync)).not.toBe(await colourOf(degraded));
+		expect(await colourOf('OutOfSync')).not.toBe(await colourOf('Degraded'));
 	});
 
-	test('refresh-period select and refresh-toggle button are present and toggling changes the button color', async ({
+	test.describe('the facet toolbar', () => {
+		test('narrows to applications needing attention', async ({ page }) => {
+			await page.getByRole('button', { name: 'Needs attention 2' }).click();
+
+			await expect(page.getByRole('cell', { name: 'backend', exact: true })).toBeVisible();
+			await expect(page.getByRole('cell', { name: 'frontend', exact: true })).toBeHidden();
+		});
+
+		test('filters by name', async ({ page }) => {
+			await page.getByRole('searchbox', { name: 'Filter by application name' }).fill('gate');
+
+			await expect(page.getByRole('cell', { name: 'gateway', exact: true })).toBeVisible();
+			await expect(page.getByRole('cell', { name: 'frontend', exact: true })).toBeHidden();
+		});
+
+		test('counts what is shown against the total', async ({ page }) => {
+			await page.getByRole('searchbox', { name: 'Filter by application name' }).fill('gate');
+
+			await expect(page.getByText('Showing 1 of 4')).toBeVisible();
+		});
+	});
+
+	test('carries the query through to the Diffs page', async ({ page }) => {
+		await page.getByRole('link', { name: 'Diff these applications' }).click();
+
+		await page.waitForURL((url) => url.pathname.startsWith('/diffs'));
+	});
+
+	// ADR 0008: a bare nav click must not fan a label-less search out to every
+	// Argo CD. The drawer is the gate.
+	test('opens the query editor instead of searching when the URL has no query', async ({
 		page
 	}) => {
-		await expect(page.getByRole('combobox')).toBeVisible();
+		let requests = 0;
+		await page.route('**/api/applications*', (route) => {
+			requests += 1;
+			return route.fulfill({ json: { results: [] } });
+		});
 
-		const refreshButton = page.getByRole('button', { name: 'Toggle automatic refresh' });
-		await expect(refreshButton).toBeVisible();
-		await expect(refreshButton).not.toHaveClass(/bg-primary/);
+		await page.goto('/applications/');
 
-		await refreshButton.click();
-		await expect(refreshButton).toHaveClass(/bg-primary/);
+		await expect(page.getByRole('heading', { name: 'Edit query', level: 2 })).toBeVisible();
+		await expect(page.getByText('none yet — pick applications by label')).toBeVisible();
+		expect(requests).toBe(0);
+	});
+
+	test('auto-refresh toggle and period select are present', async ({ page }) => {
+		const toggle = page.getByRole('checkbox', { name: 'Auto-refresh' });
+		await expect(toggle).toBeVisible();
+		await expect(toggle).not.toBeChecked();
+
+		const period = page.getByRole('combobox', { name: 'Refresh period' });
+		await expect(period).toBeDisabled();
+
+		// force: Flowbite's Toggle hides the real checkbox behind a styled
+		// span (sr-only + peer), so Playwright's actionability check on the
+		// input itself never passes.
+		await toggle.check({ force: true });
+		await expect(period).toBeEnabled();
 	});
 });
