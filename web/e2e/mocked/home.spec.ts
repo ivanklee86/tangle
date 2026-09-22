@@ -70,6 +70,18 @@ test.describe('home page', () => {
 		await expect(page.getByText('/applications?labels=env%3Aprod')).toBeVisible();
 	});
 
+	// The link and the CI command are two ways of saying the same query, and a
+	// query built here usually ends up as one or the other. Showing only one
+	// per screen meant knowing in advance which screen to build it on.
+	test('previews both the link and the tangle-cli command', async ({ page }) => {
+		await page.getByRole('textbox', { name: `${INCLUDE} key` }).fill('env');
+		await page.getByRole('textbox', { name: `${INCLUDE} value` }).fill('prod');
+		await page.getByRole('button', { name: 'Add label' }).click();
+
+		await expect(page.getByText('/applications?labels=env%3Aprod')).toBeVisible();
+		await expect(page.getByText('tangle-cli generate-manifests --label env=prod')).toBeVisible();
+	});
+
 	test('submitting navigates to /applications with the filter', async ({ page }) => {
 		await page.getByRole('textbox', { name: `${INCLUDE} key` }).fill('env');
 		await page.getByRole('textbox', { name: `${INCLUDE} value` }).fill('prod');

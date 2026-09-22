@@ -2,9 +2,9 @@
 	import { Badge, Button, Drawer, Heading } from 'flowbite-svelte';
 	import { ArrowRightOutline, CloseOutline } from 'flowbite-svelte-icons';
 	import { isValidLabelQuery } from '$lib/ui/validation';
-	import { cliCommand, type Query } from '$lib/ui/query';
-	import CopyableText from './CopyableText.svelte';
+	import { type Query } from '$lib/ui/query';
 	import QueryEditor from './QueryEditor.svelte';
+	import QueryPreview from './QueryPreview.svelte';
 	import { untrack } from 'svelte';
 
 	interface Props {
@@ -16,6 +16,17 @@
 		query: Query;
 		targetRefMode?: 'hidden' | 'optional' | 'required';
 		applyLabel?: string;
+		/**
+		 * The URL a given draft would open. Supplied by the page rather than
+		 * inferred from targetRefMode, so the preview says where *this* page
+		 * would go instead of guessing from an unrelated prop.
+		 */
+		hrefFor: (query: Query) => string;
+		/**
+		 * Whether to preview the tangle-cli equivalent alongside the link.
+		 * Only the diffs flow has one — see QueryPreview.
+		 */
+		showCli?: boolean;
 		onApply: (query: Query) => void;
 	}
 
@@ -26,6 +37,8 @@
 		query,
 		targetRefMode = 'optional',
 		applyLabel = 'Apply',
+		hrefFor,
+		showCli = false,
 		onApply
 	}: Props = $props();
 
@@ -101,16 +114,7 @@
 		<div class="grow space-y-5 overflow-y-auto px-6 py-5">
 			<QueryEditor bind:labels bind:excludeLabels bind:targetRef {targetRefMode} />
 
-			<!--
-				The same query as a CI invocation. Someone who built a filter here
-				usually wants it in a pipeline next, and re-deriving the flags by
-				hand is where the two drift apart.
-			-->
-			<CopyableText
-				caption="Same query in CI"
-				text={cliCommand(draft)}
-				copyLabel="Copy tangle-cli command"
-			/>
+			<QueryPreview href={hrefFor(draft)} query={draft} cli={showCli} />
 		</div>
 
 		<div

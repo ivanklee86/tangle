@@ -77,6 +77,11 @@ function diffsHref(query: Query): string {
  * The same query as a tangle-cli invocation, so someone who built a query in
  * the browser can paste it into CI rather than re-deriving the flags.
  *
+ * This is the *diffs* flow: `generate-manifests` is the only subcommand the
+ * CLI has, and it renders manifests and compares them against a ref. There is
+ * no equivalent for simply listing applications, which is why the Applications
+ * page shows only a link.
+ *
  * The CLI takes `key=value` per flag while the API takes `key:value` in one
  * comma-separated parameter, so this is a translation, not a reformat — flag
  * names match cmd/tangle-cli/main.go.

@@ -300,5 +300,7 @@
 	{query}
 	targetRefMode="required"
 	applyLabel="Apply and run diffs"
+	hrefFor={diffsHref}
+	showCli
 	onApply={applyQuery}
 />

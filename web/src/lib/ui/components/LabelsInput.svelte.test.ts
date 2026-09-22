@@ -61,6 +61,19 @@ describe('LabelsInput', () => {
 		await expect.element(add).toBeDisabled();
 	});
 
+	test('explains why a colon or comma is refused, rather than just refusing it', async () => {
+		const screen = await render(LabelsInput, { label: LABEL });
+		const { key, value } = boxes(screen);
+
+		await key.fill('env:staging');
+		await value.fill('prod');
+		await userEvent.keyboard('{Enter}');
+
+		await expect
+			.element(screen.getByText('Colons and commas separate pairs', { exact: false }))
+			.toBeVisible();
+	});
+
 	// Each key may appear at most once: the server builds one Kubernetes
 	// selector from these and rejects a repeated key with a 400 (ADR 0026), so
 	// a UI that let you add one would be offering a query the API refuses.

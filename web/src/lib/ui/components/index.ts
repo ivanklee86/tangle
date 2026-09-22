@@ -8,3 +8,4 @@ export { default as LabelsInput } from './LabelsInput.svelte';
 export { default as QueryBar } from './QueryBar.svelte';
 export { default as QueryDrawer } from './QueryDrawer.svelte';
 export { default as QueryEditor } from './QueryEditor.svelte';
+export { default as QueryPreview } from './QueryPreview.svelte';

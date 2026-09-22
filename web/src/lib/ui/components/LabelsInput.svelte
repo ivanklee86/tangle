@@ -14,6 +14,12 @@
 		/** Chips render in the accent colour for includes, neutral for exclusions. */
 		tone?: 'accent' | 'neutral';
 		optional?: boolean;
+		/**
+		 * Whether to show the resting how-to line. The rules are the same for
+		 * every one of these, so repeating them under each input is noise —
+		 * problems still report themselves either way.
+		 */
+		instructions?: boolean;
 	}
 
 	let {
@@ -21,7 +27,8 @@
 		label,
 		noun = 'label',
 		tone = 'accent',
-		optional = false
+		optional = false,
+		instructions = true
 	}: Props = $props();
 
 	const uid = $props.id();
@@ -61,14 +68,14 @@
 	let attemptedAdd: boolean = $state(false);
 
 	let hint = $derived.by(() => {
-		if (isDuplicate) return `"${draftKey}" is already used. Each key may appear once.`;
+		if (isDuplicate) return `"${draftKey}" is already used. Each key can be used once.`;
 		if (canAdd) return null;
 		const keyEmpty = draftKey.length === 0;
 		const valueEmpty = draftValue.length === 0;
 		if (keyEmpty && valueEmpty) return `Enter a key and value to add this ${noun}.`;
 		if (keyEmpty) return `Enter a key to add this ${noun}.`;
 		if (valueEmpty) return `Enter a value to add this ${noun}.`;
-		return "Key and value can't contain ':' or ','.";
+		return "Colons and commas separate pairs, so a key or value can't contain them.";
 	});
 
 	// A duplicate key shows immediately — the user can see the chip they're
@@ -185,9 +192,10 @@
 		{#if showProblem}
 			{hint}
 		{:else if droppedOnLoad.length > 0}
-			Dropped from the link: {droppedOnLoad.join('; ')}.
-		{:else}
-			Press Enter to add. Each key once; keys and values can't contain ':' or ','.
+			Dropped from the link: {droppedOnLoad.join(', ')}.
+		{:else if instructions}
+			Press Enter to add. Each key can be used once, and colons and commas are reserved for
+			separating pairs.
 		{/if}
 	</Helper>
 </fieldset>

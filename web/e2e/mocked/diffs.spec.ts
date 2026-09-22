@@ -66,6 +66,26 @@ test.describe('diffs page', () => {
 		await expect(page.getByText('No applications match these filters.')).toBeVisible();
 	});
 
+	test('the drawer previews both the link and the tangle-cli command', async ({ page }) => {
+		await page.getByRole('button', { name: 'Edit query' }).click();
+
+		await expect(page.getByText('/diffs?targetRef=main&labels=foo%3Abar')).toBeVisible();
+		await expect(
+			page.getByText('tangle-cli generate-manifests --label foo=bar --target-ref main')
+		).toBeVisible();
+	});
+
+	// Without --target-ref, generate-manifests compares every application's
+	// live ref against itself — a request per application for a diff that is
+	// empty by construction.
+	test('says a target ref is needed when the CLI command has none', async ({ page }) => {
+		await page.goto('/diffs/?labels=foo:bar');
+
+		await expect(
+			page.getByText('Add a target ref — without one there is nothing to compare against.')
+		).toBeVisible();
+	});
+
 	test('the reload-diff button re-issues the mocked diff POST', async ({ page }) => {
 		// The route mocked in beforeEach already served the initial page load's
 		// diff fetches before this test body runs, so a counting route added

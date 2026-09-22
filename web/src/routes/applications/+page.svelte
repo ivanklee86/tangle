@@ -371,5 +371,6 @@
 	{query}
 	targetRefMode="hidden"
 	applyLabel="See applications"
+	hrefFor={applicationsHref}
 	onApply={applyQuery}
 />

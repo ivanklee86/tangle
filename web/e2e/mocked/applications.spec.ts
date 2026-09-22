@@ -109,6 +109,17 @@ test.describe('applications page', () => {
 		await page.waitForURL((url) => url.pathname.startsWith('/diffs'));
 	});
 
+	// generate-manifests is the CLI's version of the diffs flow — it renders
+	// and compares manifests. There is no subcommand that just lists
+	// applications, so offering it here would hand someone a command that does
+	// something other than what they are looking at.
+	test('the drawer previews the link, and no CLI command', async ({ page }) => {
+		await page.getByRole('button', { name: 'Edit query' }).click();
+
+		await expect(page.getByText('/applications?labels=foo%3Abar')).toBeVisible();
+		await expect(page.getByText('tangle-cli')).toBeHidden();
+	});
+
 	// ADR 0008: a bare nav click must not fan a label-less search out to every
 	// Argo CD. The drawer is the gate.
 	test('opens the query editor instead of searching when the URL has no query', async ({

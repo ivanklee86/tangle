@@ -40,6 +40,7 @@
 		noun="exclusion"
 		tone="neutral"
 		optional
+		instructions={false}
 		bind:value={excludeLabels}
 	/>
 
@@ -73,8 +74,7 @@
 				{/snippet}
 			</Input>
 			<Helper id={targetHelpId}>
-				Manifests are rendered from this ref and compared with each application's live ref. Every
-				matching application is re-rendered, so start narrow.
+				Manifests are rendered from this ref and compared with each application's live ref.
 			</Helper>
 		</div>
 	{/if}

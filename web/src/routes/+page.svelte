@@ -3,7 +3,7 @@
 	import { ArrowRightOutline } from 'flowbite-svelte-icons';
 	import { isValidLabelQuery } from '$lib/ui/validation';
 	import { applicationsHref, diffsHref } from '$lib/ui/query';
-	import { CopyableText, QueryEditor } from '$lib/ui/components';
+	import { QueryEditor, QueryPreview } from '$lib/ui/components';
 
 	let labels: string = $state('');
 	let excludeLabels: string = $state('');
@@ -48,7 +48,12 @@
 			<QueryEditor bind:labels bind:excludeLabels bind:targetRef targetRefMode="optional" />
 
 			<div class="border-t border-gray-200 pt-4 dark:border-gray-700">
-				<CopyableText caption="Link" text={applicationsHref(query)} copyLabel="Copy link" />
+				<!--
+					Home is where both flows start, so it previews both: the link
+					the Applications button opens, and the CLI equivalent of the
+					diffs button beside it.
+				-->
+				<QueryPreview href={applicationsHref(query)} {query} cli />
 
 				<div class="mt-4 flex flex-wrap items-center justify-end gap-3">
 					{#if !canDiff}

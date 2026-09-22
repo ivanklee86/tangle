@@ -286,3 +286,41 @@ Covered at every layer, since the bug lived in the seam between them: `query.spe
 round trip through `hasSubmittedQuery`, both `load.spec.ts` files on what does and doesn't fetch, both page
 tests on applying an empty query and on rendering one, and a mocked e2e that submits the empty form on Home and
 checks the fleet is listed. Verified against the live stack too.
+
+## Follow-up: copy and preview refinements
+
+Feedback after the pages landed, all of it about what the screens say rather than what they do.
+
+**The label helper read like a spec.** "Press Enter to add. Each key once; keys and values can't contain ':'
+or ','." became "Press Enter to add. Each key can be used once, and colons and commas are reserved for
+separating pairs." — no semicolon, punctuation named in words, and it says *why* those characters are out
+rather than just banning them. The tooltip and the duplicate-key message were reworded to match, since the same
+rule was being stated three ways in one component.
+
+It was also being shown twice — once under each label input. `LabelsInput` gained an `instructions` prop so the
+how-to line appears once, under the includes; problems still report themselves under either input.
+
+**The target-ref helper lost its second sentence** ("Every matching application is re-rendered, so start
+narrow"), on request.
+
+**Both the link and the CLI command now show wherever they apply**, via a shared `QueryPreview`. Previously
+Home showed only the link and the drawer only the CLI, so which representation you got depended on which screen
+you happened to build the query on.
+
+They don't both apply everywhere, though. `generate-manifests` is the CLI's version of the *diffs* flow — it
+renders manifests and compares them against a ref — and it is the only subcommand `tangle-cli` has. There is no
+equivalent for listing applications, so:
+
+| Placement | Shows |
+| --- | --- |
+| Home | Link and CLI — it's where both flows start |
+| Applications drawer | Link only — offering `generate-manifests` here would hand someone a command that does something else |
+| Diffs drawer | Link and CLI |
+
+On Home the CLI command is shown from the start and gains `--target-ref` as soon as one is typed; until then it
+carries a note saying a ref is needed, because without one `generate-manifests` compares every application's
+live ref against itself — the empty-by-construction fan-out [ADR 0008](../adrs/0008-gate-searches-behind-explicit-user-action.md)
+was written about.
+
+`QueryDrawer` takes `hrefFor` and `showCli` from the page rather than inferring either from `targetRefMode`, so
+the preview states where *this* page would go instead of guessing from an unrelated prop.
