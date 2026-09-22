@@ -112,6 +112,22 @@ describe('diffs +page.svelte', () => {
 				.element(screen.getByRole('button', { name: 'Apply and run diffs' }))
 				.toBeDisabled();
 		});
+
+		// A ref with no labels is a real request — diff everything against it.
+		// Refusing it would leave the editor reopening forever, the same trap
+		// an empty Applications query used to hit.
+		test('runs with a target ref and no labels', async () => {
+			mockDiffFetch();
+			const screen = await render(
+				Page,
+				data({ query: { labels: '', excludeLabels: '', targetRef: 'release-25' } })
+			);
+
+			await expect.element(screen.getByRole('heading', { name: 'alpha', level: 2 })).toBeVisible();
+			await expect
+				.element(screen.getByRole('heading', { name: 'Edit diff query' }))
+				.not.toBeInTheDocument();
+		});
 	});
 
 	test('shows placeholder rows while the applications are pending', async () => {

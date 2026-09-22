@@ -12,12 +12,22 @@
 		query: Query;
 		/** Diffs compares against a ref, so its chip row ends "against <ref>". */
 		showTargetRef?: boolean;
+		/** Whether a query has actually been submitted, which changes what an empty one means. */
+		applied?: boolean;
 		onEdit: () => void;
 		/** The page's own primary action, right of Copy link. */
 		actions?: Snippet;
 	}
 
-	let { title, summary, query, showTargetRef = false, onEdit, actions }: Props = $props();
+	let {
+		title,
+		summary,
+		query,
+		showTargetRef = false,
+		applied = false,
+		onEdit,
+		actions
+	}: Props = $props();
 
 	let includes = $derived(parseLabels(query.labels));
 	let excludes = $derived(parseLabels(query.excludeLabels));
@@ -57,13 +67,18 @@
 
 		{#if empty}
 			<!--
-				The state the design never drew: someone clicked the nav link
-				without a query. Saying so beats an empty chip row, and the page
-				opens the editor for them (ADR 0008 — nothing is fetched until a
-				query is applied).
+				Two different empty states, and they're not the same thing: nobody
+				has asked yet (the design never drew this — the page opens the
+				editor for them, per ADR 0008), versus somebody submitted a query
+				with no filters, which is a real request meaning "show me
+				everything".
 			-->
 			<span class="text-sm text-gray-500 italic dark:text-gray-400">
-				none yet — pick applications by label
+				{#if applied}
+					no filters — showing everything
+				{:else}
+					none yet — pick applications by label
+				{/if}
 			</span>
 		{:else}
 			{#each includes as pair (pair.key)}

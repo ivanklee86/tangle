@@ -1,14 +1,16 @@
 import TangleAPIClient from '$lib/backend/client';
-import { isEmptyQuery, queryFromParams } from '$lib/ui/query';
+import { queryFromParams } from '$lib/ui/query';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = ({ url, fetch }) => {
 	const query = queryFromParams(url.searchParams);
 
-	// No query, or no ref to diff against, means nobody has asked for anything
-	// yet — the page opens its editor instead. ADR 0008: a bare visit must not
-	// fan a diff-generation request per application out to every Argo CD.
-	if (isEmptyQuery(query) || query.targetRef.length === 0) {
+	// The target ref is this page's gate: there is nothing to compare against
+	// without one, and a bare visit has none — so ADR 0008's concern (a nav
+	// click fanning one diff-generation POST per application out to every Argo
+	// CD) is covered without also requiring labels. A ref with no labels is a
+	// real request: diff everything.
+	if (query.targetRef.length === 0) {
 		return { query, applications: undefined };
 	}
 

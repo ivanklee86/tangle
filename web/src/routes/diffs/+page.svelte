@@ -18,18 +18,17 @@
 		type DiffFilter,
 		type DiffRow
 	} from '$lib/ui/diffs';
-	import { diffsHref, isEmptyQuery, type Query } from '$lib/ui/query';
+	import { diffsHref, type Query } from '$lib/ui/query';
 	import { DiffDetail, ErrorAlert, QueryBar, QueryDrawer } from '$lib/ui/components';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	let query = $derived(data.query);
-	// Nothing to show without both a query and a ref, so the drawer is this
-	// page's empty state too.
-	let editing: boolean = $state(
-		untrack(() => isEmptyQuery(data.query) || data.query.targetRef.length === 0)
-	);
+	// Nothing to show without a ref to compare against, so the drawer is this
+	// page's empty state too. Labels are not part of the condition: a ref with
+	// no labels means "diff everything", which is a real request.
+	let editing: boolean = $state(untrack(() => data.applications === undefined));
 
 	// Separate from +page.ts's client — this one drives the diff fan-out and
 	// reloadDiff, neither of which is part of the load() lifecycle.
@@ -130,7 +129,13 @@
 	></span>
 {/snippet}
 
-<QueryBar title="Diffs" {query} showTargetRef onEdit={() => (editing = true)}>
+<QueryBar
+	title="Diffs"
+	{query}
+	showTargetRef
+	applied={data.applications !== undefined}
+	onEdit={() => (editing = true)}
+>
 	{#snippet summary()}
 		{#if !applications}
 			{#if editing}

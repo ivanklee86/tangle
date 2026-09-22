@@ -48,20 +48,26 @@ describe('diffs +page.ts load', () => {
 			expect(fetch).not.toHaveBeenCalled();
 		});
 
-		it('does not call the API when a target ref is set but no labels are', () => {
-			const fetch = mockFetch(200, { results: [] });
-
-			const { applications } = callLoad('http://localhost/diffs/?targetRef=main', fetch);
-
-			expect(applications).toBeUndefined();
-			expect(fetch).not.toHaveBeenCalled();
-		});
-
 		it('still hands the page the query so it can seed its editor', () => {
-			const { query } = callLoad('http://localhost/diffs/?targetRef=main', mockFetch(200, {}));
+			const { query } = callLoad('http://localhost/diffs/?labels=foo:bar', mockFetch(200, {}));
 
-			expect(query).toEqual({ labels: '', excludeLabels: '', targetRef: 'main' });
+			expect(query).toEqual({ labels: 'foo:bar', excludeLabels: '', targetRef: '' });
 		});
+	});
+
+	// The ref alone is enough: it can only get into the URL by being
+	// submitted, so ADR 0008's concern is covered without also demanding
+	// labels. "Diff everything against this ref" is a real request, and
+	// refusing it would leave the editor reopening forever.
+	it('runs with a target ref and no labels', async () => {
+		const fetch = mockFetch(200, { results: [] });
+
+		const { applications } = callLoad('http://localhost/diffs/?targetRef=main', fetch);
+		await applications;
+
+		expect(fetch).toHaveBeenCalledTimes(1);
+		const [url] = fetch.mock.calls[0];
+		expect(url).not.toContain('labels');
 	});
 
 	it('forwards labels and excludeLabels from the URL, ignoring targetRef', async () => {

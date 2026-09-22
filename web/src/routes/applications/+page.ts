@@ -1,14 +1,15 @@
 import TangleAPIClient from '$lib/backend/client';
-import { isEmptyQuery, queryFromParams } from '$lib/ui/query';
+import { hasSubmittedQuery, queryFromParams } from '$lib/ui/query';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = ({ url, fetch }) => {
 	const query = queryFromParams(url.searchParams);
 
-	// No query means nobody has asked for anything yet — the page opens its
-	// editor instead (ADR 0008: don't fan out across every Argo CD because
-	// someone clicked a nav link).
-	if (isEmptyQuery(query)) {
+	// A bare /applications means nobody has asked for anything yet — the page
+	// opens its editor instead (ADR 0008: don't fan out across every Argo CD
+	// because someone clicked a nav link). A *submitted* query with no labels
+	// is a different thing: it means "show me everything", and it runs.
+	if (!hasSubmittedQuery(url.searchParams)) {
 		return { query, applications: undefined };
 	}
 

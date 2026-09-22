@@ -93,6 +93,35 @@ describe('applications +page.svelte', () => {
 
 			expect(goto).toHaveBeenCalledWith('/applications?labels=env%3Aprod');
 		});
+
+		// Submitting with nothing filled in means "show me everything", which
+		// has to navigate somewhere the page can tell apart from a bare visit
+		// — otherwise it lands back on this same state and the editor reopens,
+		// with no way ever to see the whole fleet.
+		test('applying with no labels navigates to a URL that runs the query', async () => {
+			const screen = await render(Page, data({ query: emptyQuery(), applications: undefined }));
+
+			await screen.getByRole('button', { name: 'See applications' }).click();
+
+			expect(goto).toHaveBeenCalledWith('/applications?searched=true');
+		});
+	});
+
+	describe('with an empty query that was submitted', () => {
+		test('runs it and lists everything instead of reopening the editor', async () => {
+			const screen = await render(Page, data({ query: emptyQuery() }));
+
+			await expect.element(screen.getByText('alpha')).toBeVisible();
+			await expect
+				.element(screen.getByRole('heading', { name: 'Edit query' }))
+				.not.toBeInTheDocument();
+		});
+
+		test('says the query has no filters rather than that none was given', async () => {
+			const screen = await render(Page, data({ query: emptyQuery() }));
+
+			await expect.element(screen.getByText('no filters — showing everything')).toBeVisible();
+		});
 	});
 
 	test('shows placeholder rows while the applications are pending', async () => {

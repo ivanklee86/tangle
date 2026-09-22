@@ -3,6 +3,7 @@ import {
 	applicationsHref,
 	cliCommand,
 	diffsHref,
+	hasSubmittedQuery,
 	isEmptyQuery,
 	queryFromParams,
 	type Query
@@ -56,12 +57,44 @@ describe('applicationsHref', () => {
 		);
 	});
 
-	it('omits empty parameters instead of sending blanks', () => {
-		expect(applicationsHref(query())).toBe('/applications');
+	// "No labels" is a real query meaning "show me everything", but an empty
+	// label filter vanishes from the query string — so without a marker a
+	// submitted empty query and a bare nav click produce the same URL, and
+	// the page can only read it as "nothing asked for yet".
+	it('marks a submitted empty query so it can be told from a bare visit', () => {
+		expect(applicationsHref(query())).toBe('/applications?searched=true');
+	});
+
+	it('leaves the marker off when labels already say a query was submitted', () => {
+		expect(applicationsHref(query({ labels: 'env:test' }))).toBe('/applications?labels=env%3Atest');
 	});
 
 	it('leaves the target ref out — it means nothing on this page', () => {
-		expect(applicationsHref(query({ targetRef: 'main' }))).toBe('/applications');
+		expect(applicationsHref(query({ targetRef: 'main' }))).toBe('/applications?searched=true');
+	});
+});
+
+describe('hasSubmittedQuery', () => {
+	it('is false for a bare visit', () => {
+		expect(hasSubmittedQuery(new URLSearchParams())).toBe(false);
+	});
+
+	it('is true for either label parameter', () => {
+		expect(hasSubmittedQuery(new URLSearchParams('labels=env:test'))).toBe(true);
+		expect(hasSubmittedQuery(new URLSearchParams('excludeLabels=tier:sandbox'))).toBe(true);
+	});
+
+	it('is true for an explicitly submitted empty query', () => {
+		expect(hasSubmittedQuery(new URLSearchParams('searched=true'))).toBe(true);
+	});
+
+	it('ignores parameters that narrow nothing', () => {
+		expect(hasSubmittedQuery(new URLSearchParams('refresh=true'))).toBe(false);
+	});
+
+	it('round-trips with applicationsHref for an empty query', () => {
+		const href = applicationsHref(query());
+		expect(hasSubmittedQuery(new URLSearchParams(href.split('?')[1]))).toBe(true);
 	});
 });
 

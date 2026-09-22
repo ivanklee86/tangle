@@ -28,7 +28,7 @@ describe('applications +page.ts load', () => {
 	// ADR 0008: nothing is fetched until someone has actually asked for
 	// something. Landing on /applications from the nav bar must not fan a
 	// label-less list request out to every configured Argo CD.
-	describe('with no query in the URL', () => {
+	describe('with nothing submitted', () => {
 		it('does not call the API at all', () => {
 			const fetch = mockFetch(200, { results: [] });
 
@@ -42,6 +42,23 @@ describe('applications +page.ts load', () => {
 			const { query } = callLoad('http://localhost/applications/', mockFetch(200, {}));
 
 			expect(query).toEqual({ labels: '', excludeLabels: '', targetRef: '' });
+		});
+	});
+
+	// "Show me everything" is a legitimate thing to ask for, and the gate has
+	// to let it through — otherwise submitting the editor with no labels
+	// navigates to a URL that reads as "nothing asked for" and just reopens
+	// the editor, with no way ever to see the whole fleet.
+	describe('with an explicitly submitted empty query', () => {
+		it('calls the API with no label filters', async () => {
+			const fetch = mockFetch(200, { results: [] });
+
+			const { applications } = callLoad('http://localhost/applications/?searched=true', fetch);
+			await applications;
+
+			expect(fetch).toHaveBeenCalledTimes(1);
+			const [url] = fetch.mock.calls[0];
+			expect(url).not.toContain('labels');
 		});
 	});
 

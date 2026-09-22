@@ -24,7 +24,7 @@
 		hasActiveFacets,
 		toggleFacet
 	} from '$lib/ui/applications';
-	import { applicationsHref, diffsHref, isEmptyQuery, type Query } from '$lib/ui/query';
+	import { applicationsHref, diffsHref, type Query } from '$lib/ui/query';
 	import {
 		ariaSort as ariaSortFor,
 		nextSortState,
@@ -47,10 +47,15 @@
 	let query = $derived(data.query);
 	// Open straight away when there's nothing to show — the drawer is the
 	// page's empty state, so there's no second full-page form to maintain.
+	// Open straight away only when nothing has been submitted. `applications`
+	// is undefined in exactly that case, which is also how an applied but
+	// label-less query ("show everything") stays distinguishable from a bare
+	// nav click — both have an empty Query, only one has results coming.
+	//
 	// untrack: a one-time seed from the load data, not a live binding — a
-	// later navigation re-runs load and remounts, so this doesn't need to
-	// track. Without it Svelte warns that only the initial value is captured.
-	let editing: boolean = $state(untrack(() => isEmptyQuery(data.query)));
+	// later navigation re-runs load, so this doesn't need to track. Without it
+	// Svelte warns that only the initial value is captured.
+	let editing: boolean = $state(untrack(() => data.applications === undefined));
 
 	let facets = $state(emptyFacets());
 	let sortState: SortState | undefined = $state({ key: 'health', direction: 'desc' });
@@ -94,7 +99,12 @@
 </svelte:head>
 
 {#await data.applications}
-	<QueryBar title="Applications" {query} onEdit={() => (editing = true)}>
+	<QueryBar
+		title="Applications"
+		{query}
+		applied={data.applications !== undefined}
+		onEdit={() => (editing = true)}
+	>
 		{#snippet summary()}Loading…{/snippet}
 	</QueryBar>
 	<!--
@@ -127,7 +137,12 @@
 	{@const needing = attentionCount(rows)}
 	{@const visible = sortApplications(filterApplications(rows, facets), sortState)}
 
-	<QueryBar title="Applications" {query} onEdit={() => (editing = true)}>
+	<QueryBar
+		title="Applications"
+		{query}
+		applied={data.applications !== undefined}
+		onEdit={() => (editing = true)}
+	>
 		{#snippet summary()}
 			{#if !applications}
 				Pick labels to search every configured Argo CD instance.

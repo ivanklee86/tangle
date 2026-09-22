@@ -39,13 +39,20 @@ parameter.
 either page looks like when someone clicks the nav link with no query. Taken literally, the new header — which
 renders query chips and an *Edit query* button — has nothing to render.
 
-Resolution: **keep the gate, and reuse the drawer for it.** With no query in the URL, the page renders its
-header with the H1, an empty-query summary line ("No query yet — pick applications by label") and the *Edit
-query* button, and opens the Drawer immediately. That is the same component in the same place, so it costs no
-extra design, it honours ADR 0008 (nothing is fetched until the drawer is applied), and it removes the current
-oddity where Applications shows a completely different full-page form. ADR 0008 stays accepted; this plan
-records the mechanism change, and the `searched=true` parameter is retired since "no labels at all" is now a
-legitimate applied query the drawer can submit.
+Resolution: **keep the gate, and reuse the drawer for it.** With nothing submitted, the page renders its
+header with the H1, an empty-query summary line and the *Edit query* button, and opens the Drawer immediately.
+That is the same component in the same place, so it costs no extra design, it honours ADR 0008 (nothing is
+fetched until the drawer is applied), and it removes the oddity where Applications showed a completely
+different full-page form. ADR 0008 stays accepted; this plan records the mechanism change.
+
+**The `searched=true` parameter stays.** An earlier draft of this plan retired it, on the reasoning that "no
+labels at all" is a legitimate applied query the drawer can submit — which is true, and is exactly why the
+parameter is needed. An empty label filter drops out of the query string, so a submitted empty query and a bare
+nav click produce the same URL; without a marker the gate reads both as "nothing asked for" and an empty submit
+bounces straight back into the editor, with no way ever to list the whole fleet. `applicationsHref` therefore
+emits `searched=true` for an empty query and nothing extra otherwise, and `hasSubmittedQuery` is what the gate
+reads. Diffs needs no equivalent: its target ref can only reach the URL by being submitted, so a ref with no
+labels is already distinguishable — and it runs, meaning "diff everything against this ref".
 
 ### 2. The partial-failure state cannot be built yet
 
@@ -257,3 +264,25 @@ produced — exactly the fixture drift ADR 0003 predicted, caught exactly the wa
   `--- live` / `+++ target`, for the same reason: they come from the server's `diff` invocation. A `--label`
   flag pair there would fix it. Backend, and not part of this refactor.
 - **No `j`/`k`/`/` shortcuts**, as planned.
+
+## Follow-up: the empty-query gate was broken on first delivery
+
+Reported after stages 5-6 landed: submitting the Applications editor with nothing filled in should list every
+application, and didn't.
+
+The cause was decision 1 as originally written. Retiring `searched=true` removed the only thing distinguishing
+a submitted empty query from a bare nav click — both are `/applications` — so applying the drawer with no
+labels navigated to a URL the gate read as "nothing asked for", which reopened the drawer. There was no route
+to an unfiltered listing at all.
+
+Fixed by restoring the marker in `query.ts`: `applicationsHref` emits `searched=true` only when the query is
+otherwise empty, and `hasSubmittedQuery` is what both `+page.ts` files consult instead of `isEmptyQuery`.
+Diffs had the same trap for a ref with no labels; its gate now reads the target ref alone, since a ref can only
+get into the URL by being submitted. `QueryBar` distinguishes the two empty states in its own copy — "none yet
+— pick applications by label" versus "no filters — showing everything" — because they no longer mean the same
+thing.
+
+Covered at every layer, since the bug lived in the seam between them: `query.spec.ts` on the marker and the
+round trip through `hasSubmittedQuery`, both `load.spec.ts` files on what does and doesn't fetch, both page
+tests on applying an empty query and on rendering one, and a mocked e2e that submits the empty form on Home and
+checks the fleet is listed. Verified against the live stack too.

@@ -82,6 +82,19 @@ test.describe('home page', () => {
 		);
 	});
 
+	// "Show me everything" is a legitimate query. The whole round trip has to
+	// work: submit an empty form, land on a URL the page runs, see the fleet —
+	// not bounce back into the editor.
+	test('submitting an empty form shows every application', async ({ page }) => {
+		await page.getByRole('button', { name: 'See applications' }).click();
+
+		await page.waitForURL((url) => url.pathname.startsWith('/applications'));
+
+		await expect(page.locator('tbody tr').first()).toBeVisible();
+		await expect(page.getByText('no filters — showing everything')).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Edit query', level: 2 })).toBeHidden();
+	});
+
 	test('See diffs navigates to /diffs carrying the target ref', async ({ page }) => {
 		await page.getByRole('textbox', { name: `${INCLUDE} key` }).fill('env');
 		await page.getByRole('textbox', { name: `${INCLUDE} value` }).fill('prod');
