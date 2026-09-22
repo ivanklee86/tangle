@@ -245,7 +245,7 @@
 								<TableHeadCell aria-sort={ariaSortFor(sortState, column.key)}>
 									<button
 										type="button"
-										class="cursor-pointer select-none"
+										class="cursor-pointer select-none uppercase"
 										onclick={() => toggleSort(column.key)}
 										>{column.label}{sortIndicatorFor(sortState, column.key)}</button
 									>

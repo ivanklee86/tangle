@@ -14,7 +14,12 @@ type ApplicationLinks struct {
 	URL        string `json:"url"`
 	Health     string `json:"health"`
 	SyncStatus string `json:"syncStatus"`
-	LiveRef    string `json:"LiveRef"`
+	// liveRef, not LiveRef: every sibling field here is lowerCamelCase, and
+	// so is the web UI's own ApplicationLinks type and the e2e fixtures that
+	// stand in for this response. The capitalised tag meant the field the
+	// frontend read was always undefined — invisible until a column actually
+	// displayed it.
+	LiveRef string `json:"liveRef"`
 }
 
 type ArgoCDApplicationResults struct {

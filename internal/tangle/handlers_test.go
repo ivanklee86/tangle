@@ -511,3 +511,58 @@ func TestHandlersValidLabelsAreNotRejected(t *testing.T) {
 		})
 	}
 }
+
+// TestApplicationsResponseJSONShape pins the wire field names of the
+// applications response.
+//
+// These names are a contract with two consumers that can't be type-checked
+// against this struct: the web UI's own ApplicationLinks interface, and the
+// Playwright fixtures that stand in for this endpoint. `liveRef` was
+// previously tagged `LiveRef`, so the frontend read undefined for it — which
+// nothing noticed until a column displayed the value, and which the mocked
+// e2e fixtures actively hid by spelling it the way the UI expected rather
+// than the way the server sent it.
+func TestApplicationsResponseJSONShape(t *testing.T) {
+	response := ApplicationsResponse{
+		Results: []ArgoCDApplicationResults{{
+			Name: "test",
+			Link: "https://argocd.test/applications",
+			Applications: []ApplicationLinks{{
+				Name:       "test-1",
+				URL:        "https://argocd.test/applications/argocd/test-1",
+				Health:     "Healthy",
+				SyncStatus: "Synced",
+				LiveRef:    "main",
+			}},
+		}},
+	}
+
+	encoded, err := json.Marshal(response)
+	assert.NoError(t, err)
+
+	var decoded map[string]any
+	assert.NoError(t, json.Unmarshal(encoded, &decoded))
+
+	results, ok := decoded["results"].([]any)
+	assert.True(t, ok, "results")
+	instance, ok := results[0].(map[string]any)
+	assert.True(t, ok)
+
+	for _, key := range []string{"name", "link", "applications"} {
+		assert.Contains(t, instance, key)
+	}
+
+	applications, ok := instance["applications"].([]any)
+	assert.True(t, ok, "applications")
+	application, ok := applications[0].(map[string]any)
+	assert.True(t, ok)
+
+	// Every key lowerCamelCase, with no stray capitalised variant alongside.
+	assert.Equal(t, map[string]any{
+		"name":       "test-1",
+		"url":        "https://argocd.test/applications/argocd/test-1",
+		"health":     "Healthy",
+		"syncStatus": "Synced",
+		"liveRef":    "main",
+	}, application)
+}

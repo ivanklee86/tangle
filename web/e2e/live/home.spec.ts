@@ -1,30 +1,30 @@
 import { expect, test } from '@playwright/test';
 
+const INCLUDE = 'Include applications with all of these labels';
+
 test.describe('home page (live)', () => {
-	test('loads and renders both cards with no page errors', async ({ page }) => {
+	test('renders one query editor with both actions and no page errors', async ({ page }) => {
 		const errors: Error[] = [];
 		page.on('pageerror', (error) => errors.push(error));
 
 		await page.goto('/');
 
-		await expect(page.getByRole('heading', { name: 'Applications', level: 2 })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Diffs', level: 2 })).toBeVisible();
+		await expect(
+			page.getByRole('heading', { name: 'Pick applications by label', level: 1 })
+		).toBeVisible();
+		await expect(page.getByRole('textbox', { name: `${INCLUDE} key` })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'See applications' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'See diffs' })).toBeVisible();
 
 		expect(errors).toEqual([]);
 	});
 
-	test('submitting Applications with no labels navigates to /applications without error', async ({
-		page
-	}) => {
+	test('submitting with no labels navigates to /applications without error', async ({ page }) => {
 		const errors: Error[] = [];
 		page.on('pageerror', (error) => errors.push(error));
 
 		await page.goto('/');
-
-		const applicationsForm = page.locator('form', {
-			has: page.getByRole('button', { name: 'See applications' })
-		});
-		await applicationsForm.getByRole('button', { name: 'See applications' }).click();
+		await page.getByRole('button', { name: 'See applications' }).click();
 
 		await page.waitForURL((url) => url.pathname.startsWith('/applications'));
 		await expect(page.getByRole('heading', { name: 'Applications', level: 1 })).toBeVisible();

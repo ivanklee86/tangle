@@ -1,6 +1,6 @@
 # UI refactor: one query editor, indigo palette, rebuilt Applications and Diffs
 
-Status: in progress · 2026-09-22 — stages 1-4 shipped, 5-6 outstanding
+Status: implemented · 2026-09-22
 
 Implements the design canvas "Tangle UI — Final design"
 (artifact `1f510fad-3738-4e6b-9f5a-cc8f6789bd15`, page *Final design*). The canvas's *Exploration* page holds the
@@ -218,6 +218,42 @@ Four corrections made while building:
   read an empty table; and Flowbite's `Toggle` hides the real checkbox behind a styled span, so Playwright's
   actionability check never passes without `force`.
 
-**Stages 5-6 — outstanding.** The Diffs page is untouched: it still uses `DiffsForm` and the nested
-ArgoCD → application tab layout, on the new palette. The split pane, grouped sidebar with result badges,
-breadcrumb, three tabs and progress footer are all still to build, as is the live-stack Playwright pass.
+**Stage 5 — done.** Diffs is a `SplitPane`: a sidebar listing every application grouped by instance with an
+outcome dot, `+n −n` counts and a Changed/Errors/All filter, and a detail pane with the breadcrumb, status
+badges, `liveRef → targetRef`, Reload diff, Open in Argo CD, and the three tabs. `$lib/ui/diffs.ts` holds the
+model — outcome classification, line counts, filtering, grouping and selection — so the page stays layout.
+Rows render as soon as the applications call returns and show `pending` until their own diff arrives, which is
+what makes the sidebar useful during a long fan-out. `DiffsForm` and `AppManifests` are deleted.
+
+**Stage 6 — done.** Both Playwright suites rewritten for the new pages: the mocked suite asserts structure
+against fixtures, the live suite stays structural per [ADR 0003](../adrs/0003-svelte-e2e-testing-strategy.md).
+Skeleton loading and both empty states ship on each page. The per-instance failure state is still out (decision
+2) and still needs the API change.
+
+### What running it against the live stack found
+
+Two things no test would have caught, because both were invisible until a page displayed the value.
+
+**`ApplicationLinks.LiveRef` was tagged `json:"LiveRef"`** while every sibling field — and the web UI's own
+`ApplicationLinks` interface, and the Playwright fixtures — used lowerCamelCase. The frontend therefore read
+`undefined` for it, always. Nothing noticed because nothing rendered it until this design added a Live ref
+column; `buildDiffRequests` had been sending `liveRef: undefined` in every diff POST. Fixed to `json:"liveRef"`,
+with `TestApplicationsResponseJSONShape` pinning the whole wire shape so it can't drift again.
+
+Worth noting *how* it hid: `e2e/fixtures/applications.json` spelled the field `liveRef`, the way the UI wanted
+rather than the way the server sent it. The mocked suite was green against a response shape the server never
+produced — exactly the fixture drift ADR 0003 predicted, caught exactly the way that ADR intended.
+
+**The unsortable Live ref header rendered uppercase while the sortable ones didn't,** because Flowbite's
+`TableHeadCell` uppercases its own content but the `<button>` inside the sortable cells reset it.
+
+### Not built as drawn
+
+- **No per-resource breakdown in the Diff tab.** The design shows "Diff 2 resources" and an accordion per
+  Kubernetes resource. `diffManifests` (`internal/tangle/manifests.go`) shells out to `diff -uNar` over two
+  temp files holding the whole manifest set, so the response is one unified diff with no resource boundaries
+  to recover. The tab shows `+n −n` instead, which is derivable and honest.
+- **The diff's file headers are temp paths** (`--- /tmp/tangle…/live_<uuid>.yaml`) rather than the design's
+  `--- live` / `+++ target`, for the same reason: they come from the server's `diff` invocation. A `--label`
+  flag pair there would fix it. Backend, and not part of this refactor.
+- **No `j`/`k`/`/` shortcuts**, as planned.
