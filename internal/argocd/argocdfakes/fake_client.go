@@ -127,3 +127,9 @@ func (f *FakeClient) GetScheme() string {
 }
 
 var _ argocd.IArgoCDClient = (*FakeClient)(nil)
+
+// Close satisfies argocd.IArgoCDClient. There's no connection behind a fake, so
+// there's nothing to release.
+func (f *FakeClient) Close() error {
+	return nil
+}

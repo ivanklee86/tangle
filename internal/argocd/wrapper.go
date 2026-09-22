@@ -19,6 +19,8 @@ type IArgoCDWrapper interface {
 	GetManifests(ctx context.Context, applicationName string, liveRef string, targetRef string) (*GetManifestsResponse, error)
 	GetUrl() string
 	GetScheme() string
+	// Close releases the underlying ArgoCD connection.
+	Close() error
 }
 
 type ArgoCDWrapperOptions struct {
@@ -147,6 +149,14 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map
 func (a *ArgoCDWrapper) GetManifests(ctx context.Context, applicationName string, liveRef string, targetRef string) (*GetManifestsResponse, error) {
 	refreshGroup := a.HardRefreshPool.NewGroup()
 	refreshGroup.SubmitErr(func() error {
+		// This is the one call Tangle makes that isn't a pure read: ArgoCD
+		// patches the application's refresh annotation and forces an uncached
+		// repo-server comparison. ArgoCDClient retries a lost connection once,
+		// so a connection dropped after ArgoCD had already started the work
+		// costs one extra hard refresh. Repeating it is safe — the second one
+		// supersedes the first — and the alternative, excluding this call from
+		// the retry, means the diffs page fails instead of recovering. The
+		// pool this runs on is what bounds the cost.
 		refresh := "hard"
 		_, err := a.ApplicationClient.Get(ctx, &application.ApplicationQuery{Name: &applicationName, Refresh: &refresh})
 		return err
@@ -189,4 +199,8 @@ func (a *ArgoCDWrapper) GetUrl() string {
 
 func (a *ArgoCDWrapper) GetScheme() string {
 	return a.ApplicationClient.GetScheme()
+}
+
+func (a *ArgoCDWrapper) Close() error {
+	return a.ApplicationClient.Close()
 }

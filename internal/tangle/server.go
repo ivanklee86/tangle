@@ -96,12 +96,24 @@ func New(config *TangleConfig, version string) *Tangle {
 	// Create ArgoCD clients
 	wrappers := make(map[string]argocd.IArgoCDWrapper)
 	for key, value := range config.ArgoCDs {
-		client, _ := argocd.NewArgoCDClient(&argocd.ArgoCDClientOptions{
+		client, err := argocd.NewArgoCDClient(&argocd.ArgoCDClientOptions{
+			Name:            key,
+			Logger:          logger,
 			Address:         value.Address,
 			Insecure:        value.Insecure,
 			PlainText:       value.PlainText,
 			AuthTokenEnvVar: value.AuthTokenEnvVar,
 		})
+		if err != nil {
+			// Skip the instance rather than registering a wrapper around a nil
+			// client, which would nil-deref into chi's Recoverer on the first
+			// request to it. A dial failure isn't an error here — the client
+			// warns and connects lazily — so this only fires on misconfiguration,
+			// e.g. an authTokenEnvVar naming a variable that isn't set.
+			logger.Error("Could not create ArgoCD client, skipping instance.",
+				slog.String("argocd", key), httplog.ErrorKey, err)
+			continue
+		}
 
 		wrapper, _ := argocd.New(client, key, &argocd.ArgoCDWrapperOptions{
 			DoNotInstrumentWorkers: tangle.Config.DoNotInstrument,
@@ -203,5 +215,15 @@ func (t *Tangle) Start() {
 	if err := t.Server.Shutdown(shutdownCtx); err != nil {
 		t.Log.Error("HTTP shutdown error", httplog.ErrorKey, err)
 	}
+
+	// Release the ArgoCD connections once in-flight requests are done with them.
+	// Each one also owns a local gRPC-Web proxy — a unix socket, a grpc.Server
+	// and its goroutine — that nothing else will clean up.
+	for name, wrapper := range t.ArgoCDs {
+		if err := wrapper.Close(); err != nil {
+			t.Log.Error("Error closing ArgoCD connection.", slog.String("argocd", name), httplog.ErrorKey, err)
+		}
+	}
+
 	t.Log.Info("Graceful shutdown complete.")
 }

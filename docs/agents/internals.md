@@ -47,7 +47,7 @@ flowchart LR
     end
 
     handlers --> wrappers
-    wrappers --> client["ArgoCDClient<br/>argo-cd apiclient, gRPC-Web + token"]
+    wrappers --> client["ArgoCDClient<br/>argo-cd apiclient, gRPC-Web + token<br/>redials on connection loss"]
     client --> argo1[(ArgoCD A<br/>api-server → repo-server)]
     client --> argo2[(ArgoCD B<br/>api-server → repo-server)]
 ```
@@ -66,6 +66,28 @@ Every pool is a [`alitto/pond`](https://github.com/alitto/pond) worker pool size
 config; this is the throttle that keeps Tangle from overwhelming ArgoCD's `repo-server`. Pools are
 registered as Prometheus `GaugeFunc`/`CounterFunc` collectors labeled `pool` + `argocd`
 (`internal/argocd/metrics.go`), unless `DoNotInstrument` is set.
+
+## Connections to ArgoCD
+
+`ArgoCDClient` sets `GRPCWeb: true`, so argo-cd's apiclient never dials ArgoCD directly: it starts a
+local gRPC → gRPC-Web reverse proxy on a unix socket (`/tmp/argocd-<random>.sock`) and points the gRPC
+client at that. Every RPC goes client → socket → proxy → gRPC-Web → ArgoCD. gRPC-Web is hardcoded
+rather than configurable because Tangle can't know whether a given ArgoCD sits behind an ingress that
+carries native gRPC.
+
+That connection can't re-establish itself — argo-cd's `BlockingNewClient` dials once and reuses the
+same `net.Conn` for every subsequent "dial" — so the client owns recovery. Each `ArgoCDClient` holds
+one connection behind a mutex; an RPC that fails with `codes.Unavailable`, or `codes.Canceled` while
+its request context is still live, triggers one redial and one retry. Concurrent failures from a pool
+fan-out collapse into a single redial via a generation counter, and the replaced connection is closed,
+which is what stops the old proxy and unlinks its socket. `Close()` does the same at shutdown. Dials
+are counted by `argocd_client_dials_total{argocd,reason,result}` and
+`argocd_client_connection_generation{argocd}` — unlike the pool collectors, these are always
+registered. See [ADR 0025](../adrs/0025-reconnect-the-argocd-grpc-client.md).
+
+A client whose first dial fails is kept and connects lazily on first use, so an ArgoCD that's briefly
+down at boot doesn't take the pod with it. A missing `authTokenEnvVar` is still fatal for that
+instance: `internal/tangle/server.go` logs it and skips registering a wrapper for it.
 
 ## Configuration
 
