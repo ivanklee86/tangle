@@ -91,7 +91,8 @@ URLs look like now.
 
 ## What shipped
 
-All three stages, with the recommended answer to each open decision.
+All three stages, with the recommended answer to each open decision. The decision itself is recorded in
+[ADR 0027](../../adrs/0027-serve-the-public-domain-at-runtime-for-copyable-links.md).
 
 **Server.** `normalizeDomain` in `internal/tangle/loader.go` trims whitespace, requires an `http`/`https` scheme
 and a host, drops a trailing slash and keeps any sub-path. A malformed value stops startup with a message that
