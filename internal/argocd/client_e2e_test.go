@@ -199,13 +199,34 @@ func TestE2E_ArgoCDClient_Get(t *testing.T) {
 	}
 }
 
-// socketsInTempDir lists the gRPC-Web proxy sockets currently in place.
-// argo-cd's apiclient starts one local proxy per connection, named
-// /tmp/argocd-<random>.sock (pkg/apiclient/grpcproxy.go), and closing the
-// connection is what stops the proxy and unlinks the file. Comparing sets
-// rather than counts keeps this honest if anything else on the machine has its
-// own sockets.
-func socketsInTempDir(t *testing.T) map[string]bool {
+// isolateTempDir points os.TempDir() at a directory private to this test.
+//
+// argo-cd's apiclient builds each gRPC-Web proxy's socket path from
+// os.TempDir() (pkg/apiclient/grpcproxy.go), which re-reads $TMPDIR on every
+// call, so this is what makes the socket assertions below deterministic. They
+// can't just diff /tmp before and after: `go test ./...` runs package binaries
+// in parallel, and internal/tangle's e2e tests build 14 ArgoCD clients of their
+// own, each dropping an argocd-*.sock into the same directory at an
+// unpredictable moment.
+//
+// The directory name is kept short on purpose — a unix socket path is limited
+// to ~108 characters and t.TempDir() bakes the (long) test name into it.
+func isolateTempDir(t *testing.T) {
+	t.Helper()
+
+	dir, err := os.MkdirTemp("", "tangle-e2e")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+
+	t.Setenv("TMPDIR", dir)
+}
+
+// proxySockets lists the gRPC-Web proxy sockets this test's clients have open.
+// One connection means one socket; closing the connection stops the proxy and
+// unlinks the file.
+func proxySockets(t *testing.T) []string {
 	t.Helper()
 
 	paths, err := filepath.Glob(filepath.Join(os.TempDir(), "argocd-*.sock"))
@@ -213,23 +234,7 @@ func socketsInTempDir(t *testing.T) map[string]bool {
 		t.Fatal(err)
 	}
 
-	sockets := make(map[string]bool, len(paths))
-	for _, path := range paths {
-		sockets[path] = true
-	}
-
-	return sockets
-}
-
-func newSockets(before, after map[string]bool) []string {
-	added := []string{}
-	for path := range after {
-		if !before[path] {
-			added = append(added, path)
-		}
-	}
-
-	return added
+	return paths
 }
 
 // TestE2E_ArgoCDClient_ReconnectsAfterConnectionLoss is the regression test for
@@ -245,8 +250,7 @@ func newSockets(before, after map[string]bool) []string {
 // and that the old proxy is gone afterwards.
 func TestE2E_ArgoCDClient_ReconnectsAfterConnectionLoss(t *testing.T) {
 	setup(t)
-
-	before := socketsInTempDir(t)
+	isolateTempDir(t)
 
 	client, err := NewArgoCDClient(&ArgoCDClientOptions{
 		Name:            "reconnect-test",
@@ -267,9 +271,9 @@ func TestE2E_ArgoCDClient_ReconnectsAfterConnectionLoss(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(1), stale.generation)
 
-	original := newSockets(before, socketsInTempDir(t))
-	// require, not assert: the assertions below index into this slice, so an
+	// require, not assert: the assertion below indexes into this slice, so an
 	// unexpected length has to stop the test rather than panic it.
+	original := proxySockets(t)
 	require.Len(t, original, 1, "the client should own exactly one gRPC-Web proxy socket")
 
 	fresh, err := argoCDClient.reconnect(stale)
@@ -294,8 +298,7 @@ func TestE2E_ArgoCDClient_ReconnectsAfterConnectionLoss(t *testing.T) {
 // proxy's grpc.Server, its goroutine and its socket outlived every client.
 func TestE2E_ArgoCDClient_CloseReleasesTheProxy(t *testing.T) {
 	setup(t)
-
-	before := socketsInTempDir(t)
+	isolateTempDir(t)
 
 	client, err := NewArgoCDClient(&ArgoCDClientOptions{
 		Name:            "close-test",
@@ -305,7 +308,7 @@ func TestE2E_ArgoCDClient_CloseReleasesTheProxy(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	added := newSockets(before, socketsInTempDir(t))
+	added := proxySockets(t)
 	require.Len(t, added, 1, "the client should own exactly one gRPC-Web proxy socket")
 
 	assert.NoError(t, client.Close())
