@@ -1,5 +1,8 @@
 name: "tangle"
-domain: "https://tangle.test.com"
+# The public address of this Tangle, used for the links the web UI offers to
+# copy. Points at where this stack actually serves so the e2e suites exercise
+# a real configured domain rather than one that resolves nowhere.
+domain: "http://localhost:8081"
 port: 8081
 
 listWorkers: 20

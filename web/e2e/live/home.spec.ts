@@ -19,6 +19,25 @@ test.describe('home page (live)', () => {
 		expect(errors).toEqual([]);
 	});
 
+	// The real round trip: the server reads `domain` from integration/tangle.yaml,
+	// serves it from /api/config, and the browser builds the copyable link on it.
+	// Nothing in the mocked suite exercises that path end to end.
+	test('the link preview is absolute, built from the served config', async ({ page }) => {
+		await page.goto('/');
+
+		const configured = await page.evaluate(async () => {
+			const response = await fetch('/api/config');
+			return ((await response.json()) as { domain: string }).domain;
+		});
+		expect(configured).not.toBe('');
+
+		await page.getByRole('textbox', { name: `${INCLUDE} key` }).fill('env');
+		await page.getByRole('textbox', { name: `${INCLUDE} value` }).fill('test');
+		await page.getByRole('button', { name: 'Add label' }).click();
+
+		await expect(page.getByText(`${configured}/applications?labels=env%3Atest`)).toBeVisible();
+	});
+
 	test('submitting with no labels navigates to /applications without error', async ({ page }) => {
 		const errors: Error[] = [];
 		page.on('pageerror', (error) => errors.push(error));

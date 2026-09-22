@@ -36,6 +36,18 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+// ConfigResponse carries the settings the web UI can only learn at runtime.
+//
+// The frontend is a static bundle baked into the image once and served by every
+// deployment, so a build-time variable can't hold anything deployment-specific.
+// Deliberately named for the general case rather than /api/domain: version or
+// instance metadata would belong here too.
+type ConfigResponse struct {
+	// Public base URL of this Tangle, without a trailing slash, or empty when
+	// none is configured — in which case the browser uses its own origin.
+	Domain string `json:"domain"`
+}
+
 // DiffsRequest contains the git refs to compare
 // swagger:model DiffsRequest
 type DiffsRequest struct {
@@ -82,6 +94,15 @@ func (t *Tangle) sortResults(apiResults []ArgoCDApplicationResults) []ArgoCDAppl
 func (t *Tangle) respondError(w http.ResponseWriter, status int, err error) {
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(ErrorResponse{Error: err.Error()}) // nolint: errcheck
+}
+
+func (t *Tangle) configHandler(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	response := ConfigResponse{Domain: t.Config.Domain}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {

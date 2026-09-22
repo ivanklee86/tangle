@@ -3,6 +3,7 @@ import { render } from 'vitest-browser-svelte';
 import Page from './+page.svelte';
 import { type ApplicationResponseStore } from '$lib/backend/data';
 import { emptyQuery, type Query } from '$lib/ui/query';
+import { EMPTY_CONFIG } from '$lib/backend/config';
 
 const invalidateAll = vi.fn();
 const goto = vi.fn();
@@ -54,6 +55,7 @@ function data(overrides: { query?: Query; applications?: Promise<ApplicationResp
 	return {
 		params: {},
 		data: {
+			config: EMPTY_CONFIG,
 			query: overrides.query ?? ({ ...emptyQuery(), labels: 'foo:bar' } as Query),
 			applications: 'applications' in overrides ? overrides.applications : Promise.resolve(FLEET)
 		}

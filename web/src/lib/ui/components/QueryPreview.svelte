@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Helper } from 'flowbite-svelte';
 	import { cliCommand, type Query } from '$lib/ui/query';
+	import { absoluteUrl } from '$lib/ui/links';
 	import CopyableText from './CopyableText.svelte';
 
 	interface Props {
@@ -28,7 +29,11 @@
 </script>
 
 <div class="space-y-2">
-	<CopyableText caption="Link" text={href} copyLabel="Copy link" />
+	<!--
+		Absolute, not the bare path: this is a link people copy and send, and
+		"/applications?labels=env:test" is not something a colleague can open.
+	-->
+	<CopyableText caption="Link" text={absoluteUrl(href)} copyLabel="Copy link" />
 
 	{#if cli}
 		<div>

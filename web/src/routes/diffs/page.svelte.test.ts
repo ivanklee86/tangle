@@ -3,6 +3,7 @@ import { render } from 'vitest-browser-svelte';
 import Page from './+page.svelte';
 import { type ApplicationResponseStore } from '$lib/backend/data';
 import { emptyQuery, type Query } from '$lib/ui/query';
+import { EMPTY_CONFIG } from '$lib/backend/config';
 
 const goto = vi.fn();
 vi.mock('$app/navigation', () => ({
@@ -71,6 +72,7 @@ function data(overrides: { query?: Query; applications?: Promise<ApplicationResp
 	return {
 		params: {},
 		data: {
+			config: EMPTY_CONFIG,
 			query: overrides.query ?? QUERY,
 			applications: 'applications' in overrides ? overrides.applications : Promise.resolve(FLEET)
 		}

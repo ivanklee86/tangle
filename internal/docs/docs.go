@@ -52,6 +52,19 @@ type applicationsQueryParams struct {
 //   400: errorResponse
 //   500: errorResponse
 
+// swagger:route GET /api/config config
+// Get the settings the web UI can only learn at runtime.
+//
+// Responses:
+//   200: configResponse
+
+// Runtime configuration for the web UI
+// swagger:response configResponse
+type configResponse struct {
+	// in: body
+	Body tangle.ConfigResponse
+}
+
 // Response for successful application lookup
 // swagger:response applicationsResponse
 type applicationsResponse struct {

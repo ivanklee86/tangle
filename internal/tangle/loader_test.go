@@ -1,6 +1,9 @@
 package tangle
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/knadh/koanf/v2"
@@ -169,4 +172,82 @@ func TestConfigFileKeys(t *testing.T) {
 		// Not in the fixture, so it falls back to the struct default.
 		assert.Equal(t, TangleConfigDefaults.Timeout, loadedConfig.Timeout)
 	})
+}
+
+// TestLoadConfigDomain covers the public address the web UI builds shareable
+// links from.
+//
+// The promise is narrow but load-bearing: whatever comes back can be joined
+// with a path to make a URL that works. An unset domain is fine (the browser
+// falls back to its own origin); a malformed one is a startup error, because
+// the alternative is every copied link silently pointing somewhere wrong.
+func TestLoadConfigDomain(t *testing.T) {
+	valid := []struct {
+		name   string
+		domain string
+		want   string
+	}{
+		{name: "unset", domain: "", want: ""},
+		{name: "https", domain: "https://tangle.corp", want: "https://tangle.corp"},
+		{name: "http with port", domain: "http://localhost:8081", want: "http://localhost:8081"},
+		{
+			name:   "trailing slash is dropped",
+			domain: "https://tangle.corp/",
+			want:   "https://tangle.corp",
+		},
+		{
+			// Serving Tangle under a sub-path is a legitimate deployment, so
+			// the path is kept — only the trailing slash goes.
+			name:   "sub-path is kept",
+			domain: "https://corp.example/tangle/",
+			want:   "https://corp.example/tangle",
+		},
+		{name: "surrounding whitespace", domain: "  https://tangle.corp  ", want: "https://tangle.corp"},
+	}
+
+	for _, test := range valid {
+		t.Run(test.name, func(t *testing.T) {
+			config, err := loadConfigWithDomain(t, test.domain)
+
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, config.Domain)
+		})
+	}
+
+	invalid := []struct {
+		name   string
+		domain string
+		reason string
+	}{
+		{name: "no scheme", domain: "tangle.corp", reason: "scheme"},
+		{name: "wrong scheme", domain: "ftp://tangle.corp", reason: "scheme"},
+		{name: "scheme only", domain: "https://", reason: "no host"},
+		{name: "a path, not a URL", domain: "/applications", reason: "scheme"},
+	}
+
+	for _, test := range invalid {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := loadConfigWithDomain(t, test.domain)
+
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), test.reason)
+			assert.Contains(t, err.Error(), test.domain, "the message should name the bad value")
+		})
+	}
+}
+
+// loadConfigWithDomain writes a minimal config file carrying one domain and
+// loads it, so these cases exercise the real loading path rather than calling
+// an unexported helper directly.
+func loadConfigWithDomain(t *testing.T, domain string) (*TangleConfig, error) {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), "tangle.yaml")
+	contents := "name: \"test\"\nport: 8081\n"
+	if domain != "" {
+		contents += fmt.Sprintf("domain: %q\n", domain)
+	}
+	assert.NoError(t, os.WriteFile(path, []byte(contents), 0o600))
+
+	return LoadConfig(koanf.New("."), LoadConfigOptions{Path: path})
 }

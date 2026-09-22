@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -565,4 +566,47 @@ func TestApplicationsResponseJSONShape(t *testing.T) {
 		"syncStatus": "Synced",
 		"liveRef":    "main",
 	}, application)
+}
+
+// TestConfigHandler covers the endpoint the web UI reads its runtime settings
+// from. The frontend is one static bundle serving every deployment, so this is
+// the only way a deployment-specific value reaches the browser.
+func TestConfigHandler(t *testing.T) {
+	t.Run("returns the configured domain", func(t *testing.T) {
+		tangle := newTestTangle()
+		tangle.Config.Domain = "https://tangle.corp"
+
+		server := httptest.NewServer(tangle.Server.Handler)
+		defer server.Close()
+
+		resp, err := http.Get(server.URL + "/api/config")
+		assert.NoError(t, err)
+		defer func() { _ = resp.Body.Close() }()
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var result ConfigResponse
+		assert.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+		assert.Equal(t, "https://tangle.corp", result.Domain)
+	})
+
+	t.Run("returns an empty domain rather than omitting the field", func(t *testing.T) {
+		// The browser falls back to its own origin on an empty string. A
+		// missing key would be indistinguishable from an older server that
+		// doesn't serve this endpoint at all, which the client handles
+		// differently.
+		tangle := newTestTangle()
+		tangle.Config.Domain = ""
+
+		server := httptest.NewServer(tangle.Server.Handler)
+		defer server.Close()
+
+		resp, err := http.Get(server.URL + "/api/config")
+		assert.NoError(t, err)
+		defer func() { _ = resp.Body.Close() }()
+
+		body, err := io.ReadAll(resp.Body)
+		assert.NoError(t, err)
+		assert.JSONEq(t, `{"domain": ""}`, string(body))
+	})
 }

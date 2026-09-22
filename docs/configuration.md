@@ -21,10 +21,28 @@ Additional configurations can be configured in the `tangle.yaml` or via environm
 
 | Configuration | Required? | Default Value | Description |
 | --------------- | ----------- | --------------- | ------------- |
+| domain | No | (the browser's own address) | Public URL of this Tangle, used for the links the web UI offers to copy |
 | timeout | No | 60 (seconds) | Timeout on ArgoCD queries |
 | listWorkers | No | 10 | Control `List` parallelism |
 | manifestsWorkers | No | 5 | Controls `GetManifests` parallelism |
 | hardRefreshWorkers | no | 5 | Controls `Get` with hard refresh parallelism |
+
+### `domain`
+
+The web UI shows a copyable link for every query. By default it builds that link from the address in
+the browser's own address bar, which is right whenever the address you reached Tangle on is the one
+you'd send to somebody.
+
+Set `domain` when it isn't — most often when people reach Tangle through a `kubectl port-forward`, so
+their browser says `localhost:8081` and a copied link is useless to a colleague:
+
+```yaml
+domain: "https://tangle.your-company.com"
+```
+
+It must be an absolute `http://` or `https://` URL. A trailing slash is dropped; a sub-path is kept,
+so `https://example.com/tangle` works. **A malformed value stops Tangle at startup** rather than being
+ignored — the alternative is every copied link quietly pointing somewhere wrong.
 
 ## Environment variables
 

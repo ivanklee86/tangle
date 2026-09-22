@@ -97,6 +97,49 @@ test.describe('home page', () => {
 		await expect(page.getByText('/applications?labels=env%3Aprod')).toBeVisible();
 	});
 
+	// A link is meant to be sent to somebody, and "/applications?labels=..."
+	// isn't something a colleague can open.
+	test('the link preview is a full URL, not a path', async ({ page }) => {
+		await page.getByRole('textbox', { name: `${INCLUDE} key` }).fill('env');
+		await page.getByRole('textbox', { name: `${INCLUDE} value` }).fill('prod');
+		await page.getByRole('button', { name: 'Add label' }).click();
+
+		const origin = new URL(page.url()).origin;
+		await expect(page.getByText(`${origin}/applications?labels=env%3Aprod`)).toBeVisible();
+	});
+
+	// The case the browser can't know about: someone on a port-forward sees
+	// localhost, and a link built from it is useless to anyone else. A server
+	// that reports a domain overrides the origin.
+	test('a configured domain overrides the browser origin', async ({ page }) => {
+		await page.route('**/api/config', (route) =>
+			route.fulfill({ json: { domain: 'https://tangle.corp' } })
+		);
+		await page.goto('/');
+
+		await page.getByRole('textbox', { name: `${INCLUDE} key` }).fill('env');
+		await page.getByRole('textbox', { name: `${INCLUDE} value` }).fill('prod');
+		await page.getByRole('button', { name: 'Add label' }).click();
+
+		await expect(
+			page.getByText('https://tangle.corp/applications?labels=env%3Aprod')
+		).toBeVisible();
+	});
+
+	// Older servers have no such endpoint, and nothing this config affects is
+	// load-bearing enough to block rendering on.
+	test('still renders when the config endpoint is unavailable', async ({ page }) => {
+		await page.route('**/api/config', (route) => route.fulfill({ status: 404 }));
+		await page.goto('/');
+
+		await expect(
+			page.getByRole('heading', { name: 'Pick applications by label', level: 1 })
+		).toBeVisible();
+
+		const origin = new URL(page.url()).origin;
+		await expect(page.getByText(`${origin}/applications`)).toBeVisible();
+	});
+
 	// The link and the CI command are two ways of saying the same query, and a
 	// query built here usually ends up as one or the other. Showing only one
 	// per screen meant knowing in advance which screen to build it on.
