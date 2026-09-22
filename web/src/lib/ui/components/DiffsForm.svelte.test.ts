@@ -10,7 +10,7 @@ describe('DiffsForm', () => {
 
 		await screen.getByRole('textbox', { name: 'Labels key' }).fill('env');
 		await screen.getByRole('textbox', { name: 'Labels value' }).fill('prod');
-		await screen.getByRole('button', { name: 'Add Labels' }).click();
+		await screen.getByRole('button', { name: 'Add label' }).click();
 
 		await screen.getByPlaceholder('Git branch').fill('main');
 		await screen.getByRole('button', { name: 'See diffs' }).click();

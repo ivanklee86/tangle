@@ -26,14 +26,9 @@
 
 	<form class="space-y-4" onsubmit={handleSubmit}>
 		<LabelsInput label="Labels" bind:value={labels} />
-		<LabelsInput label="Exclude Labels" bind:value={excludeLabels} />
+		<LabelsInput label="Exclude Labels" noun="exclusion" bind:value={excludeLabels} />
 
-		<Button
-			type="submit"
-			color="primary"
-			class="w-fit leading-none bg-gradient-to-br from-primary-400 to-primary-700 hover:from-primary-500 hover:to-primary-800 dark:from-primary-500 dark:to-primary-900"
-			disabled={!canSubmit}
-		>
+		<Button type="submit" color="primary" class="w-fit leading-none" disabled={!canSubmit}>
 			See applications<ArrowRightOutline class="w-6 h-6 ms-2 text-white" />
 		</Button>
 	</form>

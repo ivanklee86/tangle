@@ -42,16 +42,33 @@ test.describe('applications page', () => {
 		await expect(rows.nth(1)).toContainText('backend');
 	});
 
-	test('health and sync status cells render the right icon and text', async ({ page }) => {
+	test('health and sync statuses render as badges with text and an icon', async ({ page }) => {
+		// Asserted on the text and the presence of an icon rather than on a
+		// colour class: the colour is a theme decision (status.ts owns the
+		// mapping, and its unit tests pin it), while what this page promises is
+		// that a status is readable without relying on colour at all.
 		const frontendRow = page.locator('tbody tr', { hasText: 'frontend' });
 		await expect(frontendRow.getByText('Healthy')).toBeVisible();
 		await expect(frontendRow.getByText('Synced')).toBeVisible();
-		await expect(frontendRow.locator('svg.text-green-500')).toHaveCount(2);
+		await expect(frontendRow.locator('svg')).toHaveCount(2);
 
 		const backendRow = page.locator('tbody tr', { hasText: 'backend' });
 		await expect(backendRow.getByText('Degraded')).toBeVisible();
 		await expect(backendRow.getByText('OutOfSync')).toBeVisible();
-		await expect(backendRow.locator('svg.text-red-500')).toHaveCount(2);
+		await expect(backendRow.locator('svg')).toHaveCount(2);
+	});
+
+	test('drift and breakage do not share a badge colour', async ({ page }) => {
+		// OutOfSync is drift, Degraded is breakage. If they ever render the
+		// same, a fleet of healthy-but-unsynced applications reads as an
+		// outage — the reason the palette moved off coral in the first place.
+		const outOfSync = page.locator('tbody tr', { hasText: 'backend' }).getByText('OutOfSync');
+		const degraded = page.locator('tbody tr', { hasText: 'backend' }).getByText('Degraded');
+
+		const colourOf = async (locator: ReturnType<typeof page.getByText>) =>
+			locator.evaluate((el) => getComputedStyle(el.closest('span') ?? el).backgroundColor);
+
+		expect(await colourOf(outOfSync)).not.toBe(await colourOf(degraded));
 	});
 
 	test('refresh-period select and refresh-toggle button are present and toggling changes the button color', async ({

@@ -49,14 +49,36 @@ describe('sortApplications', () => {
 		expect(apps.map((a) => a.name)).toEqual(['charlie', 'alpha', 'bravo']);
 	});
 
-	it('sorts descending by health', () => {
+	// Status columns sort on severity, not alphabetically. Sorting health by
+	// its string gives Degraded, Healthy, Missing, Progressing — which is not
+	// what anyone clicking a health column means, and would make the
+	// "worst first" default order in the table footer a lie.
+	it('sorts health worst-first when descending', () => {
 		const sorted = sortApplications(makeApps(), { key: 'health', direction: 'desc' });
-		expect(sorted.map((a) => a.health)).toEqual(['Missing', 'Healthy', 'Degraded']);
+		expect(sorted.map((a) => a.health)).toEqual(['Degraded', 'Missing', 'Healthy']);
 	});
 
-	it('sorts by syncStatus', () => {
+	it('sorts health best-first when ascending', () => {
+		const sorted = sortApplications(makeApps(), { key: 'health', direction: 'asc' });
+		expect(sorted.map((a) => a.health)).toEqual(['Healthy', 'Missing', 'Degraded']);
+	});
+
+	it('sorts syncStatus by severity, not alphabetically', () => {
 		const sorted = sortApplications(makeApps(), { key: 'syncStatus', direction: 'asc' });
-		expect(sorted.map((a) => a.syncStatus)).toEqual(['OutOfSync', 'Synced', 'Unknown']);
+		expect(sorted.map((a) => a.syncStatus)).toEqual(['Synced', 'Unknown', 'OutOfSync']);
+	});
+
+	it('breaks severity ties by name, so equal statuses keep a stable order', () => {
+		// Without a tiebreak the order inside a bucket is whatever order the
+		// instances answered in, which changes under auto-refresh.
+		const apps: ApplicationLinks[] = [
+			{ name: 'zulu', url: '', health: 'Degraded', syncStatus: 'Synced', liveRef: 'main' },
+			{ name: 'alpha', url: '', health: 'Missing', syncStatus: 'Synced', liveRef: 'main' },
+			{ name: 'mike', url: '', health: 'Degraded', syncStatus: 'Synced', liveRef: 'main' }
+		];
+
+		const sorted = sortApplications(apps, { key: 'health', direction: 'asc' });
+		expect(sorted.map((a) => a.name)).toEqual(['alpha', 'mike', 'zulu']);
 	});
 });
 

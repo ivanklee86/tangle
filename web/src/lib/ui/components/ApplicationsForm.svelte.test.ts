@@ -10,11 +10,11 @@ describe('ApplicationsForm', () => {
 
 		await screen.getByRole('textbox', { name: 'Labels key' }).fill('env');
 		await screen.getByRole('textbox', { name: 'Labels value' }).fill('prod');
-		await screen.getByRole('button', { name: 'Add Labels' }).click();
+		await screen.getByRole('button', { name: 'Add label' }).click();
 
 		await screen.getByRole('textbox', { name: 'Exclude Labels key' }).fill('tier');
 		await screen.getByRole('textbox', { name: 'Exclude Labels value' }).fill('test');
-		await screen.getByRole('button', { name: 'Add Exclude Labels' }).click();
+		await screen.getByRole('button', { name: 'Add exclusion' }).click();
 
 		await screen.getByRole('button', { name: 'See applications' }).click();
 
