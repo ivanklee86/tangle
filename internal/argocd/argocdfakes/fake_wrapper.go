@@ -110,6 +110,14 @@ func (f *FakeWrapper) GetScheme() string {
 // equality and every excludeLabels inequality — the same semantics
 // ArgoCDWrapper.ListApplicationsByLabels asks a real ArgoCD server for by
 // combining both maps into a single "key=value,key!=value" selector string.
+//
+// It reaches those semantics by a different route, though: it matches the two
+// maps directly and never builds a selector. So FakeWrapper cannot observe a
+// bug in how that selector is constructed — #240, where an exclude-only query
+// was sent with no selector at all, passes through here either way. A test
+// that needs to cover selector construction wants a real argocd.ArgoCDWrapper
+// over FakeClient, which does parse the string (see
+// internal/tangle/handlers_test.go's newIntegrationTangle).
 func matchesLabels(candidate map[string]string, includeLabels map[string]string, excludeLabels map[string]string) bool {
 	for key, value := range includeLabels {
 		if candidate[key] != value {

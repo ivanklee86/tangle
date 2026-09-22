@@ -2,6 +2,7 @@ package argocd
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"github.com/alitto/pond/v2"
@@ -77,7 +78,6 @@ func New(client IArgoCDClient, argoCDName string, options *ArgoCDWrapperOptions)
 
 func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map[string]string, excludeLabels map[string]string) ([]ListApplicationsResult, error) {
 	group := a.ListWorkerPool.NewGroup()
-	k8sLabel := ""
 	labelsSlice := []string{}
 	for key, value := range labels {
 		labelsSlice = append(labelsSlice, key+"="+value)
@@ -86,11 +86,19 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map
 		labelsSlice = append(labelsSlice, key+"!="+value)
 	}
 
-	k8sLabel = strings.Join(labelsSlice, ",")
+	// Sorted so the selector string is deterministic: both maps are ranged
+	// over above, and Go randomizes map iteration order.
+	slices.Sort(labelsSlice)
+	k8sLabel := strings.Join(labelsSlice, ",")
 
 	group.SubmitErr(func() ([]ListApplicationsResult, error) {
+		// Gated on the joined slice rather than on labels alone: an
+		// exclude-only query still needs its "key!=value" selector sent, and
+		// sending no selector at all is what ArgoCD reads as "list
+		// everything" (#240). With both maps empty there is nothing to
+		// filter on, so the query goes out without a selector.
 		var query *application.ApplicationQuery
-		if len(labels) > 0 {
+		if len(labelsSlice) > 0 {
 			query = &application.ApplicationQuery{
 				Selector: &k8sLabel,
 			}

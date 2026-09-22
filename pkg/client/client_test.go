@@ -2,8 +2,10 @@ package client
 
 import (
 	"errors"
+	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -590,4 +592,150 @@ func TestValidateOptions(t *testing.T) {
 			assert.Error(t, validateClientOptions(*test.options))
 		}
 	}
+}
+
+// countingServer responds with a fixed status and body, and records how many
+// requests it received. Counting requests is how the retry behavior below is
+// asserted without any test actually sleeping.
+func countingServer(t *testing.T, status int, body string) (*httptest.Server, *int32) {
+	t.Helper()
+
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		atomic.AddInt32(&calls, 1)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		_, _ = w.Write([]byte(body))
+	}))
+	t.Cleanup(server.Close)
+
+	return server, &calls
+}
+
+// TestGetApplicationsSurfacesErrorBody covers the caller-facing half of #241:
+// tangle-server now explains which label was wrong in the response body, and
+// a client that throws that away leaves tangle-cli printing a bare status
+// code for a mistake the user could have fixed.
+func TestGetApplicationsSurfacesErrorBody(t *testing.T) {
+	tests := []struct {
+		name         string
+		status       int
+		body         string
+		wantContains []string
+	}{
+		{
+			name:         "400 with error body",
+			status:       http.StatusBadRequest,
+			body:         `{"error":"invalid label \"env\" in labels: expected key:value"}`,
+			wantContains: []string{"400", `invalid label "env" in labels`},
+		},
+		{
+			name:         "400 with non-JSON body",
+			status:       http.StatusBadRequest,
+			body:         "not json",
+			wantContains: []string{"400"},
+		},
+		{
+			name:         "500 with error body",
+			status:       http.StatusInternalServerError,
+			body:         `{"error":"simulated connection error"}`,
+			wantContains: []string{"500", "simulated connection error"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server, _ := countingServer(t, test.status, test.body)
+
+			_, err := GetApplications(server.URL + "/api/applications")
+			assert.Error(t, err)
+			for _, want := range test.wantContains {
+				assert.Contains(t, err.Error(), want)
+			}
+
+			var statusErr *StatusError
+			assert.True(t, errors.As(err, &statusErr), "callers should be able to inspect the status")
+			assert.Equal(t, test.status, statusErr.Code)
+		})
+	}
+}
+
+// TestGetApplicationWithRetriesSkips4xx pins the retry policy: a request the
+// server has already rejected as malformed is not worth repeating, and with
+// the default backoff a 400 would otherwise cost the caller over a minute
+// before reporting a typo.
+func TestGetApplicationWithRetriesSkips4xx(t *testing.T) {
+	tests := []struct {
+		name      string
+		status    int
+		wantCalls int32
+	}{
+		{
+			name:      "4xx is not retried",
+			status:    http.StatusBadRequest,
+			wantCalls: 1,
+		},
+		{
+			name:      "404 is not retried",
+			status:    http.StatusNotFound,
+			wantCalls: 1,
+		},
+		{
+			// Unchanged behavior: a 5xx may well be transient, so the
+			// caller still gets every attempt they asked for.
+			name:      "5xx is still retried",
+			status:    http.StatusInternalServerError,
+			wantCalls: 3,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server, calls := countingServer(t, test.status, `{"error":"boom"}`)
+
+			// Zero backoff so the retried case doesn't make the suite wait.
+			_, err := GetApplicationWithRetries(server.URL+"/api/applications", &ClientOptions{
+				Retries: 2,
+				Backoff: []int{0, 0},
+			})
+
+			assert.Error(t, err)
+			assert.Equal(t, test.wantCalls, atomic.LoadInt32(calls))
+		})
+	}
+}
+
+// TestGetApplicationWithRetriesRecoversAfter5xx guards against the 4xx
+// short-circuit accidentally breaking the case retries exist for.
+func TestGetApplicationWithRetriesRecoversAfter5xx(t *testing.T) {
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if atomic.AddInt32(&calls, 1) == 1 {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"error":"transient"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"results":[]}`))
+	}))
+	defer server.Close()
+
+	applications, err := GetApplicationWithRetries(server.URL+"/api/applications", &ClientOptions{
+		Retries: 2,
+		Backoff: []int{0, 0},
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, applications)
+	assert.Equal(t, int32(2), atomic.LoadInt32(&calls))
+}
+
+// TestGetDiffsSurfacesErrorBody — the diffs endpoint has no 400 today, but it
+// shares the status-handling path, so this pins it against drift.
+func TestGetDiffsSurfacesErrorBody(t *testing.T) {
+	server, _ := countingServer(t, http.StatusInternalServerError, `{"error":"manifest generation failed"}`)
+
+	_, err := GetDiffs(server.URL+"/api/argocd/test/applications/test-1/diffs", "main", "feature")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "manifest generation failed")
 }

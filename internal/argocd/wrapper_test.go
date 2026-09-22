@@ -116,3 +116,105 @@ func TestArgoCDWrapper(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 }
+
+// TestArgoCDWrapper_ListApplicationsByLabelsSelector pins the selector string
+// ListApplicationsByLabels asks ArgoCD for, for each shape of the two label
+// maps. The promise to callers is that every label they supply — include or
+// exclude — reaches ArgoCD as part of one selector; #240 broke it for
+// exclude-only queries, which were sent with no selector at all and so
+// matched every application.
+//
+// These assert on the selector rather than only on the results because the
+// selector is the request actually made: a result set can look right for the
+// wrong reason, and "no selector sent" is indistinguishable from "a selector
+// that happens to match everything" if you only count applications.
+func TestArgoCDWrapper_ListApplicationsByLabelsSelector(t *testing.T) {
+	tests := []struct {
+		name          string
+		labels        map[string]string
+		excludeLabels map[string]string
+		wantSelector  string
+		wantSet       bool
+		wantNames     []string
+	}{
+		{
+			name:         "includes only",
+			labels:       map[string]string{"env": "test"},
+			wantSelector: "env=test",
+			wantSet:      true,
+			wantNames:    []string{"test-1"},
+		},
+		{
+			name:         "includes only, multiple",
+			labels:       map[string]string{"foo": "bar", "env": "test"},
+			wantSelector: "env=test,foo=bar",
+			wantSet:      true,
+			wantNames:    []string{"test-1"},
+		},
+		{
+			name:          "excludes only",
+			excludeLabels: map[string]string{"env": "test"},
+			wantSelector:  "env!=test",
+			wantSet:       true,
+			wantNames:     []string{"test-2"},
+		},
+		{
+			name:          "excludes only, multiple",
+			excludeLabels: map[string]string{"env": "test", "bazz": "buzz"},
+			wantSelector:  "bazz!=buzz,env!=test",
+			wantSet:       true,
+			wantNames:     []string{},
+		},
+		{
+			name:          "includes and excludes",
+			labels:        map[string]string{"foo": "bar"},
+			excludeLabels: map[string]string{"env": "test"},
+			wantSelector:  "env!=test,foo=bar",
+			wantSet:       true,
+			wantNames:     []string{"test-2"},
+		},
+		{
+			// Nothing to filter on, so no selector is the right request —
+			// this is the case the old `len(labels) > 0` gate existed for,
+			// and it has to keep working after the fix.
+			name:      "neither",
+			wantSet:   false,
+			wantNames: []string{"test-1", "test-2"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			client := argocdfakes.NewFakeClient(wrapperFixtureApplications())
+
+			wrapper, err := argocd.New(client, "test", &argocd.ArgoCDWrapperOptions{
+				DoNotInstrumentWorkers: true,
+			})
+			assert.Nil(t, err)
+
+			labels := test.labels
+			if labels == nil {
+				labels = map[string]string{}
+			}
+			excludeLabels := test.excludeLabels
+			if excludeLabels == nil {
+				excludeLabels = map[string]string{}
+			}
+
+			results, err := wrapper.ListApplicationsByLabels(context.Background(), labels, excludeLabels)
+			assert.NoError(t, err)
+
+			selector, set := client.LastListSelector()
+			assert.Equal(t, test.wantSet, set, "whether a selector was sent")
+			if test.wantSet {
+				assert.Equal(t, test.wantSelector, selector)
+			}
+
+			names := []string{}
+			for _, result := range results {
+				names = append(names, result.Name)
+			}
+			assert.ElementsMatch(t, test.wantNames, names)
+		})
+	}
+}

@@ -71,34 +71,41 @@ func (t *Tangle) sortResults(apiResults []ArgoCDApplicationResults) []ArgoCDAppl
 
 }
 
+// respondError writes err to the caller as the JSON ErrorResponse body the
+// API documents, at the given status. Callers log first, with whatever
+// context they have; this handles only the part the caller sees.
+func (t *Tangle) respondError(w http.ResponseWriter, status int, err error) {
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(ErrorResponse{Error: err.Error()}) // nolint: errcheck
+}
+
 func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	query := req.URL.Query()
 
-	labels := make(map[string]string)
-	if len(query.Get("labels")) > 0 {
-		rawLabels := strings.Split(query.Get("labels"), ",")
-		for idx := range rawLabels {
-			rawLabel := strings.Split(rawLabels[idx], ":")
-			if len(rawLabel) == 2 {
-				labels[rawLabel[0]] = rawLabel[1]
-			} else {
-				t.Log.Error("Invalid label format", "label", rawLabels[idx])
-			}
-		}
+	// Bad label input is rejected before anything is sent to ArgoCD: a
+	// malformed or duplicated pair means the caller's filter isn't the one
+	// they wrote, and answering it anyway costs a fan-out across every
+	// configured instance to return a result set that doesn't match the
+	// request.
+	labels, err := parseLabels("labels", query.Get("labels"))
+	if err != nil {
+		t.Log.Error("Invalid label query parameter", "parameter", "labels", "error", err)
+		t.respondError(w, http.StatusBadRequest, err)
+		return
 	}
 
-	excludeLabels := make(map[string]string)
-	if len(query.Get("excludeLabels")) > 0 {
-		rawLabels := strings.Split(query.Get("excludeLabels"), ",")
-		for idx := range rawLabels {
-			rawLabel := strings.Split(rawLabels[idx], ":")
-			if len(rawLabel) == 2 {
-				excludeLabels[rawLabel[0]] = rawLabel[1]
-			} else {
-				t.Log.Error("Invalid exclude label format", "label", rawLabels[idx])
-			}
-		}
+	excludeLabels, err := parseLabels("excludeLabels", query.Get("excludeLabels"))
+	if err != nil {
+		t.Log.Error("Invalid label query parameter", "parameter", "excludeLabels", "error", err)
+		t.respondError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if err := conflictingLabels(labels, excludeLabels); err != nil {
+		t.Log.Error("Contradictory label query parameters", "error", err)
+		t.respondError(w, http.StatusBadRequest, err)
+		return
 	}
 
 	t.Log.Info("Listing applications by labels", "labels", labels, "excludeLabels", excludeLabels)
@@ -108,8 +115,7 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 		queryResults, err := argoCD.ListApplicationsByLabels(req.Context(), labels, excludeLabels)
 		if err != nil {
 			t.Log.Error("Failed to list applications by labels", "argocd", name, "error", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(ErrorResponse{Error: err.Error()}) // nolint: errcheck
+			t.respondError(w, http.StatusInternalServerError, err)
 			return
 		}
 
@@ -146,7 +152,7 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 
 	response := ApplicationsResponse{Results: t.sortResults(apiResults)}
 
-	err := json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

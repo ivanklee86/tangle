@@ -54,10 +54,15 @@ flowchart LR
 
 ## Request paths
 
-- **`GET /api/applications?labels=k:v&excludeLabels=k:v`** — fans out over every configured ArgoCD,
-  translating labels into a single Kubernetes selector (`k=v,k!=v`), and returns per-instance results
-  ordered by `sortOrder`. Deep links back into each ArgoCD UI are synthesized from the instance
-  address and scheme (`http`/`https`, from that instance's `plainText`/`insecure` config).
+- **`GET /api/applications?labels=k:v&excludeLabels=k:v`** — validates both parameters
+  (`internal/tangle/labels.go`), then fans out over every configured ArgoCD, translating labels into a
+  single Kubernetes selector (`k=v,k!=v`, sorted so the string is deterministic), and returns
+  per-instance results ordered by `sortOrder`. Deep links back into each ArgoCD UI are synthesized
+  from the instance address and scheme (`http`/`https`, from that instance's `plainText`/`insecure`
+  config). A malformed segment, a key repeated within a parameter, or a key shared between both
+  parameters at the same value is a `400` before any fan-out — see
+  [ADR 0026](../adrs/0026-reject-malformed-label-query-parameters.md). The selector is attached
+  whenever *either* map is non-empty, so an exclude-only query filters rather than listing everything.
 - **`POST /api/argocd/{argocd}/applications/{name}/diffs`** — submits a `refresh=hard` `Get` on the
   hard-refresh pool, then generates manifests for `liveRef` and `targetRef` concurrently on the
   manifests pool, converts each to YAML, and shells out to `diff -uNar` over two tempfiles.

@@ -3,7 +3,9 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -27,6 +29,41 @@ type ApplicationsUrlOptions struct {
 	Insecure      bool
 	Labels        map[string]string
 	ExcludeLabels map[string]string
+}
+
+// StatusError is a non-200 response from tangle-server. Message carries the
+// server's own ErrorResponse body when it sent one — for a 400 that's the
+// label the caller got wrong, which is the whole point of the status.
+type StatusError struct {
+	Code    int
+	Message string
+}
+
+func (e *StatusError) Error() string {
+	if e.Message == "" {
+		return fmt.Sprintf("unexpected status code: %d", e.Code)
+	}
+
+	return fmt.Sprintf("unexpected status code: %d: %s", e.Code, e.Message)
+}
+
+// Retryable reports whether repeating the request could plausibly succeed. A
+// 4xx says the request itself is wrong — retrying a malformed label filter
+// just spends the backoff periods to get the same answer.
+func (e *StatusError) Retryable() bool {
+	return e.Code < 400 || e.Code >= 500
+}
+
+// statusError builds a StatusError from a non-200 response, pulling the
+// server's ErrorResponse body out when it's there and falling back to the
+// bare status when it isn't.
+func statusError(code int, body []byte) *StatusError {
+	errorResponse := tangle.ErrorResponse{}
+	if err := json.Unmarshal(body, &errorResponse); err != nil {
+		return &StatusError{Code: code}
+	}
+
+	return &StatusError{Code: code, Message: errorResponse.Error}
 }
 
 // Validate option
@@ -117,12 +154,17 @@ func GetApplications(url string) (*tangle.ApplicationsResponse, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return nil, statusError(resp.StatusCode, body)
 	}
 
 	applications := &tangle.ApplicationsResponse{}
-	err = json.NewDecoder(resp.Body).Decode(applications)
+	err = json.Unmarshal(body, applications)
 	if err != nil {
 		return nil, err
 	}
@@ -148,11 +190,22 @@ func GetApplicationWithRetries(url string, options *ClientOptions) (*tangle.Appl
 		applications, err := GetApplications(url)
 		if err == nil {
 			return applications, nil
-		} else if err != nil && i == retries {
-			return nil, err
-		} else if err != nil {
-			time.Sleep(time.Duration(backoff[i]) * time.Second)
 		}
+
+		// A 4xx means the request is wrong, not that the server was
+		// momentarily unhappy — retrying a malformed label filter spends
+		// every backoff period to arrive at the same answer, and hides the
+		// server's explanation behind the delay.
+		var statusErr *StatusError
+		if errors.As(err, &statusErr) && !statusErr.Retryable() {
+			return nil, err
+		}
+
+		if i == retries {
+			return nil, err
+		}
+
+		time.Sleep(time.Duration(backoff[i]) * time.Second)
 	}
 
 	return nil, nil
@@ -184,13 +237,18 @@ func GetDiffs(url string, liveRef string, targetRef string) (*tangle.DiffsRespon
 	}
 	defer func() { _ = resp.Body.Close() }()
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return nil, statusError(resp.StatusCode, body)
 	}
 
 	// Parse response
 	diffs := &tangle.DiffsResponse{}
-	err = json.NewDecoder(resp.Body).Decode(diffs)
+	err = json.Unmarshal(body, diffs)
 	if err != nil {
 		return nil, err
 	}

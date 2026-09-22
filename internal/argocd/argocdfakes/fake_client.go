@@ -7,6 +7,7 @@ package argocdfakes
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/argoproj/argo-cd/v3/pkg/apiclient/application"
 	"github.com/argoproj/argo-cd/v3/pkg/apis/application/v1alpha1"
@@ -38,6 +39,13 @@ type FakeClient struct {
 	// ErrOnList, if set, is returned by every List call.
 	ErrOnList error
 
+	// ListQueries records every ApplicationQuery List was called with, in
+	// order, so tests can assert on the selector string a caller built
+	// rather than inferring it from which applications came back. Guarded by
+	// listMu: ArgoCDWrapper issues List from a pond worker pool.
+	listMu      sync.Mutex
+	ListQueries []*application.ApplicationQuery
+
 	// ErrOnGet, keyed by application name, is returned by Get for that name.
 	ErrOnGet map[string]error
 
@@ -59,6 +67,10 @@ func NewFakeClient(apps []v1alpha1.Application) *FakeClient {
 }
 
 func (f *FakeClient) List(_ context.Context, in *application.ApplicationQuery) (*v1alpha1.ApplicationList, error) {
+	f.listMu.Lock()
+	f.ListQueries = append(f.ListQueries, in)
+	f.listMu.Unlock()
+
 	if f.ErrOnList != nil {
 		return nil, f.ErrOnList
 	}
@@ -80,6 +92,35 @@ func (f *FakeClient) List(_ context.Context, in *application.ApplicationQuery) (
 	}
 
 	return &v1alpha1.ApplicationList{Items: items}, nil
+}
+
+// LastListSelector returns the selector string from the most recent List
+// call and whether one was set at all. A query sent with no selector — what
+// an unfiltered "list everything" request looks like — reports false, which
+// is the distinction ArgoCDWrapper gets wrong when it drops an exclude-only
+// selector.
+func (f *FakeClient) LastListSelector() (string, bool) {
+	f.listMu.Lock()
+	defer f.listMu.Unlock()
+
+	if len(f.ListQueries) == 0 {
+		return "", false
+	}
+
+	query := f.ListQueries[len(f.ListQueries)-1]
+	if query == nil || query.Selector == nil {
+		return "", false
+	}
+
+	return *query.Selector, true
+}
+
+// ListCallCount reports how many times List has been called.
+func (f *FakeClient) ListCallCount() int {
+	f.listMu.Lock()
+	defer f.listMu.Unlock()
+
+	return len(f.ListQueries)
 }
 
 func (f *FakeClient) Get(_ context.Context, in *application.ApplicationQuery) (*v1alpha1.Application, error) {
