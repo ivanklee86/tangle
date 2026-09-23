@@ -12,22 +12,12 @@
 		query: Query;
 		/** Diffs compares against a ref, so its chip row ends "against <ref>". */
 		showTargetRef?: boolean;
-		/** Whether a query has actually been submitted, which changes what an empty one means. */
-		applied?: boolean;
 		onEdit: () => void;
 		/** The page's own primary action, right of Copy link. */
 		actions?: Snippet;
 	}
 
-	let {
-		title,
-		summary,
-		query,
-		showTargetRef = false,
-		applied = false,
-		onEdit,
-		actions
-	}: Props = $props();
+	let { title, summary, query, showTargetRef = false, onEdit, actions }: Props = $props();
 
 	let includes = $derived(parseLabels(query.labels));
 	let excludes = $derived(parseLabels(query.excludeLabels));
@@ -67,19 +57,11 @@
 
 		{#if empty}
 			<!--
-				Two different empty states, and they're not the same thing: nobody
-				has asked yet (the design never drew this — the page opens the
-				editor for them, per ADR 0008), versus somebody submitted a query
-				with no filters, which is a real request meaning "show me
-				everything".
+				Same words whether nobody has asked yet or somebody submitted a
+				query with no filters: before a first query the page opens the
+				editor anyway (ADR 0008), so the bar needn't say it twice.
 			-->
-			<span class="text-sm text-gray-500 italic dark:text-gray-400">
-				{#if applied}
-					no filters — showing everything
-				{:else}
-					none yet — pick applications by label
-				{/if}
-			</span>
+			<span class="text-sm text-gray-500 italic dark:text-gray-400">No filters</span>
 		{:else}
 			{#each includes as pair (pair.key)}
 				<Badge color="primary" class="font-mono font-semibold">{pair.key}:{pair.value}</Badge>

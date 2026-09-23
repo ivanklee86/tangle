@@ -3,6 +3,7 @@ import { mockTangleAPI } from '../fixtures';
 
 const INCLUDE = 'Include applications with all of these labels';
 const EXCLUDE = 'Exclude applications with any of these labels';
+const DIFF_WHY = 'Add target ref to enable diffs.';
 
 test.describe('home page', () => {
 	test.beforeEach(async ({ page }) => {
@@ -16,8 +17,8 @@ test.describe('home page', () => {
 	// switch intent.
 	test('renders one query editor with both actions', async ({ page }) => {
 		await expect(
-			page.getByRole('heading', { name: 'Pick applications by label', level: 1 })
-		).toBeVisible();
+			page.getByRole('heading', { name: 'Build a label query', level: 1 })
+		).toBeAttached();
 
 		await expect(page.getByRole('textbox', { name: `${INCLUDE} key` })).toBeVisible();
 		await expect(page.getByRole('textbox', { name: `${INCLUDE} value` })).toBeVisible();
@@ -55,11 +56,24 @@ test.describe('home page', () => {
 	test('See diffs stays disabled until a target ref is entered', async ({ page }) => {
 		const seeDiffs = page.getByRole('button', { name: 'See diffs' });
 		await expect(seeDiffs).toBeDisabled();
-		await expect(page.getByText('Enter a target ref to enable diffs')).toBeVisible();
+		await expect(seeDiffs).toHaveAccessibleDescription(DIFF_WHY);
 
 		await page.getByPlaceholder('Branch, tag or commit').fill('release-25');
 
 		await expect(seeDiffs).toBeEnabled();
+		await expect(seeDiffs).toHaveAccessibleDescription('');
+	});
+
+	// The reason used to sit beside the button and again under the CI command.
+	// Now it is said once, on hover, where the question comes up.
+	test('hovering the disabled See diffs button explains why', async ({ page }) => {
+		await expect(page.getByRole('tooltip')).toBeHidden();
+
+		await page.getByRole('button', { name: 'See diffs' }).hover({ force: true });
+
+		await expect(page.getByRole('tooltip')).toHaveText(DIFF_WHY);
+		await expect(page.getByText('only needed for diffs')).toHaveCount(0);
+		await expect(page.getByText(/nothing to compare/)).toHaveCount(0);
 	});
 
 	// ADR 0003 records that a Flowbite upgrade once shipped an Input whose left
@@ -133,8 +147,8 @@ test.describe('home page', () => {
 		await page.goto('/');
 
 		await expect(
-			page.getByRole('heading', { name: 'Pick applications by label', level: 1 })
-		).toBeVisible();
+			page.getByRole('heading', { name: 'Build a label query', level: 1 })
+		).toBeAttached();
 
 		const origin = new URL(page.url()).origin;
 		await expect(page.getByText(`${origin}/applications`)).toBeVisible();
@@ -173,7 +187,7 @@ test.describe('home page', () => {
 		await page.waitForURL((url) => url.pathname.startsWith('/applications'));
 
 		await expect(page.locator('tbody tr').first()).toBeVisible();
-		await expect(page.getByText('no filters — showing everything')).toBeVisible();
+		await expect(page.getByText('No filters')).toBeVisible();
 		await expect(page.getByRole('heading', { name: 'Edit query', level: 2 })).toBeHidden();
 	});
 

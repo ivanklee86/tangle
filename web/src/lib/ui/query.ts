@@ -36,6 +36,9 @@ function isEmptyQuery(query: Query): boolean {
  */
 const SEARCHED_PARAM = 'searched';
 
+/** Why diffs can't run yet: there is nothing to compare against without a ref. */
+const NO_TARGET_REF_REASON = 'Add target ref to enable diffs.';
+
 /**
  * Whether the page should run the query in this URL, or open its editor.
  *
@@ -109,6 +112,7 @@ export {
 	emptyQuery,
 	hasSubmittedQuery,
 	isEmptyQuery,
+	NO_TARGET_REF_REASON,
 	queryFromParams,
 	SEARCHED_PARAM,
 	type Query

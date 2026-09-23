@@ -81,7 +81,7 @@ describe('applications +page.svelte', () => {
 		test('says so in the query bar instead of showing empty chips', async () => {
 			const screen = await render(Page, data({ query: emptyQuery(), applications: undefined }));
 
-			await expect.element(screen.getByText('none yet — pick applications by label')).toBeVisible();
+			await expect.element(screen.getByText('No filters')).toBeVisible();
 		});
 
 		test('applying the editor navigates with the new query', async () => {
@@ -122,7 +122,7 @@ describe('applications +page.svelte', () => {
 		test('says the query has no filters rather than that none was given', async () => {
 			const screen = await render(Page, data({ query: emptyQuery() }));
 
-			await expect.element(screen.getByText('no filters — showing everything')).toBeVisible();
+			await expect.element(screen.getByText('No filters')).toBeVisible();
 		});
 	});
 
@@ -170,7 +170,7 @@ describe('applications +page.svelte', () => {
 			// bravo sorts first by default (worst health), so it owns the first
 			// link in the table.
 			await expect
-				.element(screen.getByRole('link', { name: 'Open in Argo CD' }).first())
+				.element(screen.getByRole('link', { name: 'Open in ArgoCD' }).first())
 				.toHaveAttribute('href', 'https://argocd.test/applications/bravo');
 		});
 

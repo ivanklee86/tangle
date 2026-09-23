@@ -226,7 +226,7 @@ describe('diffs +page.svelte', () => {
 			const screen = await render(Page, data());
 
 			await expect
-				.element(screen.getByRole('link', { name: 'Open in Argo CD' }))
+				.element(screen.getByRole('link', { name: 'Open in ArgoCD' }))
 				.toHaveAttribute('href', 'https://argocd.test/alpha');
 		});
 	});

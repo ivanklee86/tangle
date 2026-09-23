@@ -2,9 +2,10 @@
 	import { Badge, Button, Drawer, Heading } from 'flowbite-svelte';
 	import { ArrowRightOutline, CloseOutline } from 'flowbite-svelte-icons';
 	import { isValidLabelQuery } from '$lib/ui/validation';
-	import { type Query } from '$lib/ui/query';
+	import { NO_TARGET_REF_REASON, type Query } from '$lib/ui/query';
 	import QueryEditor from './QueryEditor.svelte';
 	import QueryPreview from './QueryPreview.svelte';
+	import DisabledReason from './DisabledReason.svelte';
 	import { untrack } from 'svelte';
 
 	interface Props {
@@ -73,10 +74,9 @@
 		].filter(Boolean).length
 	);
 
+	let missingTargetRef = $derived(targetRefMode === 'required' && targetRef.trim().length === 0);
 	let valid = $derived(
-		isValidLabelQuery(labels) &&
-			isValidLabelQuery(excludeLabels) &&
-			(targetRefMode !== 'required' || targetRef.trim().length > 0)
+		isValidLabelQuery(labels) && isValidLabelQuery(excludeLabels) && !missingTargetRef
 	);
 
 	function discard(): void {
@@ -91,7 +91,12 @@
 	}
 </script>
 
-<Drawer bind:open placement="right" class="flex w-full max-w-xl flex-col p-0">
+<!--
+	dismissable={false}: Flowbite's own close button sits in the corner on top
+	of the one in our header, which is aligned with the title. Escape and
+	clicking outside still close it; those are governed by outsideclose.
+-->
+<Drawer bind:open placement="right" dismissable={false} class="flex w-full max-w-xl flex-col p-0">
 	<div
 		class="flex shrink-0 items-start justify-between gap-4 border-b border-gray-200 px-6 py-4 dark:border-gray-700"
 	>
@@ -114,12 +119,7 @@
 		<div class="grow space-y-5 overflow-y-auto px-6 py-5">
 			<QueryEditor bind:labels bind:excludeLabels bind:targetRef {targetRefMode} />
 
-			<QueryPreview
-				href={hrefFor(draft)}
-				query={draft}
-				cli={showCli}
-				targetRefEditable={targetRefMode !== 'hidden'}
-			/>
+			<QueryPreview href={hrefFor(draft)} query={draft} cli={showCli} />
 		</div>
 
 		<div
@@ -133,9 +133,13 @@
 			{/if}
 			<div class="grow"></div>
 			<Button type="button" color="alternative" onclick={discard}>Discard</Button>
-			<Button type="submit" color="primary" disabled={!valid}>
-				{applyLabel}<ArrowRightOutline class="ms-2 h-4 w-4" />
-			</Button>
+			<DisabledReason reason={missingTargetRef ? NO_TARGET_REF_REASON : undefined}>
+				{#snippet children(describedBy)}
+					<Button type="submit" color="primary" disabled={!valid} aria-describedby={describedBy}>
+						{applyLabel}<ArrowRightOutline class="ms-2 h-4 w-4" />
+					</Button>
+				{/snippet}
+			</DisabledReason>
 		</div>
 	</form>
 </Drawer>

@@ -2,6 +2,7 @@ export { default as ArgoCDHealthStatus } from './ArgoCDHealthStatus.svelte';
 export { default as ArgoCDSyncStatus } from './ArgoCDSyncStatus.svelte';
 export { default as CopyableText } from './CopyableText.svelte';
 export { default as DiffDetail } from './DiffDetail.svelte';
+export { default as DisabledReason } from './DisabledReason.svelte';
 export { default as ErrorAlert } from './ErrorAlert.svelte';
 export { default as Header } from './Header.svelte';
 export { default as LabelsInput } from './LabelsInput.svelte';

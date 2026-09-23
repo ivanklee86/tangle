@@ -31,7 +31,7 @@ test.describe('applications page (live)', () => {
 
 		// Every instance the server answered for shows up as a column value,
 		// rather than as a tab you have to find.
-		await expect(page.getByRole('link', { name: 'Open in Argo CD' }).first()).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Open in ArgoCD' }).first()).toBeVisible();
 
 		const sortButton = page.getByRole('button', { name: /^Application/ });
 		await sortButton.click();

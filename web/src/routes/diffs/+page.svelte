@@ -129,13 +129,7 @@
 	></span>
 {/snippet}
 
-<QueryBar
-	title="Diffs"
-	{query}
-	showTargetRef
-	applied={data.applications !== undefined}
-	onEdit={() => (editing = true)}
->
+<QueryBar title="Diffs" {query} showTargetRef onEdit={() => (editing = true)}>
 	{#snippet summary()}
 		{#if !applications}
 			{#if editing}
@@ -240,12 +234,12 @@
 										{#if row.outcome === 'pending'}
 											<span class="text-gray-400 italic dark:text-gray-500">pending</span>
 										{:else if row.outcome === 'error'}
-											<span class="font-semibold text-red-600 dark:text-red-400">error</span>
+											<span class="font-semibold text-red-600 dark:text-red-400">Error</span>
 										{:else if row.outcome === 'changed'}
 											<span class="text-green-600 dark:text-green-400">+{row.stats.added}</span>
 											<span class="text-red-600 dark:text-red-400">−{row.stats.removed}</span>
 										{:else}
-											<span class="text-gray-400 dark:text-gray-500">no changes</span>
+											<span class="text-gray-400 dark:text-gray-500">No changes</span>
 										{/if}
 									</span>
 								</button>

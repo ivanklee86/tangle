@@ -9,12 +9,7 @@
 		Tabs,
 		Tooltip
 	} from 'flowbite-svelte';
-	import {
-		ArrowUpRightFromSquareOutline,
-		CheckOutline,
-		FileCopyOutline,
-		RefreshOutline
-	} from 'flowbite-svelte-icons';
+	import { ArrowUpRightFromSquareOutline, RefreshOutline } from 'flowbite-svelte-icons';
 	import { CodeBlock } from 'svhighlight';
 	import 'highlight.js/styles/an-old-hope.css';
 	import { type DiffRow } from '$lib/ui/diffs';
@@ -29,20 +24,6 @@
 	}
 
 	let { row, targetRef, onReload }: Props = $props();
-
-	let copied: boolean = $state(false);
-	let timer: ReturnType<typeof setTimeout> | undefined;
-
-	async function copyDiff(): Promise<void> {
-		try {
-			await navigator.clipboard.writeText(row.diff?.response.diffs ?? '');
-			copied = true;
-			clearTimeout(timer);
-			timer = setTimeout(() => (copied = false), 2000);
-		} catch {
-			copied = false;
-		}
-	}
 </script>
 
 <div class="flex h-full min-w-0 flex-col overflow-y-auto p-6">
@@ -67,7 +48,7 @@
 			</Button>
 			<Tooltip>Reload diff</Tooltip>
 			<Button size="sm" color="alternative" href={row.url} target="_blank" rel="external">
-				Open in Argo CD<ArrowUpRightFromSquareOutline class="ms-1.5 h-3 w-3" />
+				Open in ArgoCD<ArrowUpRightFromSquareOutline class="ms-1.5 h-3 w-3" />
 			</Button>
 		</div>
 	</div>
@@ -103,15 +84,6 @@
 							<span class="font-mono">{targetRef}</span>.
 						</p>
 					{:else}
-						<div class="mb-2 flex justify-end">
-							<Button size="xs" color="alternative" aria-label="Copy diff" onclick={copyDiff}>
-								{#if copied}
-									<CheckOutline class="me-1.5 h-3 w-3" />Copied
-								{:else}
-									<FileCopyOutline class="me-1.5 h-3 w-3" />Copy diff
-								{/if}
-							</Button>
-						</div>
 						<CodeBlock language="diff" code={row.diff.response.diffs} showLineNumbers={false} />
 					{/if}
 				</TabItem>

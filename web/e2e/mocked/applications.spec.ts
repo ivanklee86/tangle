@@ -110,15 +110,14 @@ test.describe('applications page', () => {
 	});
 
 	// The label selector is the reusable part, and this drawer is where it gets
-	// tuned — so the CI command belongs here too. tangle-cli's only subcommand
-	// is generate-manifests, which needs a ref this editor has no field for, so
-	// the note points at the flag rather than at a box to fill in.
+	// tuned — so the CI command belongs here too. This editor has no ref field,
+	// so the command carries no --target-ref; adding one is left to CI.
 	test('the drawer previews both the link and the CI command', async ({ page }) => {
 		await page.getByRole('button', { name: 'Edit query' }).click();
 
 		await expect(page.getByText('/applications?labels=foo%3Abar')).toBeVisible();
 		await expect(page.getByText('tangle-cli generate-manifests --label foo=bar')).toBeVisible();
-		await expect(page.getByText('--target-ref', { exact: false })).toBeVisible();
+		await expect(page.getByText('--target-ref', { exact: false })).toHaveCount(0);
 	});
 
 	// ADR 0008: a bare nav click must not fan a label-less search out to every
@@ -139,7 +138,7 @@ test.describe('applications page', () => {
 		await page.goto('/applications/');
 
 		await expect(page.getByRole('heading', { name: 'Edit query', level: 2 })).toBeVisible();
-		await expect(page.getByText('none yet — pick applications by label')).toBeVisible();
+		await expect(page.getByText('No filters')).toBeVisible();
 		expect(requests).toBe(0);
 	});
 

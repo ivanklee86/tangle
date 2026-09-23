@@ -131,15 +131,22 @@ test.describe('diffs page', () => {
 		).toBeVisible();
 	});
 
-	// Without --target-ref, generate-manifests compares every application's
-	// live ref against itself — a request per application for a diff that is
-	// empty by construction.
-	test('says a target ref is needed when the CLI command has none', async ({ page }) => {
+	// Without a target ref there is nothing to compare against. Like Home, the
+	// disabled button says why on hover rather than a second line under the
+	// CLI command.
+	test('hovering the disabled apply button says a target ref is needed', async ({ page }) => {
 		await page.goto('/diffs/?labels=foo:bar');
 
-		await expect(
-			page.getByText('Add a target ref — without one there is nothing to compare against.')
-		).toBeVisible();
+		const apply = page.getByRole('button', { name: 'Apply and run diffs' });
+		await expect(apply).toHaveAccessibleDescription('Add target ref to enable diffs.');
+		await expect(page.getByText(/nothing to compare/)).toHaveCount(0);
+
+		await apply.hover({ force: true });
+		await expect(page.getByRole('tooltip')).toHaveText('Add target ref to enable diffs.');
+
+		await page.getByPlaceholder('Branch, tag or commit').fill('main');
+		await expect(apply).toBeEnabled();
+		await expect(apply).toHaveAccessibleDescription('');
 	});
 
 	test('the reload-diff button re-issues the mocked diff POST', async ({ page }) => {

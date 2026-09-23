@@ -13,7 +13,6 @@
 		noun?: string;
 		/** Chips render in the accent colour for includes, neutral for exclusions. */
 		tone?: 'accent' | 'neutral';
-		optional?: boolean;
 		/**
 		 * Whether to show the resting how-to line. The rules are the same for
 		 * every one of these, so repeating them under each input is noise —
@@ -27,7 +26,6 @@
 		label,
 		noun = 'label',
 		tone = 'accent',
-		optional = false,
 		instructions = true
 	}: Props = $props();
 
@@ -116,8 +114,6 @@
 	<div class="flex items-baseline justify-between gap-4">
 		<span class="text-sm font-semibold text-gray-900 dark:text-white">
 			{label}
-			{#if optional}<span class="font-normal text-gray-500 dark:text-gray-400">(optional)</span
-				>{/if}
 		</span>
 		<span class="shrink-0 text-xs text-gray-500 dark:text-gray-400">{count}</span>
 	</div>
@@ -194,8 +190,7 @@
 		{:else if droppedOnLoad.length > 0}
 			Dropped from the link: {droppedOnLoad.join(', ')}.
 		{:else if instructions}
-			Press Enter to add. Each key can be used once, and colons and commas are reserved for
-			separating pairs.
+			Press Enter to add. Colons and commas are reserved.
 		{/if}
 	</Helper>
 </fieldset>

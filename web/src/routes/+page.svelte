@@ -2,8 +2,8 @@
 	import { Button, Card, Heading } from 'flowbite-svelte';
 	import { ArrowRightOutline } from 'flowbite-svelte-icons';
 	import { isValidLabelQuery } from '$lib/ui/validation';
-	import { applicationsHref, diffsHref } from '$lib/ui/query';
-	import { QueryEditor, QueryPreview } from '$lib/ui/components';
+	import { applicationsHref, diffsHref, NO_TARGET_REF_REASON } from '$lib/ui/query';
+	import { DisabledReason, QueryEditor, QueryPreview } from '$lib/ui/components';
 
 	let labels: string = $state('');
 	let excludeLabels: string = $state('');
@@ -14,7 +14,8 @@
 	let valid = $derived(isValidLabelQuery(labels) && isValidLabelQuery(excludeLabels));
 	// Diffs re-render every matching application against the ref, so there is
 	// nothing to run without one — the button says so rather than failing later.
-	let canDiff = $derived(valid && targetRef.trim().length > 0);
+	let hasTargetRef = $derived(targetRef.trim().length > 0);
+	let canDiff = $derived(valid && hasTargetRef);
 
 	function go(href: string): void {
 		window.location.href = href;
@@ -26,13 +27,10 @@
 </svelte:head>
 
 <div class="mx-auto mt-10 w-full max-w-3xl">
-	<Heading tag="h1" class="text-2xl font-bold">Pick applications by label</Heading>
-	<p class="mt-1.5 text-gray-500 dark:text-gray-400">
-		Tangle queries every configured Argo CD instance with the same label selector. Build the query
-		once, then list the applications or diff them against a git ref.
-	</p>
+	<!-- Visually hidden: the form speaks for itself, but the page still needs an h1 to navigate by. -->
+	<Heading tag="h1" class="sr-only">Build a label query</Heading>
 
-	<Card class="mt-6 w-full max-w-none p-6">
+	<Card class="w-full max-w-none p-6">
 		<!--
 			One editor with two submits, rather than two cards that each carried
 			their own copy of the label inputs: the query is the same thing in
@@ -56,20 +54,19 @@
 				<QueryPreview href={applicationsHref(query)} {query} cli />
 
 				<div class="mt-4 flex flex-wrap items-center justify-end gap-3">
-					{#if !canDiff}
-						<span id="diff-why" class="text-sm text-gray-500 dark:text-gray-400">
-							Enter a target ref to enable diffs
-						</span>
-					{/if}
-					<Button
-						type="button"
-						color="alternative"
-						disabled={!canDiff}
-						aria-describedby={canDiff ? undefined : 'diff-why'}
-						onclick={() => go(diffsHref(query))}
-					>
-						See diffs
-					</Button>
+					<DisabledReason reason={hasTargetRef ? undefined : NO_TARGET_REF_REASON}>
+						{#snippet children(describedBy)}
+							<Button
+								type="button"
+								color="alternative"
+								disabled={!canDiff}
+								aria-describedby={describedBy}
+								onclick={() => go(diffsHref(query))}
+							>
+								See diffs
+							</Button>
+						{/snippet}
+					</DisabledReason>
 					<Button type="submit" color="primary" disabled={!valid}>
 						See applications<ArrowRightOutline class="ms-2 h-5 w-5" />
 					</Button>

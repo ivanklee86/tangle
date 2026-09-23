@@ -99,12 +99,7 @@
 </svelte:head>
 
 {#await data.applications}
-	<QueryBar
-		title="Applications"
-		{query}
-		applied={data.applications !== undefined}
-		onEdit={() => (editing = true)}
-	>
+	<QueryBar title="Applications" {query} onEdit={() => (editing = true)}>
 		{#snippet summary()}Loading…{/snippet}
 	</QueryBar>
 	<!--
@@ -137,15 +132,10 @@
 	{@const needing = attentionCount(rows)}
 	{@const visible = sortApplications(filterApplications(rows, facets), sortState)}
 
-	<QueryBar
-		title="Applications"
-		{query}
-		applied={data.applications !== undefined}
-		onEdit={() => (editing = true)}
-	>
+	<QueryBar title="Applications" {query} onEdit={() => (editing = true)}>
 		{#snippet summary()}
 			{#if !applications}
-				Pick labels to search every configured Argo CD instance.
+				Pick labels to search every configured ArgoCD instance.
 			{:else}
 				{rows.length}
 				{rows.length === 1 ? 'application' : 'applications'} across
@@ -256,7 +246,7 @@
 				<div class="max-h-[60vh] overflow-y-auto">
 					<Table hoverable>
 						<TableHead class="sticky top-0 z-10">
-							{#each [{ label: 'Application', key: 'name' as const }, { label: 'Argo CD', key: 'instance' as const }, { label: 'Health', key: 'health' as const }, { label: 'Sync', key: 'syncStatus' as const }] as column (column.key)}
+							{#each [{ label: 'Application', key: 'name' as const }, { label: 'ArgoCD', key: 'instance' as const }, { label: 'Health', key: 'health' as const }, { label: 'Sync', key: 'syncStatus' as const }] as column (column.key)}
 								<TableHeadCell aria-sort={ariaSortFor(sortState, column.key)}>
 									<button
 										type="button"
@@ -296,7 +286,7 @@
 											target="_blank"
 											rel="external"
 										>
-											Open in Argo CD<ArrowUpRightFromSquareOutline class="ms-1.5 h-3 w-3" />
+											Open in ArgoCD<ArrowUpRightFromSquareOutline class="ms-1.5 h-3 w-3" />
 										</Button>
 									</TableBodyCell>
 								</TableBodyRow>
@@ -309,7 +299,7 @@
 							{#if rows.length === 0}
 								<h2 class="text-lg font-bold">No applications match this query</h2>
 								<p class="mx-auto mt-2 max-w-md text-sm text-gray-500 dark:text-gray-400">
-									Nothing across {applications.response.results.length} Argo CD
+									Nothing across {applications.response.results.length} ArgoCD
 									{applications.response.results.length === 1 ? 'instance' : 'instances'} carries
 									{#if query.labels}<code class="font-mono">{query.labels}</code>{:else}any label{/if}
 									{#if query.excludeLabels}without
@@ -356,7 +346,6 @@
 								>
 							{/if}
 						</span>
-						<span>Rows update in place on refresh; order changes only when you sort or filter</span>
 					</div>
 				{/if}
 			</div>
@@ -367,7 +356,7 @@
 <QueryDrawer
 	bind:open={editing}
 	title="Edit query"
-	description="Applying searches every configured Argo CD instance."
+	description="Applying searches every configured ArgoCD instance."
 	{query}
 	targetRefMode="hidden"
 	applyLabel="See applications"

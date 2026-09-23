@@ -10,8 +10,8 @@ test.describe('home page (live)', () => {
 		await page.goto('/');
 
 		await expect(
-			page.getByRole('heading', { name: 'Pick applications by label', level: 1 })
-		).toBeVisible();
+			page.getByRole('heading', { name: 'Build a label query', level: 1 })
+		).toBeAttached();
 		await expect(page.getByRole('textbox', { name: `${INCLUDE} key` })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'See applications' })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'See diffs' })).toBeVisible();

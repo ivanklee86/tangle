@@ -39,7 +39,6 @@
 		label="Exclude applications with any of these labels"
 		noun="exclusion"
 		tone="neutral"
-		optional
 		instructions={false}
 		bind:value={excludeLabels}
 	/>
@@ -48,17 +47,10 @@
 		<div
 			class="space-y-2 rounded-lg border border-gray-200 p-4 dark:border-gray-700 dark:bg-gray-900"
 		>
-			<Label for="{uid}-target" class="flex items-baseline justify-between gap-4">
-				<span>
-					Target ref
-					{#if targetRefMode === 'required'}<span class="text-red-500" aria-hidden="true">*</span
-						>{/if}
-				</span>
-				{#if targetRefMode === 'optional'}
-					<span class="text-xs font-normal text-gray-500 dark:text-gray-400"
-						>only needed for diffs</span
-					>
-				{/if}
+			<Label for="{uid}-target">
+				Target ref
+				{#if targetRefMode === 'required'}<span class="text-red-500" aria-hidden="true">*</span
+					>{/if}
 			</Label>
 			<!--
 				ps-10 clears the leading icon. Flowbite positions a `left` snippet
@@ -79,7 +71,7 @@
 				{/snippet}
 			</Input>
 			<Helper id={targetHelpId}>
-				Manifests are rendered from this ref and compared with each application's live ref.
+				Manifests are rendered from this ref and compared with live manifests.
 			</Helper>
 		</div>
 	{/if}
