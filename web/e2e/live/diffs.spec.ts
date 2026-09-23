@@ -1,51 +1,33 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('diffs page (live)', () => {
-	test('nested tabs render for every application, manifests expand with real YAML, reload re-issues a real request, and no page errors occur', async ({
+	test('lists every application, shows a real diff, reload re-issues a request, and no page errors occur', async ({
 		page
 	}) => {
 		const errors: Error[] = [];
 		page.on('pageerror', (error) => errors.push(error));
 
-		await page.goto('/diffs/?targetRef=test_gitops');
+		await page.goto('/diffs/?labels=foo:bar&targetRef=test_gitops');
 
-		// Only the active outer tab's inner tablist is mounted at a time, so
-		// this stays exactly two tablists — outer (ArgoCD) and inner
-		// (application) — no matter which outer tab is currently selected.
-		const outerTabs = page.getByRole('tablist').first().getByRole('tab');
-		await expect(outerTabs.first()).toBeVisible({ timeout: 30_000 });
-		const outerTabCount = await outerTabs.count();
-		expect(outerTabCount).toBeGreaterThan(0);
+		// The sidebar fills from the applications call, before any diff has
+		// come back — that responsiveness is the point of listing rows as
+		// pending rather than waiting for the whole fan-out.
+		const sidebar = page.getByRole('navigation', { name: 'Applications' });
+		await expect(sidebar.getByRole('button').first()).toBeVisible({ timeout: 30_000 });
+		const applicationCount = await sidebar.getByRole('button').count();
+		expect(applicationCount).toBeGreaterThan(0);
 
-		for (let i = 0; i < outerTabCount; i++) {
-			await outerTabs.nth(i).click();
+		// The detail pane opens on the first application without a click.
+		await expect(page.getByLabel('Diff location')).toBeVisible();
+		await expect(page.getByRole('tab', { name: /^Diff/ })).toBeVisible({ timeout: 30_000 });
 
-			const innerTabs = page.getByRole('tablist').nth(1).getByRole('tab');
-			await expect(innerTabs.first()).toBeVisible();
-			expect(await innerTabs.count()).toBeGreaterThan(0);
-		}
-
-		// Settle back on the first ArgoCD/application before checking content.
-		await outerTabs.first().click();
-		await expect(page.getByRole('heading', { name: 'Status', level: 3 })).toBeVisible();
-
-		// Manifests accordion: collapsed by default (aria-expanded=false),
-		// expands to real YAML on click. svhighlight renders one
+		// Real YAML behind the manifest tabs. svhighlight renders one
 		// <code class="language-yaml"> per line, so this checks a non-zero
-		// count rather than a single element's text (matching text like
-		// "apiVersion:" isn't unique here — the always-visible diff codeblock
-		// above the accordion can render the same context lines).
-		const manifestsHeader = page.getByRole('button', { name: 'Manifests' });
-		await expect(manifestsHeader).toBeVisible();
-		await expect(manifestsHeader).toHaveAttribute('aria-expanded', 'false');
-
-		const manifestYamlLines = page.locator('code.language-yaml:visible');
-		await expect(manifestYamlLines).toHaveCount(0);
-
-		await manifestsHeader.click();
-		await expect(manifestsHeader).toHaveAttribute('aria-expanded', 'true');
+		// count rather than one element's text.
+		await page.getByRole('tab', { name: 'Target manifests' }).click();
+		const yamlLines = page.locator('code.language-yaml:visible');
 		await expect(async () => {
-			expect(await manifestYamlLines.count()).toBeGreaterThan(0);
+			expect(await yamlLines.count()).toBeGreaterThan(0);
 		}).toPass();
 
 		// Reload diff re-issues a real request against the live server.
@@ -53,9 +35,32 @@ test.describe('diffs page (live)', () => {
 			(response) => response.url().includes('/diffs') && response.request().method() === 'POST'
 		);
 		await page.getByRole('button', { name: 'Reload diff' }).click();
-		const response = await reloadResponse;
-		expect(response.ok()).toBe(true);
+		expect((await reloadResponse).ok()).toBe(true);
 
 		expect(errors).toEqual([]);
+	});
+
+	test('selecting another application swaps the detail pane', async ({ page }) => {
+		await page.goto('/diffs/?labels=foo:bar&targetRef=test_gitops');
+
+		const sidebar = page.getByRole('navigation', { name: 'Applications' });
+		const buttons = sidebar.getByRole('button');
+		await expect(buttons.first()).toBeVisible({ timeout: 30_000 });
+
+		if ((await buttons.count()) < 2) test.skip();
+
+		const secondName = (await buttons.nth(1).innerText()).split('\n')[0].trim();
+		await buttons.nth(1).click();
+
+		await expect(page.getByRole('heading', { name: secondName, level: 2 })).toBeVisible();
+	});
+
+	// ADR 0008: this page fans out one diff-generation POST per application to
+	// every ArgoCD, so a bare visit must not start it.
+	test('a visit without a target ref opens the query editor instead', async ({ page }) => {
+		await page.goto('/diffs/?labels=foo:bar');
+
+		await expect(page.getByRole('heading', { name: 'Edit diff query', level: 2 })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Apply and run diffs' })).toBeDisabled();
 	});
 });

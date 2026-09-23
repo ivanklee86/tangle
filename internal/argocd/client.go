@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math/rand/v2"
 	"os"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/argoproj/argo-cd/v3/pkg/apiclient"
 	"github.com/argoproj/argo-cd/v3/pkg/apiclient/application"
@@ -71,6 +74,9 @@ type ArgoCDClient struct {
 	// dial is a field so tests can exercise the reconnect machinery without a
 	// live ArgoCD. Production always uses dialArgoCD.
 	dial func() (application.ApplicationServiceClient, io.Closer, error)
+	// backoff is how long to wait before the given transient retry (1-based).
+	// A field so tests don't sleep. Production always uses transientBackoff.
+	backoff func(attempt int) time.Duration
 
 	mu         sync.Mutex
 	conn       *connection
@@ -95,6 +101,7 @@ func NewArgoCDClient(options *ArgoCDClientOptions) (IArgoCDClient, error) {
 		authToken: authToken,
 	}
 	client.dial = client.dialArgoCD
+	client.backoff = transientBackoff
 
 	// Connect eagerly so a broken instance shows up in the logs at boot rather
 	// than on someone's first request — but don't treat failure as fatal. With
@@ -202,17 +209,38 @@ func (c *ArgoCDClient) reconnect(stale *connection) (*connection, error) {
 	return c.connectLocked(dialReasonReconnect)
 }
 
-// callWithReconnect runs op against the current connection and, if that fails
-// in a way that says the connection itself is gone, redials once and runs it
-// again.
+// maxTransientRetries bounds how many times one call is repeated after a
+// transient transport failure. A truncated response is rare and uncorrelated
+// (about 1 in 1,000 through a busy ingress in testing), so a second failure in
+// a row almost always means something is actually wrong.
+const maxTransientRetries = 2
+
+// transientBackoff waits a little longer before each retry, with jitter so a
+// burst of failures from one fan-out doesn't come back in lockstep.
+func transientBackoff(attempt int) time.Duration {
+	base := time.Duration(attempt) * 100 * time.Millisecond
+	return base/2 + rand.N(base/2+1)
+}
+
+// callWithReconnect runs op against the current connection and recovers from
+// two kinds of failure that aren't ArgoCD's answer to the request:
 //
-// The connection argo-cd's SDK hands us can never re-establish itself:
-// util/grpc.BlockingNewClient dials once and installs a "dialer" closed over
-// that single net.Conn, so when gRPC re-creates the transport — after its
-// 30-minute idle timeout, a GOAWAY, or any transport error — it writes the
-// HTTP/2 client preface into a closed file descriptor and every subsequent RPC
-// fails for the life of the process. Redialing is the only recovery available
-// from outside the SDK. See docs/adrs/0025-reconnect-the-argocd-grpc-client.md.
+//   - The connection itself is gone (isConnectionLost). The connection argo-cd's
+//     SDK hands us can never re-establish itself: util/grpc.BlockingNewClient
+//     dials once and installs a "dialer" closed over that single net.Conn, so
+//     when gRPC re-creates the transport — after its 30-minute idle timeout, a
+//     GOAWAY, or any transport error — every subsequent RPC fails for the life
+//     of the process. This redials once and runs op again. See
+//     docs/adrs/0025-reconnect-the-argocd-grpc-client.md.
+//   - The response was lost between ArgoCD and us
+//     (isTransientTransportFailure), typically a reverse proxy cutting a
+//     gRPC-Web response off partway through. The connection is fine, so this
+//     waits briefly and runs op again, up to maxTransientRetries times. See
+//     docs/adrs/0028-retry-transient-argocd-transport-failures.md.
+//
+// Every RPC this package makes is a read, so repeating one is safe. The one
+// with a side effect, GetManifests' preceding hard-refresh Get, is repeated
+// knowingly: a second refresh supersedes the first (ADR 0025 covers the cost).
 //
 // This is a generic function rather than a method because Go methods can't take
 // type parameters.
@@ -224,34 +252,106 @@ func callWithReconnect[T any](ctx context.Context, c *ArgoCDClient, method strin
 		return zero, err
 	}
 
-	result, err := op(conn.applications)
-	if !isConnectionLost(ctx, err) {
-		return result, err
+	reconnected := false
+	transientRetries := 0
+	for {
+		result, err := op(conn.applications)
+
+		switch {
+		case err == nil:
+			if reconnected || transientRetries > 0 {
+				c.log.Info("ArgoCD call succeeded after retrying.",
+					slog.String("method", method),
+					slog.Bool("reconnected", reconnected),
+					slog.Int("transient_retries", transientRetries),
+					slog.Uint64("generation", conn.generation))
+			}
+			return result, nil
+
+		case !reconnected && isConnectionLost(ctx, err):
+			c.log.Warn("Lost the connection to ArgoCD, reconnecting.",
+				slog.String("method", method),
+				slog.Uint64("generation", conn.generation),
+				slog.Any("error", err))
+
+			fresh, reconnectErr := c.reconnect(conn)
+			if reconnectErr != nil {
+				c.log.Error("Could not reconnect to ArgoCD.",
+					slog.String("method", method),
+					slog.Any("error", reconnectErr))
+				return zero, errors.Join(err, reconnectErr)
+			}
+			clientRetriesTotal.WithLabelValues(c.Options.Name, method, retryReasonReconnect).Inc()
+			conn = fresh
+			reconnected = true
+
+		case transientRetries < maxTransientRetries && isTransientTransportFailure(ctx, err):
+			transientRetries++
+			wait := c.backoff(transientRetries)
+			c.log.Warn("ArgoCD response was lost in transit, retrying.",
+				slog.String("method", method),
+				slog.Int("attempt", transientRetries),
+				slog.Duration("backoff", wait),
+				slog.Any("error", err))
+
+			timer := time.NewTimer(wait)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return zero, errors.Join(err, ctx.Err())
+			case <-timer.C:
+			}
+			clientRetriesTotal.WithLabelValues(c.Options.Name, method, retryReasonTransient).Inc()
+
+		default:
+			return result, err
+		}
+	}
+}
+
+// transientTransportMessages are the ways a response lost in transit shows up.
+// argo-cd's gRPC-Web proxy returns these as codes.Unknown with the Go error's
+// text as the message, so the text is all there is to go on:
+//
+//   - "unexpected EOF": the response body ended before its gRPC-Web trailer
+//     frame. pkg/apiclient/grpcproxy.go turns a short read into
+//     io.ErrUnexpectedEOF. This is what an ingress closing a chunked
+//     HTTP/1.1 response partway through produces.
+//   - ": EOF" and "connection reset by peer": the request's connection was
+//     closed before any response arrived, which net/http reports from
+//     http.Client.Do as `Post "<url>": EOF` or a reset read.
+var transientTransportMessages = []string{
+	io.ErrUnexpectedEOF.Error(),
+	": EOF",
+	"connection reset by peer",
+}
+
+// isTransientTransportFailure reports whether err means the response was lost
+// between ArgoCD and this process, rather than being ArgoCD's answer.
+//
+// ADR 0025 chose status codes over error text for isConnectionLost. That
+// isn't possible here: these failures arrive as codes.Unknown, the same code
+// as a genuine error from ArgoCD, so the message is the only signal. Matching
+// is anchored to the exact texts above so an ArgoCD error that happens to
+// mention them isn't retried.
+func isTransientTransportFailure(ctx context.Context, err error) bool {
+	if err == nil || ctx.Err() != nil {
+		return false
 	}
 
-	c.log.Warn("Lost the connection to ArgoCD, reconnecting.",
-		slog.String("method", method),
-		slog.Uint64("generation", conn.generation),
-		slog.Any("error", err))
-
-	fresh, reconnectErr := c.reconnect(conn)
-	if reconnectErr != nil {
-		c.log.Error("Could not reconnect to ArgoCD.",
-			slog.String("method", method),
-			slog.Any("error", reconnectErr))
-		return zero, errors.Join(err, reconnectErr)
+	s, ok := status.FromError(err)
+	if !ok || s.Code() != codes.Unknown {
+		return false
 	}
 
-	result, retryErr := op(fresh.applications)
-	if retryErr != nil {
-		return result, retryErr
+	message := s.Message()
+	for _, transient := range transientTransportMessages {
+		if message == transient || strings.HasSuffix(message, transient) {
+			return true
+		}
 	}
 
-	c.log.Info("Reconnected to ArgoCD.",
-		slog.String("method", method),
-		slog.Uint64("generation", fresh.generation))
-
-	return result, nil
+	return false
 }
 
 // isConnectionLost reports whether err means this client's connection is gone

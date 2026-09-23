@@ -2,14 +2,8 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Page from './+page.svelte';
 import { type ApplicationResponseStore } from '$lib/backend/data';
-
-const { pageState } = vi.hoisted(() => ({
-	pageState: { url: new URL('http://localhost/applications/?labels=foo:bar') }
-}));
-
-vi.mock('$app/state', () => ({
-	page: pageState
-}));
+import { emptyQuery, type Query } from '$lib/ui/query';
+import { EMPTY_CONFIG } from '$lib/backend/config';
 
 const invalidateAll = vi.fn();
 const goto = vi.fn();
@@ -27,114 +21,308 @@ function deferred<T>() {
 	return { promise, resolve };
 }
 
-const resolvedApplications: ApplicationResponseStore = {
-	response: {
-		results: [
-			{
-				name: 'test',
-				link: '',
-				applications: [
-					{ name: 'alpha', url: '', health: 'Healthy', syncStatus: 'Synced', liveRef: 'main' }
-				]
-			}
-		]
-	},
-	errorResponse: { error: '' },
-	error: false,
-	loaded: true
-};
+function store(
+	applications: { name: string; health: string; syncStatus: string }[],
+	instance = 'test'
+): ApplicationResponseStore {
+	return {
+		response: {
+			results: [
+				{
+					name: instance,
+					link: '',
+					applications: applications.map((application) => ({
+						...application,
+						url: `https://argocd.test/applications/${application.name}`,
+						liveRef: 'main'
+					}))
+				}
+			]
+		},
+		errorResponse: { error: '' },
+		error: false,
+		loaded: true
+	};
+}
+
+const FLEET = store([
+	{ name: 'alpha', health: 'Healthy', syncStatus: 'Synced' },
+	{ name: 'bravo', health: 'Degraded', syncStatus: 'OutOfSync' },
+	{ name: 'charlie', health: 'Healthy', syncStatus: 'OutOfSync' }
+]);
+
+function data(overrides: { query?: Query; applications?: Promise<ApplicationResponseStore> } = {}) {
+	return {
+		params: {},
+		data: {
+			config: EMPTY_CONFIG,
+			query: overrides.query ?? ({ ...emptyQuery(), labels: 'foo:bar' } as Query),
+			applications: 'applications' in overrides ? overrides.applications : Promise.resolve(FLEET)
+		}
+	};
+}
 
 describe('applications +page.svelte', () => {
 	afterEach(() => {
 		invalidateAll.mockClear();
 		goto.mockClear();
 		vi.useRealTimers();
-		pageState.url = new URL('http://localhost/applications/?labels=foo:bar');
 	});
 
-	test('shows the label/exclude-label form instead of searching by default', async () => {
-		pageState.url = new URL('http://localhost/applications/');
+	// ADR 0008: a bare nav click must not fan out across every Argo CD. The
+	// drawer is now that gate — it opens instead of a separate full-page form.
+	describe('with no query', () => {
+		test('opens the editor rather than searching', async () => {
+			const screen = await render(Page, data({ query: emptyQuery(), applications: undefined }));
 
-		const screen = await render(Page, {
-			params: {},
-			data: { applications: Promise.resolve(resolvedApplications) }
+			await expect.element(screen.getByRole('heading', { name: 'Edit query' })).toBeVisible();
 		});
 
-		await expect
-			.element(screen.getByRole('heading', { name: 'Applications', level: 2 }))
-			.toBeVisible();
-		await expect.element(screen.getByRole('button', { name: 'See applications' })).toBeVisible();
-	});
+		test('says so in the query bar instead of showing empty chips', async () => {
+			const screen = await render(Page, data({ query: emptyQuery(), applications: undefined }));
 
-	test('searching navigates with the submitted labels', async () => {
-		pageState.url = new URL('http://localhost/applications/');
-
-		const screen = await render(Page, {
-			params: {},
-			data: { applications: Promise.resolve(resolvedApplications) }
+			await expect.element(screen.getByText('No filters')).toBeVisible();
 		});
 
-		await screen.getByRole('textbox', { name: 'Labels key' }).fill('foo');
-		await screen.getByRole('textbox', { name: 'Labels value' }).fill('bar');
-		await screen.getByRole('button', { name: 'Add Labels' }).click();
-		await screen.getByRole('button', { name: 'See applications' }).click();
+		test('applying the editor navigates with the new query', async () => {
+			const screen = await render(Page, data({ query: emptyQuery(), applications: undefined }));
 
-		expect(goto).toHaveBeenCalledWith('/applications?labels=foo%3Abar&searched=true');
-	});
+			const label = 'Include applications with all of these labels';
+			await screen.getByRole('textbox', { name: `${label} key` }).fill('env');
+			await screen.getByRole('textbox', { name: `${label} value` }).fill('prod');
+			await screen.getByRole('button', { name: 'Add label' }).click();
+			await screen.getByRole('button', { name: 'See applications' }).click();
 
-	test('searching with both fields empty still navigates with a searched marker', async () => {
-		pageState.url = new URL('http://localhost/applications/');
-
-		const screen = await render(Page, {
-			params: {},
-			data: { applications: Promise.resolve(resolvedApplications) }
+			expect(goto).toHaveBeenCalledWith('/applications?labels=env%3Aprod');
 		});
 
-		await screen.getByRole('button', { name: 'See applications' }).click();
+		// Submitting with nothing filled in means "show me everything", which
+		// has to navigate somewhere the page can tell apart from a bare visit
+		// — otherwise it lands back on this same state and the editor reopens,
+		// with no way ever to see the whole fleet.
+		test('applying with no labels navigates to a URL that runs the query', async () => {
+			const screen = await render(Page, data({ query: emptyQuery(), applications: undefined }));
 
-		expect(goto).toHaveBeenCalledWith('/applications?searched=true');
+			await screen.getByRole('button', { name: 'See applications' }).click();
+
+			expect(goto).toHaveBeenCalledWith('/applications?searched=true');
+		});
 	});
 
-	test('skips the form and shows results when arriving with filters already in the URL', async () => {
-		const screen = await render(Page, {
-			params: {},
-			data: { applications: Promise.resolve(resolvedApplications) }
+	describe('with an empty query that was submitted', () => {
+		test('runs it and lists everything instead of reopening the editor', async () => {
+			const screen = await render(Page, data({ query: emptyQuery() }));
+
+			await expect.element(screen.getByText('alpha')).toBeVisible();
+			await expect
+				.element(screen.getByRole('heading', { name: 'Edit query' }))
+				.not.toBeInTheDocument();
 		});
 
-		await expect.element(screen.getByText('alpha')).toBeVisible();
+		test('says the query has no filters rather than that none was given', async () => {
+			const screen = await render(Page, data({ query: emptyQuery() }));
+
+			await expect.element(screen.getByText('No filters')).toBeVisible();
+		});
 	});
 
-	test('shows a spinner while data.applications is pending', async () => {
+	test('shows placeholder rows while the applications are pending', async () => {
 		const { promise } = deferred<ApplicationResponseStore>();
 
-		const screen = await render(Page, { params: {}, data: { applications: promise } });
+		const screen = await render(Page, data({ applications: promise }));
 
-		await expect.element(screen.getByRole('status')).toBeVisible();
+		await expect.element(screen.getByText('Loading applications')).toBeInTheDocument();
 	});
 
-	test('renders the application grid once data.applications resolves', async () => {
-		const screen = await render(Page, {
-			params: {},
-			data: { applications: Promise.resolve(resolvedApplications) }
+	// Auto-refresh re-runs load, which hands the page a new, pending promise
+	// for the same query. Swapping back to the skeleton then would lose the
+	// table's scroll and unmount the toolbar mid-keystroke.
+	describe('refreshing', () => {
+		test('keeps the current rows and toolbar while the same query reloads', async () => {
+			const screen = await render(Page, data());
+			await expect.element(screen.getByText('alpha')).toBeVisible();
+			const search = screen.getByRole('searchbox', { name: 'Filter by application name' });
+			await search.fill('al');
+
+			const { promise } = deferred<ApplicationResponseStore>();
+			await screen.rerender({ data: data({ applications: promise }).data });
+
+			await expect.element(screen.getByText('alpha')).toBeVisible();
+			await expect.element(screen.getByText('Loading applications')).not.toBeInTheDocument();
+			await expect.element(search).toHaveValue('al');
 		});
 
-		await expect.element(screen.getByText('alpha')).toBeVisible();
+		test('shows the refreshed rows once the reload resolves', async () => {
+			const screen = await render(Page, data());
+			await expect.element(screen.getByText('alpha')).toBeVisible();
+
+			const { promise, resolve } = deferred<ApplicationResponseStore>();
+			await screen.rerender({ data: data({ applications: promise }).data });
+			resolve(store([{ name: 'delta', health: 'Healthy', syncStatus: 'Synced' }]));
+
+			await expect.element(screen.getByText('delta')).toBeVisible();
+			await expect.element(screen.getByText('alpha')).not.toBeInTheDocument();
+		});
+
+		// A different query is a new question: its answer isn't known yet, and
+		// the old rows would be answering something else.
+		test('shows the loading state instead of stale rows for a different query', async () => {
+			const screen = await render(Page, data());
+			await expect.element(screen.getByText('alpha')).toBeVisible();
+
+			const { promise } = deferred<ApplicationResponseStore>();
+			await screen.rerender({
+				data: data({
+					query: { ...emptyQuery(), labels: 'env:prod' } as Query,
+					applications: promise
+				}).data
+			});
+
+			await expect.element(screen.getByText('Loading applications')).toBeInTheDocument();
+			await expect.element(screen.getByText('alpha')).not.toBeInTheDocument();
+		});
 	});
 
-	test('calls invalidateAll on an interval once refresh is enabled', async () => {
+	test('shows the query in the bar before any data arrives', async () => {
+		// The header renders from the URL, so someone can read what was asked
+		// for while the fetch is still in flight.
+		const { promise } = deferred<ApplicationResponseStore>();
+
+		const screen = await render(Page, data({ applications: promise }));
+
+		await expect.element(screen.getByText('foo:bar')).toBeVisible();
+	});
+
+	// One table across every instance, rather than a tab per instance: the
+	// question people arrive with is "what in my fleet needs attention".
+	describe('the results table', () => {
+		test('lists applications from every instance with their Argo CD', async () => {
+			const screen = await render(Page, data());
+
+			await expect.element(screen.getByText('alpha')).toBeVisible();
+			await expect.element(screen.getByText('bravo')).toBeVisible();
+			await expect.element(screen.getByRole('cell', { name: 'test' }).first()).toBeVisible();
+		});
+
+		test('defaults to worst-first, so the row needing attention is on top', async () => {
+			const screen = await render(Page, data());
+
+			// Asserted on the order the table text appears in rather than on a
+			// row index, so the check survives a column or header change.
+			const text = screen.getByRole('table').element().textContent ?? '';
+			expect(text.indexOf('bravo')).toBeLessThan(text.indexOf('alpha'));
+		});
+
+		test('links each row out to Argo CD', async () => {
+			const screen = await render(Page, data());
+
+			// bravo sorts first by default (worst health), so it owns the first
+			// link in the table.
+			await expect
+				.element(screen.getByRole('link', { name: 'Open in ArgoCD' }).first())
+				.toHaveAttribute('href', 'https://argocd.test/applications/bravo');
+		});
+
+		// Every configured ArgoCD answers a search, including ones with no
+		// matches. The summary should count only the instances the rows
+		// actually come from, so an empty answer isn't reported as a source.
+		test('summarizes only the instances that have matching applications', async () => {
+			const withEmptyInstance: ApplicationResponseStore = {
+				...FLEET,
+				response: {
+					results: [...FLEET.response.results, { name: 'prod', link: '', applications: [] }]
+				}
+			};
+
+			const screen = await render(Page, data({ applications: Promise.resolve(withEmptyInstance) }));
+
+			await expect
+				.element(screen.getByText('3 applications across 1 instance', { exact: false }))
+				.toBeVisible();
+		});
+
+		test('counts what is shown against the total', async () => {
+			const screen = await render(Page, data());
+
+			await expect.element(screen.getByText('Showing', { exact: false })).toBeVisible();
+		});
+	});
+
+	describe('the facet toolbar', () => {
+		test('narrows to applications needing attention', async () => {
+			const screen = await render(Page, data());
+			await expect.element(screen.getByText('alpha')).toBeVisible();
+
+			await screen.getByRole('button', { name: 'Needs attention 2' }).click();
+
+			// alpha is Healthy and Synced, so it drops out; charlie is healthy
+			// but drifted, so it stays.
+			await expect.element(screen.getByText('alpha')).not.toBeInTheDocument();
+			await expect.element(screen.getByText('charlie')).toBeVisible();
+		});
+
+		test('filters by name as you type', async () => {
+			const screen = await render(Page, data());
+
+			await screen.getByRole('searchbox', { name: 'Filter by application name' }).fill('brav');
+
+			await expect.element(screen.getByText('bravo')).toBeVisible();
+			await expect.element(screen.getByText('alpha')).not.toBeInTheDocument();
+		});
+
+		test('offers a way back when the filters hide everything', async () => {
+			const screen = await render(Page, data());
+
+			await screen
+				.getByRole('searchbox', { name: 'Filter by application name' })
+				.fill('nothing-matches');
+
+			await expect
+				.element(screen.getByText('No applications match the filters in the toolbar.'))
+				.toBeVisible();
+
+			await screen.getByRole('button', { name: 'Clear filters' }).click();
+
+			await expect.element(screen.getByText('alpha')).toBeVisible();
+		});
+	});
+
+	test('explains an empty result set in terms of the query that produced it', async () => {
+		const screen = await render(Page, data({ applications: Promise.resolve(store([])) }));
+
+		await expect
+			.element(screen.getByRole('heading', { name: 'No applications match this query' }))
+			.toBeVisible();
+	});
+
+	test('carries the query through to the Diffs page', async () => {
+		const screen = await render(Page, data());
+
+		await expect
+			.element(screen.getByRole('link', { name: 'Diff these applications' }))
+			.toHaveAttribute('href', '/diffs?labels=foo%3Abar');
+	});
+
+	test('calls invalidateAll on an interval once auto-refresh is enabled', async () => {
 		vi.useFakeTimers();
 
-		const screen = await render(Page, {
-			params: {},
-			data: { applications: Promise.resolve(resolvedApplications) }
-		});
+		const screen = await render(Page, data());
 		await expect.element(screen.getByText('alpha')).toBeVisible();
 
-		const refreshButton = screen.getByRole('button', { name: 'Toggle automatic refresh' });
-		await refreshButton.click();
-
+		await screen.getByRole('checkbox', { name: 'Auto-refresh' }).click();
 		await vi.advanceTimersByTimeAsync(10_000);
 
 		expect(invalidateAll).toHaveBeenCalled();
+	});
+
+	test('does not refresh while auto-refresh is off', async () => {
+		vi.useFakeTimers();
+
+		const screen = await render(Page, data());
+		await expect.element(screen.getByText('alpha')).toBeVisible();
+
+		await vi.advanceTimersByTimeAsync(30_000);
+
+		expect(invalidateAll).not.toHaveBeenCalled();
 	});
 });

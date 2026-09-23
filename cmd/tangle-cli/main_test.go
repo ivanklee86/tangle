@@ -136,4 +136,29 @@ func TestCli(t *testing.T) {
 		assert.Contains(t, string(out), "Applications found: 4")
 		assert.Contains(t, string(out), "True")
 	})
+
+	// --folder's help text promises "Defaults to current folder". CI jobs
+	// commonly omit it, and it used to resolve to "" and write to the root.
+	t.Run("generate manifests without --folder writes to the working directory", func(t *testing.T) {
+		server := newFakeTangleServer(t)
+
+		tempDir := t.TempDir()
+		t.Chdir(tempDir)
+
+		b := bytes.NewBufferString("")
+		command := NewRootCommand()
+		command.SetOut(b)
+		command.SetErr(b)
+		command.SetArgs([]string{
+			"generate-manifests",
+			"--server-address", strings.TrimPrefix(server.URL, "http://"),
+			"--insecure",
+			"--target-ref", "test_gitops",
+		})
+		assert.NoError(t, command.Execute())
+
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "diff-test-test-1.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "manifests-test-test-1.yaml"))
+		assert.FileExists(t, fmt.Sprintf("%s/%s", tempDir, "error-prod-test-3.txt"))
+	})
 }

@@ -40,7 +40,8 @@ function buildDiffMap(diffs: ApplicationDiff[]): ApplicationsDiffsData {
 
 interface FetchDiffsCallbacks {
 	onTotal?: (total: number) => void;
-	onProgress?: () => void;
+	/** Called with each diff as it resolves, so a caller can show it straight away. */
+	onProgress?: (diff: ApplicationDiff) => void;
 }
 
 async function fetchDiffs(
@@ -62,7 +63,7 @@ async function fetchDiffs(
 					request.targetRef
 				)
 				.then((result) => {
-					callbacks.onProgress?.();
+					callbacks.onProgress?.(result);
 					return result;
 				})
 		)

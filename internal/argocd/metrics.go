@@ -137,6 +137,16 @@ const (
 	dialResultFailure = "failure"
 )
 
+// Labels for clientRetriesTotal.
+const (
+	// retryReasonTransient: the response was lost in transit (see
+	// isTransientTransportFailure) and the call was repeated as-is.
+	retryReasonTransient = "transient"
+	// retryReasonReconnect: the connection itself was gone, so the call was
+	// repeated on a freshly dialed one.
+	retryReasonReconnect = "reconnect"
+)
+
 // Connection metrics are package-level vectors registered once per process,
 // unlike the pool collectors above: those carry const labels and are registered
 // per pool, which is why they're skipped under DoNotInstrument (a second
@@ -160,5 +170,13 @@ var (
 			Help: "Number of connections this process has established to an ArgoCD instance; increments on every reconnect",
 		},
 		[]string{"argocd"},
+	)
+
+	clientRetriesTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "argocd_client_retries_total",
+			Help: "Number of ArgoCD RPCs repeated after a failure, by method and why the first attempt failed",
+		},
+		[]string{"argocd", "method", "reason"},
 	)
 )

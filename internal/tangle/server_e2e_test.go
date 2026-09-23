@@ -66,9 +66,20 @@ func TestE2E_ServerApplications(t *testing.T) {
 		{name: "tags_match_all", url: "/applications?labels=foo:bar", test_count: 2, prod_count: 2},
 		{name: "tags_match_one", url: "/applications?labels=env:test", test_count: 1, prod_count: 0},
 		{name: "tags_match_none", url: "/applications?labels=env:foobar", test_count: 0, prod_count: 0},
-		{name: "invalid_tags", url: "/applications?labels=foobar", test_count: 2, prod_count: 2},
 		{name: "multiple_tags", url: "/applications?labels=env:test,bazz:buzz", test_count: 1, prod_count: 0},
 		{name: "exclude", url: "/applications?labels=foo:bar&excludeLabels=env:test", test_count: 1, prod_count: 2},
+		// #240: an exclude-only query used to be sent with no selector at
+		// all, so ArgoCD listed every application (2 and 2 here). This is
+		// the only layer where a real ArgoCD, rather than apimachinery,
+		// interprets the selector.
+		{name: "exclude_only", url: "/applications?excludeLabels=env:test", test_count: 1, prod_count: 2},
+		// prod_count is 2 because the "my-project" applications carry no
+		// "bazz" label, and a Kubernetes "!=" requirement matches an absent
+		// key.
+		{name: "exclude_only_multiple", url: "/applications?excludeLabels=env:test,bazz:buzz", test_count: 0, prod_count: 2},
+		// The same key in both parameters with different values is
+		// redundant but satisfiable, and stays a 200.
+		{name: "cross_map_different_values", url: "/applications?labels=env:test&excludeLabels=env:prod", test_count: 1, prod_count: 0},
 	}
 
 	for _, test := range tests {
@@ -93,6 +104,50 @@ func TestE2E_ServerApplications(t *testing.T) {
 					assert.Equal(t, test.prod_count, len(argoCDResult.Applications))
 				}
 			}
+		})
+	}
+}
+
+// TestE2E_ServerApplicationsBadRequest covers #241 against a Tangle built
+// from integration/tangle.yaml through the real LoadConfig path, with real
+// wrappers and the real router and middleware behind it.
+//
+// A rejected request never reaches ArgoCD, so unlike the cases above this
+// isn't testing the live integration — the handler tests already pin the
+// messages. What it adds is that the validation still holds when the server
+// is assembled from real configuration rather than a hand-built test config,
+// which is where a config-dependent difference (timeouts, CORS, the
+// instrumentation middleware the unit tests disable) would surface.
+func TestE2E_ServerApplicationsBadRequest(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{name: "malformed_include", url: "/api/applications?labels=env"},
+		{name: "malformed_exclude", url: "/api/applications?excludeLabels=env"},
+		{name: "too_many_separators", url: "/api/applications?labels=env:test:extra"},
+		{name: "malformed_alongside_valid", url: "/api/applications?labels=env,team:platform"},
+		{name: "duplicate_include_key", url: "/api/applications?labels=env:test,env:prod"},
+		{name: "duplicate_exclude_key", url: "/api/applications?excludeLabels=env:test,env:prod"},
+		{name: "contradictory_pair", url: "/api/applications?labels=env:test&excludeLabels=env:test"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tangle := newE2ETangle(t)
+
+			server := httptest.NewServer(tangle.Server.Handler)
+			defer server.Close()
+
+			resp, err := http.Get(server.URL + test.url)
+			assert.NoError(t, err)
+			defer func() { _ = resp.Body.Close() }()
+
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+			var result ErrorResponse
+			assert.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+			assert.NotEmpty(t, result.Error, "a 400 must say which label was wrong")
 		})
 	}
 }

@@ -1,47 +1,79 @@
 import { describe, it, expect } from 'vitest';
-import { CheckCircleSolid, CloseCircleSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
-import { statusAppearance } from '$lib/ui/status';
+import { statusAppearance, statusSeverity, needsAttention } from '$lib/ui/status';
 
 describe('statusAppearance', () => {
-	it('treats Healthy as healthy', () => {
-		expect(statusAppearance('Healthy').icon).toBe(CheckCircleSolid);
+	// The promise here is Argo CD's own vocabulary: a status means the same
+	// thing in Tangle as in the Argo CD UI people came from. The colour is the
+	// contract, not the icon — it's what a reader takes in first.
+	it.each([
+		['Healthy', 'green'],
+		['Synced', 'green'],
+		['OutOfSync', 'yellow'],
+		['Progressing', 'blue'],
+		['Degraded', 'red'],
+		['Missing', 'red'],
+		['Suspended', 'gray'],
+		['Unknown', 'gray']
+	])('renders %s as a %s badge', (status, color) => {
+		expect(statusAppearance(status).color).toBe(color);
 	});
 
-	it('treats Synced as healthy', () => {
-		expect(statusAppearance('Synced').icon).toBe(CheckCircleSolid);
+	it('keeps OutOfSync away from the colour that means breakage', () => {
+		// Drift is not breakage. If these ever collide, a fleet of
+		// perfectly healthy but un-synced applications looks like an outage.
+		expect(statusAppearance('OutOfSync').color).not.toBe(statusAppearance('Degraded').color);
 	});
 
-	it('treats OutOfSync as unhealthy', () => {
-		expect(statusAppearance('OutOfSync').icon).toBe(CloseCircleSolid);
+	it('falls back to gray for an unrecognised status', () => {
+		// A status Argo CD adds later must not be reported as healthy.
+		expect(statusAppearance('SomeNewStatus').color).toBe('gray');
+		expect(statusAppearance('SomeNewStatus').needsAttention).toBe(false);
 	});
 
-	it('treats Degraded as unhealthy', () => {
-		expect(statusAppearance('Degraded').icon).toBe(CloseCircleSolid);
+	it('gives every status an icon, so colour is never the only signal', () => {
+		for (const status of ['Healthy', 'OutOfSync', 'Progressing', 'Degraded', 'Unknown']) {
+			expect(statusAppearance(status).icon).toBeDefined();
+		}
+	});
+});
+
+describe('statusSeverity', () => {
+	it('ranks breakage above drift, and drift above healthy', () => {
+		expect(statusSeverity('Degraded')).toBeGreaterThan(statusSeverity('Progressing'));
+		expect(statusSeverity('Progressing')).toBeGreaterThan(statusSeverity('OutOfSync'));
+		expect(statusSeverity('OutOfSync')).toBeGreaterThan(statusSeverity('Unknown'));
+		expect(statusSeverity('Unknown')).toBeGreaterThan(statusSeverity('Healthy'));
 	});
 
-	it('treats Missing as unhealthy', () => {
-		expect(statusAppearance('Missing').icon).toBe(CloseCircleSolid);
+	it('ranks Degraded and Missing together', () => {
+		expect(statusSeverity('Missing')).toBe(statusSeverity('Degraded'));
 	});
 
-	it('treats Progressing as unknown', () => {
-		expect(statusAppearance('Progressing').icon).toBe(ExclamationCircleSolid);
+	it('ranks Healthy and Synced together, at the bottom', () => {
+		expect(statusSeverity('Synced')).toBe(statusSeverity('Healthy'));
+		expect(statusSeverity('Healthy')).toBe(0);
+	});
+});
+
+describe('needsAttention', () => {
+	it('is false only when both statuses are clean', () => {
+		expect(needsAttention('Healthy', 'Synced')).toBe(false);
 	});
 
-	it('treats Suspended as unknown', () => {
-		expect(statusAppearance('Suspended').icon).toBe(ExclamationCircleSolid);
+	it('is true when an application has drifted even though it is healthy', () => {
+		// The case the Applications facet exists for: a running application
+		// whose manifests no longer match what is deployed.
+		expect(needsAttention('Healthy', 'OutOfSync')).toBe(true);
 	});
 
-	it('treats Unknown as unknown', () => {
-		expect(statusAppearance('Unknown').icon).toBe(ExclamationCircleSolid);
+	it('is true when health is bad even though sync is clean', () => {
+		expect(needsAttention('Degraded', 'Synced')).toBe(true);
+		expect(needsAttention('Missing', 'Synced')).toBe(true);
+		expect(needsAttention('Progressing', 'Synced')).toBe(true);
 	});
 
-	it('falls back to unknown for an unrecognized status', () => {
-		expect(statusAppearance('SomeNewStatus').icon).toBe(ExclamationCircleSolid);
-	});
-
-	it('pairs each icon with a dark-mode-aware color class', () => {
-		expect(statusAppearance('Healthy').class).toContain('dark:');
-		expect(statusAppearance('OutOfSync').class).toContain('dark:');
-		expect(statusAppearance('Unknown').class).toContain('dark:');
+	it('leaves a suspended application alone', () => {
+		// Suspended is somebody's deliberate pause, not a problem to surface.
+		expect(needsAttention('Suspended', 'Synced')).toBe(false);
 	});
 });

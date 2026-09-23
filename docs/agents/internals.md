@@ -54,10 +54,15 @@ flowchart LR
 
 ## Request paths
 
-- **`GET /api/applications?labels=k:v&excludeLabels=k:v`** — fans out over every configured ArgoCD,
-  translating labels into a single Kubernetes selector (`k=v,k!=v`), and returns per-instance results
-  ordered by `sortOrder`. Deep links back into each ArgoCD UI are synthesized from the instance
-  address and scheme (`http`/`https`, from that instance's `plainText`/`insecure` config).
+- **`GET /api/applications?labels=k:v&excludeLabels=k:v`** — validates both parameters
+  (`internal/tangle/labels.go`), then fans out over every configured ArgoCD, translating labels into a
+  single Kubernetes selector (`k=v,k!=v`, sorted so the string is deterministic), and returns
+  per-instance results ordered by `sortOrder`. Deep links back into each ArgoCD UI are synthesized
+  from the instance address and scheme (`http`/`https`, from that instance's `plainText`/`insecure`
+  config). A malformed segment, a key repeated within a parameter, or a key shared between both
+  parameters at the same value is a `400` before any fan-out — see
+  [ADR 0026](../adrs/0026-reject-malformed-label-query-parameters.md). The selector is attached
+  whenever *either* map is non-empty, so an exclude-only query filters rather than listing everything.
 - **`POST /api/argocd/{argocd}/applications/{name}/diffs`** — submits a `refresh=hard` `Get` on the
   hard-refresh pool, then generates manifests for `liveRef` and `targetRef` concurrently on the
   manifests pool, converts each to YAML, and shells out to `diff -uNar` over two tempfiles.
@@ -85,6 +90,8 @@ are counted by `argocd_client_dials_total{argocd,reason,result}` and
 `argocd_client_connection_generation{argocd}` — unlike the pool collectors, these are always
 registered. See [ADR 0025](../adrs/0025-reconnect-the-argocd-grpc-client.md).
 
+A reverse proxy in front of ArgoCD (an ingress or load balancer) occasionally cuts a gRPC-Web response off partway through. argo-cd's proxy reports that as `codes.Unknown` with the message `unexpected EOF`, and nothing in argo-cd retries it. The same retry loop therefore also repeats a call whose `Unknown` message is, or ends with, `unexpected EOF`, `: EOF` or `connection reset by peer`. It stays on the same connection, retries at most twice, and backs off about 100 ms times the attempt number, with jitter. Every RPC here is a read, so repeating one is safe. Retries of both kinds are counted by `argocd_client_retries_total{argocd,method,reason}`. See [ADR 0028](../adrs/0028-retry-transient-argocd-transport-failures.md).
+
 A client whose first dial fails is kept and connects lazily on first use, so an ArgoCD that's briefly
 down at boot doesn't take the pod with it. A missing `authTokenEnvVar` is still fatal for that
 instance: `internal/tangle/server.go` logs it and skips registering a wrapper for it.
@@ -108,6 +115,12 @@ Service named `tangle` collides with this prefix — see
 
 The CLI uses [`cobra`](https://github.com/spf13/cobra)/[`viper`](https://github.com/spf13/viper)
 with the same `TANGLE_` prefix.
+
+`tangle-cli generate-manifests` is the CLI's only subcommand, and one run produces both manifests and diffs. For each matched application it writes `manifests-<argocd>-<app>.yaml` and `diff-<argocd>-<app>.yaml`, plus `error-<argocd>-<app>.txt` when manifest generation fails. Files go to `--folder`, or to the working directory when that flag is left out. A generation error only makes the CLI exit non-zero with `--fail-on-error`; a failure to reach the server always exits 1.
+
+## Live test fixtures
+
+The live stack (`task services:cicd`) seeds the four Applications in `integration/kubernetes/example/`, all tracking `main` on GitHub rather than the local checkout. The `test_gitops` branch on `origin` stands in for "a change the user pushed": it enables `test-1`'s ingress (so its diff adds one `Ingress`) and deliberately breaks `test-3`'s `values.yaml` (so manifest generation fails), leaving `test-2` and `test-4` unchanged. The scenario tests for [test_cases.md](test_cases.md) (`cmd/tangle-cli/main_e2e_test.go`, `web/e2e/live/ci-scenarios.spec.ts`) and the other live suites rely on exactly this, so treat `test_gitops` as a test fixture: don't rebase or "fix" it.
 
 ## Build
 

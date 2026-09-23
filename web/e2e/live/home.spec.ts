@@ -1,30 +1,49 @@
 import { expect, test } from '@playwright/test';
 
+const INCLUDE = 'Include applications with all of these labels';
+
 test.describe('home page (live)', () => {
-	test('loads and renders both cards with no page errors', async ({ page }) => {
+	test('renders one query editor with both actions and no page errors', async ({ page }) => {
 		const errors: Error[] = [];
 		page.on('pageerror', (error) => errors.push(error));
 
 		await page.goto('/');
 
-		await expect(page.getByRole('heading', { name: 'Applications', level: 2 })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Diffs', level: 2 })).toBeVisible();
+		await expect(
+			page.getByRole('heading', { name: 'Build a label query', level: 1 })
+		).toBeAttached();
+		await expect(page.getByRole('textbox', { name: `${INCLUDE} key` })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'See applications' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'See diffs' })).toBeVisible();
 
 		expect(errors).toEqual([]);
 	});
 
-	test('submitting Applications with no labels navigates to /applications without error', async ({
-		page
-	}) => {
+	// The real round trip: the server reads `domain` from integration/tangle.yaml,
+	// serves it from /api/config, and the browser builds the copyable link on it.
+	// Nothing in the mocked suite exercises that path end to end.
+	test('the link preview is absolute, built from the served config', async ({ page }) => {
+		await page.goto('/');
+
+		const configured = await page.evaluate(async () => {
+			const response = await fetch('/api/config');
+			return ((await response.json()) as { domain: string }).domain;
+		});
+		expect(configured).not.toBe('');
+
+		await page.getByRole('textbox', { name: `${INCLUDE} key` }).fill('env');
+		await page.getByRole('textbox', { name: `${INCLUDE} value` }).fill('test');
+		await page.getByRole('button', { name: 'Add label' }).click();
+
+		await expect(page.getByText(`${configured}/applications?labels=env%3Atest`)).toBeVisible();
+	});
+
+	test('submitting with no labels navigates to /applications without error', async ({ page }) => {
 		const errors: Error[] = [];
 		page.on('pageerror', (error) => errors.push(error));
 
 		await page.goto('/');
-
-		const applicationsForm = page.locator('form', {
-			has: page.getByRole('button', { name: 'See applications' })
-		});
-		await applicationsForm.getByRole('button', { name: 'See applications' }).click();
+		await page.getByRole('button', { name: 'See applications' }).click();
 
 		await page.waitForURL((url) => url.pathname.startsWith('/applications'));
 		await expect(page.getByRole('heading', { name: 'Applications', level: 1 })).toBeVisible();

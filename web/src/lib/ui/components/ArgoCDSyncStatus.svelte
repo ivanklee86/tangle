@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Badge } from 'flowbite-svelte';
 	import { statusAppearance } from '$lib/ui/status';
 
 	interface Props {
@@ -10,7 +11,7 @@
 	let appearance = $derived(statusAppearance(syncStatus));
 </script>
 
-<div class="flex">
-	<appearance.icon class="w-5 h-5 me-2 {appearance.class}" />
+<Badge color={appearance.color} rounded class="gap-1.5 px-2.5 py-1">
+	<appearance.icon class="h-3.5 w-3.5" />
 	{syncStatus}
-</div>
+</Badge>

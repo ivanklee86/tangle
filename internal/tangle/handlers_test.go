@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -53,9 +54,13 @@ func newTestTangle() *Tangle {
 	}
 
 	config := TangleConfig{
-		Name:            "test-tangle",
-		Domain:          "localhost",
-		Port:            8081,
+		Name:   "test-tangle",
+		Domain: "localhost",
+		Port:   8081,
+		// Handler tests go through the real router, which wraps every
+		// request in middleware.Timeout(Timeout seconds). Left at zero,
+		// that hands handlers an already-expired context.
+		Timeout:         TangleConfigDefaults.Timeout,
 		ArgoCDs:         argocdConfig,
 		DoNotInstrument: true,
 	}
@@ -67,6 +72,44 @@ func newTestTangle() *Tangle {
 	}
 
 	return tangle
+}
+
+// newIntegrationTangle builds a *Tangle whose ArgoCDs are real
+// argocd.ArgoCDWrapper values over argocdfakes.FakeClient, so a request
+// travels the production path: the handler's parsed label maps become one
+// Kubernetes selector string, which FakeClient parses with
+// k8s.io/apimachinery/pkg/labels exactly as a real ArgoCD server would.
+//
+// newTestTangle's FakeWrapper deliberately short-circuits that — it matches
+// the two maps directly — which makes it useless for selector-construction
+// bugs. #240 (an exclude-only query dropping its selector and returning every
+// application) is invisible through FakeWrapper and caught here.
+//
+// The applications are split the same way newTestTangle splits them, and the
+// same way the live cluster's RBAC does: "default" project to the test
+// instance, "my-project" to prod.
+func newIntegrationTangle(t *testing.T) (*Tangle, map[string]*argocdfakes.FakeClient) {
+	t.Helper()
+
+	tangle := newTestTangle()
+
+	clients := map[string]*argocdfakes.FakeClient{
+		"test": argocdfakes.NewFakeClient(argocdfakes.ExampleApplications()[:2]),
+		"prod": argocdfakes.NewFakeClient(argocdfakes.ExampleApplications()[2:]),
+	}
+
+	for name, client := range clients {
+		// DoNotInstrumentWorkers, or the second subtest panics re-registering
+		// the same pool metrics on Prometheus's global registry.
+		wrapper, err := argocd.New(client, name, &argocd.ArgoCDWrapperOptions{
+			DoNotInstrumentWorkers: true,
+		})
+		assert.NoError(t, err)
+
+		tangle.ArgoCDs[name] = wrapper
+	}
+
+	return tangle, clients
 }
 
 func TestHandlers(t *testing.T) {
@@ -99,12 +142,6 @@ func TestHandlers(t *testing.T) {
 			url:        "/applications?labels=env:foobar",
 			test_count: 0,
 			prod_count: 0,
-		},
-		{
-			name:       "invalid_tags",
-			url:        "/applications?labels=foobar",
-			test_count: 2,
-			prod_count: 2,
 		},
 		{
 			name:       "multiple_tags",
@@ -273,5 +310,307 @@ func TestDiffsError(t *testing.T) {
 		assert.Empty(t, result.LiveManifests)
 		assert.Empty(t, result.TargetManifests)
 		assert.Empty(t, result.Diffs)
+	})
+}
+
+// TestHandlersIntegration runs the label matrix against real ArgoCDWrapper
+// values over FakeClient, so the selector the handler's maps produce is
+// actually parsed and applied. These rows are the end-to-end statement of
+// #240: through FakeWrapper the exclude-only cases pass either way, because
+// it never builds a selector at all.
+func TestHandlersIntegration(t *testing.T) {
+	tests := []struct {
+		name       string
+		url        string
+		test_count int
+		prod_count int
+	}{
+		{
+			name:       "no_tags",
+			url:        "/api/applications",
+			test_count: 2,
+			prod_count: 2,
+		},
+		{
+			name:       "tags_match_all",
+			url:        "/api/applications?labels=foo:bar",
+			test_count: 2,
+			prod_count: 2,
+		},
+		{
+			name:       "tags_match_one",
+			url:        "/api/applications?labels=env:test",
+			test_count: 1,
+			prod_count: 0,
+		},
+		{
+			name:       "multiple_tags",
+			url:        "/api/applications?labels=env:test,bazz:buzz",
+			test_count: 1,
+			prod_count: 0,
+		},
+		{
+			name:       "exclude_and_include",
+			url:        "/api/applications?labels=foo:bar&excludeLabels=env:test",
+			test_count: 1,
+			prod_count: 2,
+		},
+		{
+			// #240: before the fix this returned 2 and 2 — the selector was
+			// never sent, so ArgoCD listed everything.
+			name:       "exclude_only",
+			url:        "/api/applications?excludeLabels=env:test",
+			test_count: 1,
+			prod_count: 2,
+		},
+		{
+			// prod_count is 2, not 0: the prod fixtures carry no "bazz"
+			// label at all, and a Kubernetes "!=" requirement matches a key
+			// that is absent.
+			name:       "exclude_only_multiple",
+			url:        "/api/applications?excludeLabels=env:test,bazz:buzz",
+			test_count: 0,
+			prod_count: 2,
+		},
+		{
+			// The same key in both maps with different values is redundant
+			// but satisfiable, and must not be rejected.
+			name:       "cross_map_different_values",
+			url:        "/api/applications?labels=env:test&excludeLabels=env:prod",
+			test_count: 1,
+			prod_count: 0,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tangle, _ := newIntegrationTangle(t)
+
+			server := httptest.NewServer(tangle.Server.Handler)
+			defer server.Close()
+
+			resp, err := http.Get(server.URL + test.url)
+			assert.NoError(t, err)
+			defer func() { _ = resp.Body.Close() }()
+
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+			var result ApplicationsResponse
+			assert.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+
+			counts := map[string]int{}
+			for _, argoCDResult := range result.Results {
+				counts[argoCDResult.Name] = len(argoCDResult.Applications)
+			}
+
+			assert.Equal(t, test.test_count, counts["test"], "test instance")
+			assert.Equal(t, test.prod_count, counts["prod"], "prod instance")
+		})
+	}
+}
+
+// TestHandlersBadRequest covers #241: a label parameter that can't be turned
+// into the selector the caller described is refused, rather than answered
+// with a result set that doesn't match the request.
+//
+// These go through tangle.Server.Handler — the real chi router and its
+// middleware — rather than calling applicationsHandler directly, because a
+// new status code is exactly the kind of thing middleware could rewrite, and
+// nothing else in this package covers the route as mounted.
+func TestHandlersBadRequest(t *testing.T) {
+	tests := []struct {
+		name         string
+		url          string
+		wantContains []string
+	}{
+		{
+			name:         "malformed_include",
+			url:          "/api/applications?labels=env",
+			wantContains: []string{`"env"`, "labels", "key:value"},
+		},
+		{
+			name:         "malformed_exclude",
+			url:          "/api/applications?excludeLabels=env",
+			wantContains: []string{`"env"`, "excludeLabels", "key:value"},
+		},
+		{
+			name:         "too_many_separators",
+			url:          "/api/applications?labels=env:test:extra",
+			wantContains: []string{`"env:test:extra"`, "labels"},
+		},
+		{
+			name:         "malformed_alongside_valid",
+			url:          "/api/applications?labels=env,team:platform",
+			wantContains: []string{`"env"`, "labels"},
+		},
+		{
+			name:         "duplicate_include_key",
+			url:          "/api/applications?labels=env:test,env:prod",
+			wantContains: []string{`"env"`, "labels", "at most once"},
+		},
+		{
+			name:         "duplicate_exclude_key",
+			url:          "/api/applications?excludeLabels=env:test,env:prod",
+			wantContains: []string{`"env"`, "excludeLabels", "at most once"},
+		},
+		{
+			name:         "contradictory_pair",
+			url:          "/api/applications?labels=env:test&excludeLabels=env:test",
+			wantContains: []string{`"env"`, "labels", "excludeLabels", "no application can match"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tangle, clients := newIntegrationTangle(t)
+
+			server := httptest.NewServer(tangle.Server.Handler)
+			defer server.Close()
+
+			resp, err := http.Get(server.URL + test.url)
+			assert.NoError(t, err)
+			defer func() { _ = resp.Body.Close() }()
+
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+			var result ErrorResponse
+			assert.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+			for _, want := range test.wantContains {
+				assert.Contains(t, result.Error, want)
+			}
+
+			// A rejected request must not reach ArgoCD. This is a separate
+			// promise from the status code: answering a malformed query
+			// anyway costs a fan-out to every configured instance for a
+			// result the caller can't use.
+			for name, client := range clients {
+				assert.Zero(t, client.ListCallCount(), "%s instance was queried for a rejected request", name)
+			}
+		})
+	}
+}
+
+// TestHandlersValidLabelsAreNotRejected guards the other direction: the
+// validation added for #241 must not refuse queries that are merely
+// redundant or unfiltered.
+func TestHandlersValidLabelsAreNotRejected(t *testing.T) {
+	urls := []string{
+		"/api/applications",
+		"/api/applications?labels=env:test&excludeLabels=env:prod",
+		"/api/applications?labels=env:test,foo:bar",
+		"/api/applications?excludeLabels=env:test,foo:bar",
+	}
+
+	for _, url := range urls {
+		t.Run(url, func(t *testing.T) {
+			tangle, _ := newIntegrationTangle(t)
+
+			server := httptest.NewServer(tangle.Server.Handler)
+			defer server.Close()
+
+			resp, err := http.Get(server.URL + url)
+			assert.NoError(t, err)
+			defer func() { _ = resp.Body.Close() }()
+
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+		})
+	}
+}
+
+// TestApplicationsResponseJSONShape pins the wire field names of the
+// applications response.
+//
+// These names are a contract with two consumers that can't be type-checked
+// against this struct: the web UI's own ApplicationLinks interface, and the
+// Playwright fixtures that stand in for this endpoint. `liveRef` was
+// previously tagged `LiveRef`, so the frontend read undefined for it — which
+// nothing noticed until a column displayed the value, and which the mocked
+// e2e fixtures actively hid by spelling it the way the UI expected rather
+// than the way the server sent it.
+func TestApplicationsResponseJSONShape(t *testing.T) {
+	response := ApplicationsResponse{
+		Results: []ArgoCDApplicationResults{{
+			Name: "test",
+			Link: "https://argocd.test/applications",
+			Applications: []ApplicationLinks{{
+				Name:       "test-1",
+				URL:        "https://argocd.test/applications/argocd/test-1",
+				Health:     "Healthy",
+				SyncStatus: "Synced",
+				LiveRef:    "main",
+			}},
+		}},
+	}
+
+	encoded, err := json.Marshal(response)
+	assert.NoError(t, err)
+
+	var decoded map[string]any
+	assert.NoError(t, json.Unmarshal(encoded, &decoded))
+
+	results, ok := decoded["results"].([]any)
+	assert.True(t, ok, "results")
+	instance, ok := results[0].(map[string]any)
+	assert.True(t, ok)
+
+	for _, key := range []string{"name", "link", "applications"} {
+		assert.Contains(t, instance, key)
+	}
+
+	applications, ok := instance["applications"].([]any)
+	assert.True(t, ok, "applications")
+	application, ok := applications[0].(map[string]any)
+	assert.True(t, ok)
+
+	// Every key lowerCamelCase, with no stray capitalised variant alongside.
+	assert.Equal(t, map[string]any{
+		"name":       "test-1",
+		"url":        "https://argocd.test/applications/argocd/test-1",
+		"health":     "Healthy",
+		"syncStatus": "Synced",
+		"liveRef":    "main",
+	}, application)
+}
+
+// TestConfigHandler covers the endpoint the web UI reads its runtime settings
+// from. The frontend is one static bundle serving every deployment, so this is
+// the only way a deployment-specific value reaches the browser.
+func TestConfigHandler(t *testing.T) {
+	t.Run("returns the configured domain", func(t *testing.T) {
+		tangle := newTestTangle()
+		tangle.Config.Domain = "https://tangle.corp"
+
+		server := httptest.NewServer(tangle.Server.Handler)
+		defer server.Close()
+
+		resp, err := http.Get(server.URL + "/api/config")
+		assert.NoError(t, err)
+		defer func() { _ = resp.Body.Close() }()
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var result ConfigResponse
+		assert.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+		assert.Equal(t, "https://tangle.corp", result.Domain)
+	})
+
+	t.Run("returns an empty domain rather than omitting the field", func(t *testing.T) {
+		// The browser falls back to its own origin on an empty string. A
+		// missing key would be indistinguishable from an older server that
+		// doesn't serve this endpoint at all, which the client handles
+		// differently.
+		tangle := newTestTangle()
+		tangle.Config.Domain = ""
+
+		server := httptest.NewServer(tangle.Server.Handler)
+		defer server.Close()
+
+		resp, err := http.Get(server.URL + "/api/config")
+		assert.NoError(t, err)
+		defer func() { _ = resp.Body.Close() }()
+
+		body, err := io.ReadAll(resp.Body)
+		assert.NoError(t, err)
+		assert.JSONEq(t, `{"domain": ""}`, string(body))
 	})
 }

@@ -8,15 +8,30 @@
 @source '../node_modules/flowbite-svelte-icons';
 @source '../node_modules/svhighlight';
 
+/*
+ * Indigo, not coral. Every Flowbite component that says color="primary" reads
+ * this ramp, so the accent is defined once here.
+ *
+ * Coral failed contrast where it mattered most: coral-600 on white, and white
+ * on coral-600, both land at 3.5:1 — under WCAG AA's 4.5:1 for body text. It
+ * also sat one step from the red used for Degraded, so an active tab and a
+ * broken application read as the same colour family. Indigo-600 gives 6.5:1
+ * white-on-fill and indigo-300 gives 8.8:1 on gray-900, and it shares no
+ * boundary with any status colour — so indigo means "you can act on this" and
+ * nothing else does.
+ *
+ * Coral survives as the wordmark in Header.svelte, where it never competes
+ * with a status.
+ */
 @theme {
-	--color-primary-50: #fff5f2;
-	--color-primary-100: #fff1ee;
-	--color-primary-200: #ffe4de;
-	--color-primary-300: #ffd5cc;
-	--color-primary-400: #ffbcad;
-	--color-primary-500: #fe795d;
-	--color-primary-600: #ef562f;
-	--color-primary-700: #eb4f27;
-	--color-primary-800: #cc4522;
-	--color-primary-900: #a5371b;
+	--color-primary-50: #eef2ff;
+	--color-primary-100: #e0e7ff;
+	--color-primary-200: #c6d2ff;
+	--color-primary-300: #a3b3ff;
+	--color-primary-400: #7c86ff;
+	--color-primary-500: #615fff;
+	--color-primary-600: #4f39f6;
+	--color-primary-700: #432dd7;
+	--color-primary-800: #372aac;
+	--color-primary-900: #312c85;
 }

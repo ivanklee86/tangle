@@ -2,6 +2,8 @@ package tangle
 
 import (
 	"errors"
+	"fmt"
+	"net/url"
 	"os"
 	"slices"
 	"strings"
@@ -89,5 +91,48 @@ func LoadConfig(config *koanf.Koanf, options LoadConfigOptions) (*TangleConfig, 
 
 	tangleConfig.IgnoredEnvVars = ignoredEnvVars
 
+	normalizedDomain, err := normalizeDomain(tangleConfig.Domain)
+	if err != nil {
+		return nil, err
+	}
+	tangleConfig.Domain = normalizedDomain
+
 	return &tangleConfig, nil
+}
+
+// normalizeDomain checks and tidies the configured public address of this
+// Tangle, which the web UI uses to build links people copy and share.
+//
+// An unset domain is fine — the browser falls back to its own origin, which is
+// correct whenever the address someone used is the address they'd share.
+//
+// A *malformed* one is a startup error rather than something to ignore. It can
+// only be a typo in configuration the operator owns, it is cheap to catch here,
+// and the failure it would otherwise cause is silent: every copied link points
+// somewhere wrong, which is worse than no link at all. That differs from the
+// unknown TANGLE_ environment variables above, which are ignored precisely
+// because they are not ours to validate — Kubernetes injects them.
+func normalizeDomain(domain string) (string, error) {
+	trimmed := strings.TrimSpace(domain)
+	if trimmed == "" {
+		return "", nil
+	}
+
+	parsed, err := url.Parse(trimmed)
+	if err != nil {
+		return "", fmt.Errorf("invalid domain %q: %w", domain, err)
+	}
+
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return "", fmt.Errorf("invalid domain %q: needs an http:// or https:// scheme", domain)
+	}
+
+	if parsed.Host == "" {
+		return "", fmt.Errorf("invalid domain %q: no host", domain)
+	}
+
+	// Stored without a trailing slash so callers can join a path onto it
+	// without producing "//applications". Any other path is kept: serving
+	// Tangle under a sub-path is a legitimate deployment.
+	return strings.TrimSuffix(trimmed, "/"), nil
 }

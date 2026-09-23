@@ -162,6 +162,7 @@ func New(config *TangleConfig, version string) *Tangle {
 
 	// Application routes
 	router.Route("/api", func(r chi.Router) {
+		r.Get("/config", tangle.configHandler)
 		r.Get("/applications", tangle.applicationsHandler)
 		r.Post("/argocd/{argocd}/applications/{name}/diffs", tangle.applicationManifestsHandler)
 	})
