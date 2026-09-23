@@ -174,6 +174,24 @@ describe('applications +page.svelte', () => {
 				.toHaveAttribute('href', 'https://argocd.test/applications/bravo');
 		});
 
+		// Every configured ArgoCD answers a search, including ones with no
+		// matches. The summary should count only the instances the rows
+		// actually come from, so an empty answer isn't reported as a source.
+		test('summarizes only the instances that have matching applications', async () => {
+			const withEmptyInstance: ApplicationResponseStore = {
+				...FLEET,
+				response: {
+					results: [...FLEET.response.results, { name: 'prod', link: '', applications: [] }]
+				}
+			};
+
+			const screen = await render(Page, data({ applications: Promise.resolve(withEmptyInstance) }));
+
+			await expect
+				.element(screen.getByText('3 applications across 1 instance', { exact: false }))
+				.toBeVisible();
+		});
+
 		test('counts what is shown against the total', async () => {
 			const screen = await render(Page, data());
 

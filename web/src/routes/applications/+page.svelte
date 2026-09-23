@@ -130,6 +130,7 @@
 {:then applications}
 	{@const rows = applications ? flattenApplications(applications.response.results) : []}
 	{@const needing = attentionCount(rows)}
+	{@const instancesWithMatches = new Set(rows.map((row) => row.instance)).size}
 	{@const visible = sortApplications(filterApplications(rows, facets), sortState)}
 
 	<QueryBar title="Applications" {query} onEdit={() => (editing = true)}>
@@ -139,8 +140,8 @@
 			{:else}
 				{rows.length}
 				{rows.length === 1 ? 'application' : 'applications'} across
-				{applications.response.results.length}
-				{applications.response.results.length === 1 ? 'instance' : 'instances'}
+				{instancesWithMatches}
+				{instancesWithMatches === 1 ? 'instance' : 'instances'}
 				{#if needing > 0}
 					· <span class="text-yellow-600 dark:text-yellow-300">{needing} need attention</span>
 				{/if}
