@@ -78,7 +78,12 @@ tasks:
       # -tags=e2e adds the //go:build e2e files to the build, it doesn't
       # remove the untagged ones — -run selects just the TestE2E_-prefixed
       # tests so this doesn't also re-run every unit/integration test.
-      - go test -tags=e2e -run '^TestE2E_' -v ./... 2>&1
+      #
+      # -p 1 runs one package at a time. Every e2e package talks to the same
+      # single ArgoCD, and running them in parallel (go test's default)
+      # intermittently made it drop gRPC-Web streams ("unexpected EOF")
+      # once cmd/tangle-cli's e2e tests added real load.
+      - go test -p 1 -tags=e2e -run '^TestE2E_' -v ./... 2>&1
 
   test:e2e:ci:
     desc: Run Golang e2e tests and generate coverage report, for CI.
@@ -86,5 +91,6 @@ tasks:
       COVERAGE_RAW: coverage-e2e.out
       COVERAGE_REPORT: coverage-e2e.html
     cmds:
-      - go test -tags=e2e -run '^TestE2E_' --coverprofile {{.COVERAGE_RAW}} -v ./... 2>&1 | tee >(go-junit-report > report-e2e.xml)
+      # -p 1: see test:e2e.
+      - go test -p 1 -tags=e2e -run '^TestE2E_' --coverprofile {{.COVERAGE_RAW}} -v ./... 2>&1 | tee >(go-junit-report > report-e2e.xml)
       - go tool cover -html={{.COVERAGE_RAW}} -o {{.COVERAGE_REPORT}}
