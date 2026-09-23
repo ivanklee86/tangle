@@ -94,6 +94,20 @@ func TestCharacterCount(t *testing.T) {
 	})
 }
 
+// Library callers that don't swap the streams must see errors on stderr.
+// Both constructors used to default Err to os.Stdin.
+func TestDefaultStreams(t *testing.T) {
+	for name, tangleCLI := range map[string]*TangleCLI{
+		"New":           New(),
+		"NewWithConfig": NewWithConfig(Config{}),
+	} {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, os.Stdout, tangleCLI.Out)
+			assert.Equal(t, os.Stderr, tangleCLI.Err)
+		})
+	}
+}
+
 func TestTangleCLIHappyPaths(t *testing.T) {
 	server := newFakeTangleServer(t)
 

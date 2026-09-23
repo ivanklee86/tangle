@@ -137,7 +137,7 @@ func New() *TangleCLI {
 	return &TangleCLI{
 		Config: &config,
 		Out:    os.Stdout,
-		Err:    os.Stdin,
+		Err:    os.Stderr,
 	}
 }
 
@@ -156,13 +156,25 @@ func NewWithConfig(config Config) *TangleCLI {
 	return &TangleCLI{
 		Config: &config,
 		Out:    os.Stdout,
-		Err:    os.Stdin,
+		Err:    os.Stderr,
 	}
 }
 
 func (t *TangleCLI) Configure() {
 	t.Labels = labelStringsToMap(t.LabelsAsStrings)
 	t.ExcludeLabels = labelStringsToMap(t.ExcludeLabelsAsStrings)
+
+	// New() defaults Folder to the working directory, but registering the
+	// --folder flag then resets it to the flag's "" default, which made
+	// WriteFiles write to "/diff-….yaml". Re-apply the default here, after
+	// flags are parsed.
+	if t.Folder == "" {
+		dir, err := os.Getwd()
+		if err != nil {
+			t.Error(fmt.Sprintf("Error finding working directory: %s", err))
+		}
+		t.Folder = dir
+	}
 }
 
 func (t *TangleCLI) GenerateManifests() {

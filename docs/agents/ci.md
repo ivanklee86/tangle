@@ -94,7 +94,7 @@ unit/integration layer is no longer path-conditional either:
 | --- | --- | --- | --- | --- |
 | Unit | `pkg/client`, `internal/tangle` (server/loader/manifests), `internal/cli/output_test.go` | `*.spec.ts`, `*.svelte.test.ts` (vitest) | `go` / `ts` | Always runs |
 | Integration (mock/fixture-backed) | `internal/argocd` (via `internal/argocd/argocdfakes`), `internal/tangle/handlers_test.go`, CLI round-trip tests (via `httptest.NewServer`) | `web/e2e/mocked/*.spec.ts` (Playwright, network-mocked via `page.route`) | `go` / `ts` | Always runs |
-| E2E (real ArgoCD, real browser) | `internal/argocd/client_e2e_test.go`, `internal/tangle/server_e2e_test.go` (`//go:build e2e`) | `web/e2e/live/*.spec.ts` (Playwright, real cluster, `playwright.live.config.ts`) | `e2e` | Always runs |
+| E2E (real ArgoCD, real browser) | `internal/argocd/client_e2e_test.go`, `internal/tangle/server_e2e_test.go`, `cmd/tangle-cli/main_e2e_test.go` (real `tangle-cli` binary; `//go:build e2e`) | `web/e2e/live/*.spec.ts` (Playwright, real cluster, `playwright.live.config.ts`) | `e2e` | Always runs |
 
 `go test ./...` (no build tag) needs no `.env`, live ArgoCD, or Docker — it's a pure, fast
 unit+integration suite. `go test -tags=e2e ./...` needs `task services:cicd` up and `.env`
