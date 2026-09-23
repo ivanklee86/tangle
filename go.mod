@@ -27,6 +27,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/yarlson/chiprom v0.1.0
 	golang.org/x/term v0.45.0
+	google.golang.org/grpc v1.82.2
 	k8s.io/apimachinery v0.36.1
 	sigs.k8s.io/yaml v1.6.0
 )
@@ -172,7 +173,6 @@ require (
 	google.golang.org/genproto v0.0.0-20250303144028-a0af3efb3deb // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
-	google.golang.org/grpc v1.82.2 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
