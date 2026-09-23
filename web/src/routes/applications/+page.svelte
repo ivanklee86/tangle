@@ -40,6 +40,7 @@
 		QueryBar,
 		QueryDrawer
 	} from '$lib/ui/components';
+	import type { ApplicationResponseStore } from '$lib/backend/data';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -56,6 +57,37 @@
 	// later navigation re-runs load, so this doesn't need to track. Without it
 	// Svelte warns that only the initial value is captured.
 	let editing: boolean = $state(untrack(() => data.applications === undefined));
+
+	// The last answer, and which query it answered. Auto-refresh re-runs
+	// load, which hands over a new pending promise for the same query; an
+	// {#await} would drop back to the skeleton for it, losing the table's
+	// scroll and unmounting the toolbar mid-keystroke. So the previous rows
+	// stay up until the new ones arrive — but only for the same query. A
+	// different query shows the loading state, since the old rows would be
+	// answering a different question.
+	let resolved: { key: string; applications: ApplicationResponseStore } | undefined = $state();
+	let queryKey = $derived(applicationsHref(data.query));
+
+	$effect(() => {
+		const promise = data.applications;
+		const key = queryKey;
+		if (!promise) return;
+
+		let current = true;
+		promise.then((applications) => {
+			if (current) resolved = { key, applications };
+		});
+		return () => {
+			current = false;
+		};
+	});
+
+	type Shown = { loading: true } | { loading: false; applications?: ApplicationResponseStore };
+	let shown: Shown = $derived.by(() => {
+		if (!data.applications) return { loading: false };
+		if (resolved?.key === queryKey) return { loading: false, applications: resolved.applications };
+		return { loading: true };
+	});
 
 	let facets = $state(emptyFacets());
 	let sortState: SortState | undefined = $state({ key: 'health', direction: 'desc' });
@@ -98,7 +130,7 @@
 	<title>Applications | Tangle</title>
 </svelte:head>
 
-{#await data.applications}
+{#if shown.loading}
 	<QueryBar title="Applications" {query} onEdit={() => (editing = true)}>
 		{#snippet summary()}Loading…{/snippet}
 	</QueryBar>
@@ -127,7 +159,8 @@
 			{/each}
 		</div>
 	</div>
-{:then applications}
+{:else}
+	{@const applications = shown.applications}
 	{@const rows = applications ? flattenApplications(applications.response.results) : []}
 	{@const needing = attentionCount(rows)}
 	{@const instancesWithMatches = new Set(rows.map((row) => row.instance)).size}
@@ -352,7 +385,7 @@
 			</div>
 		</div>
 	{/if}
-{/await}
+{/if}
 
 <QueryDrawer
 	bind:open={editing}

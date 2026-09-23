@@ -2,6 +2,7 @@
 	import { Badge, Button, Heading, Tooltip } from 'flowbite-svelte';
 	import { CheckOutline, CodeBranchOutline, EditOutline, LinkOutline } from 'flowbite-svelte-icons';
 	import { parseLabels } from '$lib/ui/labels';
+	import { absoluteUrl } from '$lib/ui/links';
 	import { isEmptyQuery, type Query } from '$lib/ui/query';
 	import type { Snippet } from 'svelte';
 
@@ -28,13 +29,17 @@
 
 	async function copyLink(): Promise<void> {
 		try {
-			await navigator.clipboard.writeText(window.location.href);
+			// Built on the configured domain like QueryPreview's link (ADR
+			// 0027), so a port-forwarded address bar doesn't leak into it.
+			await navigator.clipboard.writeText(
+				absoluteUrl(`${window.location.pathname}${window.location.search}`)
+			);
 			copied = true;
 			clearTimeout(timer);
 			timer = setTimeout(() => (copied = false), 2000);
 		} catch {
-			// Clipboard access can be denied. The URL is in the address bar
-			// either way, so don't claim a success that didn't happen.
+			// Clipboard access can be denied. Don't claim a success that
+			// didn't happen.
 			copied = false;
 		}
 	}

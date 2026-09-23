@@ -54,12 +54,18 @@
 	let excludeLabels: string = $state(untrack(() => query.excludeLabels));
 	let targetRef: string = $state(untrack(() => query.targetRef));
 
+	// LabelsInput parses its value into chips once, when it mounts, so
+	// reseeding the value alone would leave a discarded draft's chips on
+	// screen. Bumping this after the reseed remounts the editor from it.
+	let generation: number = $state(0);
+
 	let wasOpen: boolean = $state(false);
 	$effect(() => {
 		if (open && !wasOpen) {
 			labels = query.labels;
 			excludeLabels = query.excludeLabels;
 			targetRef = query.targetRef;
+			generation += 1;
 		}
 		wasOpen = open;
 	});
@@ -117,7 +123,9 @@
 
 	<form class="flex min-h-0 grow flex-col" onsubmit={apply}>
 		<div class="grow space-y-5 overflow-y-auto px-6 py-5">
-			<QueryEditor bind:labels bind:excludeLabels bind:targetRef {targetRefMode} />
+			{#key generation}
+				<QueryEditor bind:labels bind:excludeLabels bind:targetRef {targetRefMode} />
+			{/key}
 
 			<QueryPreview href={hrefFor(draft)} query={draft} cli={showCli} />
 		</div>

@@ -77,6 +77,19 @@ function diffsHref(query: Query): string {
 }
 
 /**
+ * Makes one argument safe to paste into a POSIX shell.
+ *
+ * The query comes from the URL, so a shared link can put anything in it.
+ * Values made only of characters with no shell meaning stay bare, which keeps
+ * the everyday command readable; anything else is single-quoted, with any
+ * embedded single quote closed, escaped and reopened.
+ */
+function shellQuote(argument: string): string {
+	if (/^[A-Za-z0-9_./:=@%+-]+$/.test(argument)) return argument;
+	return `'${argument.replaceAll("'", "'\\''")}'`;
+}
+
+/**
  * The same query as a tangle-cli invocation, so someone who built a query in
  * the browser can paste it into CI rather than re-deriving the flags.
  *
@@ -93,13 +106,13 @@ function cliCommand(query: Query): string {
 	const parts = ['tangle-cli generate-manifests'];
 
 	for (const { key, value } of parseLabels(query.labels)) {
-		parts.push(`--label ${key}=${value}`);
+		parts.push(`--label ${shellQuote(`${key}=${value}`)}`);
 	}
 	for (const { key, value } of parseLabels(query.excludeLabels)) {
-		parts.push(`--exclude-label ${key}=${value}`);
+		parts.push(`--exclude-label ${shellQuote(`${key}=${value}`)}`);
 	}
 	if (query.targetRef.length > 0) {
-		parts.push(`--target-ref ${query.targetRef}`);
+		parts.push(`--target-ref ${shellQuote(query.targetRef)}`);
 	}
 
 	return parts.join(' ');

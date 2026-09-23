@@ -134,6 +134,55 @@ describe('applications +page.svelte', () => {
 		await expect.element(screen.getByText('Loading applications')).toBeInTheDocument();
 	});
 
+	// Auto-refresh re-runs load, which hands the page a new, pending promise
+	// for the same query. Swapping back to the skeleton then would lose the
+	// table's scroll and unmount the toolbar mid-keystroke.
+	describe('refreshing', () => {
+		test('keeps the current rows and toolbar while the same query reloads', async () => {
+			const screen = await render(Page, data());
+			await expect.element(screen.getByText('alpha')).toBeVisible();
+			const search = screen.getByRole('searchbox', { name: 'Filter by application name' });
+			await search.fill('al');
+
+			const { promise } = deferred<ApplicationResponseStore>();
+			await screen.rerender({ data: data({ applications: promise }).data });
+
+			await expect.element(screen.getByText('alpha')).toBeVisible();
+			await expect.element(screen.getByText('Loading applications')).not.toBeInTheDocument();
+			await expect.element(search).toHaveValue('al');
+		});
+
+		test('shows the refreshed rows once the reload resolves', async () => {
+			const screen = await render(Page, data());
+			await expect.element(screen.getByText('alpha')).toBeVisible();
+
+			const { promise, resolve } = deferred<ApplicationResponseStore>();
+			await screen.rerender({ data: data({ applications: promise }).data });
+			resolve(store([{ name: 'delta', health: 'Healthy', syncStatus: 'Synced' }]));
+
+			await expect.element(screen.getByText('delta')).toBeVisible();
+			await expect.element(screen.getByText('alpha')).not.toBeInTheDocument();
+		});
+
+		// A different query is a new question: its answer isn't known yet, and
+		// the old rows would be answering something else.
+		test('shows the loading state instead of stale rows for a different query', async () => {
+			const screen = await render(Page, data());
+			await expect.element(screen.getByText('alpha')).toBeVisible();
+
+			const { promise } = deferred<ApplicationResponseStore>();
+			await screen.rerender({
+				data: data({
+					query: { ...emptyQuery(), labels: 'env:prod' } as Query,
+					applications: promise
+				}).data
+			});
+
+			await expect.element(screen.getByText('Loading applications')).toBeInTheDocument();
+			await expect.element(screen.getByText('alpha')).not.toBeInTheDocument();
+		});
+	});
+
 	test('shows the query in the bar before any data arrives', async () => {
 		// The header renders from the URL, so someone can read what was asked
 		// for while the fetch is still in flight.

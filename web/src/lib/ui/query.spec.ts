@@ -133,6 +133,29 @@ describe('cliCommand', () => {
 		expect(cliCommand(query({ labels: 'env:test' }))).not.toContain('--target-ref');
 	});
 
+	// The query comes from the URL, so a shared link can carry anything. What
+	// gets copied into a shell must run as the flags shown, never as extra
+	// commands.
+	it('quotes a target ref that carries shell syntax', () => {
+		expect(cliCommand(query({ targetRef: 'main; rm -rf ~' }))).toBe(
+			"tangle-cli generate-manifests --target-ref 'main; rm -rf ~'"
+		);
+	});
+
+	it('quotes label values and escapes an embedded single quote', () => {
+		expect(cliCommand(query({ labels: "team:it's", excludeLabels: 'env:$(id)' }))).toBe(
+			"tangle-cli generate-manifests --label 'team=it'\\''s' --exclude-label 'env=$(id)'"
+		);
+	});
+
+	it('leaves ordinary refs and labels unquoted so the command stays readable', () => {
+		expect(
+			cliCommand(query({ labels: 'app.kubernetes.io/name:web', targetRef: 'feature/x-1.2' }))
+		).toBe(
+			'tangle-cli generate-manifests --label app.kubernetes.io/name=web --target-ref feature/x-1.2'
+		);
+	});
+
 	it('is still a runnable command for an empty query', () => {
 		expect(cliCommand(query())).toBe('tangle-cli generate-manifests');
 	});
