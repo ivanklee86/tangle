@@ -28,14 +28,19 @@ interface DiffRow {
  *
  * `---` and `+++` are the file headers, not content, so they're excluded —
  * otherwise every diff, however small, reports one extra addition and removal.
+ * Headers only come before the first `@@` hunk, though: inside a hunk a
+ * removed YAML document separator reads `----`, and that is content.
  */
 function diffStats(diffText: string): DiffStats {
 	let added = 0;
 	let removed = 0;
+	let inHunk = false;
 
 	for (const line of diffText.split('\n')) {
-		if (line.startsWith('+') && !line.startsWith('+++')) added += 1;
-		else if (line.startsWith('-') && !line.startsWith('---')) removed += 1;
+		if (line.startsWith('@@')) inHunk = true;
+		else if (!inHunk && (line.startsWith('---') || line.startsWith('+++'))) continue;
+		else if (line.startsWith('+')) added += 1;
+		else if (line.startsWith('-')) removed += 1;
 	}
 
 	return { added, removed };

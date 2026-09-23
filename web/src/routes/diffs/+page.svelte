@@ -4,7 +4,11 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { untrack } from 'svelte';
-	import { type ApplicationResponseStore, type ApplicationsDiffsData } from '$lib/backend/data';
+	import {
+		type ApplicationDiff,
+		type ApplicationResponseStore,
+		type ApplicationsDiffsData
+	} from '$lib/backend/data';
 	import { fetchDiffs } from '$lib/backend/diffs';
 	import TangleAPIClient from '$lib/backend/client';
 	import {
@@ -40,38 +44,57 @@
 	let nameFilter: string = $state('');
 	let selectedKey: string | undefined = $state();
 
+	// Bumped whenever the diffs on screen stop belonging to what's being
+	// asked for: a new query, a reload of everything, or unmounting. Every
+	// fetch captures it when it starts and drops its result if it has moved
+	// on, so a slow request for an old target ref can't land under the new
+	// one's heading. Deliberately not $state: nothing renders from it.
+	let generation = 0;
+
+	// A request was actually made. Without a target ref the load fetches
+	// nothing, so there is nothing to wait for.
+	let requested = $derived(data.applications !== undefined && data.query.targetRef.length > 0);
+
+	function mergeDiff(diff: ApplicationDiff): void {
+		const { argoCD, applicationName } = diff.requestDetails;
+		diffs = { ...diffs, [argoCD]: { ...diffs[argoCD], [applicationName]: diff } };
+	}
+
+	// Each diff is merged as it lands, so the sidebar fills in while the
+	// slowest requests are still running. That also makes the map complete
+	// by the time the fan-out finishes, so there's no final wholesale
+	// assignment to overwrite a single-diff reload that landed in between.
+	function fanOut(results: ApplicationResponseStore['response']['results'], targetRef: string) {
+		const current = ++generation;
+		diffs = {};
+		fetchDiffs(client, results, targetRef, {
+			onProgress: (diff) => {
+				if (current === generation) mergeDiff(diff);
+			}
+		});
+	}
+
 	// $effect rather than onMount: SvelteKit reuses this component across
 	// client-side navigations (a labels or targetRef change) without
-	// remounting, so onMount would only ever see the first query. The
-	// `cancelled` guard stops a superseded navigation's in-flight fetch from
-	// overwriting state from a newer one.
+	// remounting, so onMount would only ever see the first query.
 	$effect(() => {
 		const pending = data.applications;
 		const targetRef = data.query.targetRef;
-		let cancelled = false;
+		const current = ++generation;
 
 		applications = undefined;
 		diffs = {};
 
 		if (!pending || targetRef.length === 0) return;
 
-		pending.then(async (result) => {
-			if (cancelled) return;
+		pending.then((result) => {
+			if (current !== generation) return;
 			applications = result;
-			if (result.error) return;
-
-			const fetched = await fetchDiffs(client, result.response.results, targetRef, {
-				// Rows are rendered from `applications` as soon as it lands and
-				// classified as pending until their diff arrives, so progress is
-				// derived from the rows rather than counted separately.
-				onProgress: () => {}
-			});
-
-			if (!cancelled) diffs = fetched;
+			if (!result.error) fanOut(result.response.results, targetRef);
 		});
 
 		return () => {
-			cancelled = true;
+			generation += 1;
 		};
 	});
 
@@ -80,16 +103,14 @@
 	}
 
 	async function reloadDiff(row: DiffRow): Promise<void> {
+		const current = generation;
 		const result = await client.getApplicationDiff(
 			row.instance,
 			row.name,
 			row.liveRef,
 			query.targetRef
 		);
-		diffs = {
-			...diffs,
-			[row.instance]: { ...diffs[row.instance], [row.name]: result }
-		};
+		if (current === generation) mergeDiff(result);
 	}
 
 	// Rows exist as soon as the applications call returns and are classified
@@ -103,12 +124,8 @@
 	let selected = $derived(resolveSelection(visible, selectedKey));
 
 	function reloadAll(): void {
-		diffs = {};
 		if (!applications || applications.error) return;
-
-		fetchDiffs(client, applications.response.results, query.targetRef).then((fetched) => {
-			diffs = fetched;
-		});
+		fanOut(applications.response.results, query.targetRef);
 	}
 </script>
 
@@ -132,10 +149,10 @@
 <QueryBar title="Diffs" {query} showTargetRef onEdit={() => (editing = true)}>
 	{#snippet summary()}
 		{#if !applications}
-			{#if editing}
-				Pick labels and a target ref to compare against.
-			{:else}
+			{#if requested}
 				Loading applications…
+			{:else}
+				Pick labels and a target ref to compare against.
 			{/if}
 		{:else}
 			{rows.length}
@@ -284,7 +301,7 @@
 		</p>
 		<Button class="mt-5" color="primary" onclick={() => (editing = true)}>Edit query</Button>
 	</div>
-{:else if !editing}
+{:else if requested}
 	<div class="p-6" role="status">
 		<span class="sr-only">Loading applications</span>
 		<div class="space-y-2">
@@ -292,6 +309,18 @@
 				<div class="h-10 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700"></div>
 			{/each}
 		</div>
+	</div>
+{:else if !editing}
+	<!--
+		The editor was closed without a target ref: nothing was fetched, so
+		"loading" would never resolve. Say what's missing instead.
+	-->
+	<div class="px-6 py-16 text-center">
+		<h2 class="text-lg font-bold">Nothing to compare yet</h2>
+		<p class="mx-auto mt-2 max-w-md text-sm text-gray-500 dark:text-gray-400">
+			Diffs need a target ref to compare each application's live manifests against.
+		</p>
+		<Button class="mt-5" color="primary" onclick={() => (editing = true)}>Edit query</Button>
 	</div>
 {/if}
 

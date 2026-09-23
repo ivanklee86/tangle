@@ -120,4 +120,21 @@ describe('fetchDiffs', () => {
 			applicationName: 'app-c'
 		});
 	});
+
+	// The page shows each diff as it lands rather than waiting for the
+	// slowest one, so progress has to carry the result, not just a tick.
+	it('hands each result to onProgress as it resolves', async () => {
+		const getApplicationDiff = vi
+			.fn()
+			.mockImplementation((argoCD: string, applicationName: string) =>
+				Promise.resolve(makeDiff(argoCD, applicationName))
+			);
+		const client = { getApplicationDiff } as unknown as import('$lib/backend/client').default;
+		const onProgress = vi.fn();
+
+		await fetchDiffs(client, makeResults(), 'feature-branch', { onProgress });
+
+		const received = onProgress.mock.calls.map(([diff]) => diff.requestDetails.applicationName);
+		expect(received.sort()).toEqual(['app-a', 'app-b', 'app-c']);
+	});
 });

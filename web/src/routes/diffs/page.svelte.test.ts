@@ -29,6 +29,53 @@ function mockDiffFetch(diffs = '', manifestGenerationError = '') {
 	);
 }
 
+/**
+ * Stubs the diff POST with one pending response per application and target
+ * ref, so a test decides when each diff lands and in what order.
+ */
+function controlledDiffFetch() {
+	const pending = new Map<string, (diffs: string) => void>();
+	vi.stubGlobal(
+		'fetch',
+		vi.fn((url: string, init: RequestInit) => {
+			const application = url.split('/applications/')[1].split('/')[0];
+			const { targetRef } = JSON.parse(init.body as string) as { targetRef: string };
+			return new Promise((resolve) => {
+				pending.set(`${application}@${targetRef}`, (diffs) =>
+					resolve({
+						status: 200,
+						text: () =>
+							Promise.resolve(
+								JSON.stringify({
+									liveManifests: '',
+									targetManifests: '',
+									diffs,
+									manifestGenerationError: ''
+								})
+							)
+					})
+				);
+			});
+		})
+	);
+
+	return {
+		async resolve(key: string, diffs: string) {
+			await expect.poll(() => pending.has(key)).toBe(true);
+			const settle = pending.get(key)!;
+			pending.delete(key);
+			settle(diffs);
+		}
+	};
+}
+
+// Told apart by line count in the sidebar: the fresh diff adds one line,
+// the stale one three.
+const FRESH = '@@ -1 +1,2 @@\n+fresh\n';
+const STALE = '@@ -1 +1,4 @@\n+stale\n+stale\n+stale\n';
+
+const settled = () => new Promise((resolve) => setTimeout(resolve, 50));
+
 const FLEET: ApplicationResponseStore = {
 	response: {
 		results: [
@@ -137,6 +184,89 @@ describe('diffs +page.svelte', () => {
 		const screen = await render(Page, data({ applications: new Promise(() => {}) }));
 
 		await expect.element(screen.getByText('Loading applications')).toBeInTheDocument();
+	});
+
+	// Closing the editor without a target ref leaves nothing in flight, so a
+	// loading state would never resolve.
+	test('says what is missing, not "loading", when the editor closes without a ref', async () => {
+		const screen = await render(
+			Page,
+			data({
+				query: { labels: 'foo:bar', excludeLabels: '', targetRef: '' },
+				applications: undefined
+			})
+		);
+
+		await screen.getByRole('button', { name: 'Discard' }).click();
+
+		await expect.element(screen.getByText('Loading applications')).not.toBeInTheDocument();
+		await expect
+			.element(screen.getByText('Pick labels and a target ref to compare against.'))
+			.toBeVisible();
+		await screen.getByRole('button', { name: 'Edit query' }).first().click();
+		await expect.element(screen.getByRole('heading', { name: 'Edit diff query' })).toBeVisible();
+	});
+
+	// A long fan-out is only usable if each diff shows up as it lands.
+	test('shows each diff as it arrives rather than after the slowest', async () => {
+		const diffs = controlledDiffFetch();
+		const screen = await render(Page, data());
+
+		await diffs.resolve('alpha@release-25', '');
+
+		await expect
+			.element(screen.getByRole('button', { name: /alpha/ }))
+			.toMatchTextContent('No changes');
+		await expect
+			.element(screen.getByRole('button', { name: /bravo/ }))
+			.toMatchTextContent('pending');
+	});
+
+	// A reload started under one target ref must not land on the page after
+	// the query has moved to another: rows match diffs by name, so the old
+	// ref's diffs would show under the new ref's heading.
+	test('drops a reload that finishes after the query changed', async () => {
+		const diffs = controlledDiffFetch();
+		const screen = await render(Page, data());
+		await diffs.resolve('alpha@release-25', '');
+		await diffs.resolve('bravo@release-25', '');
+
+		await screen.getByRole('button', { name: 'Reload all' }).click();
+		await screen.rerender({ data: data({ query: { ...QUERY, targetRef: 'release-26' } }).data });
+		await diffs.resolve('alpha@release-26', FRESH);
+		await diffs.resolve('bravo@release-26', '');
+		await expect.element(screen.getByRole('button', { name: /^alpha/ })).toMatchTextContent('+1');
+
+		await diffs.resolve('alpha@release-25', STALE);
+		await diffs.resolve('bravo@release-25', '');
+		await settled();
+
+		await expect.element(screen.getByRole('button', { name: /^alpha/ })).toMatchTextContent('+1');
+		await expect
+			.element(screen.getByRole('button', { name: /^alpha/ }))
+			.not.toMatchTextContent('+3');
+	});
+
+	// Same race for a single application's reload.
+	test('drops a single-diff reload that finishes after the query changed', async () => {
+		const diffs = controlledDiffFetch();
+		const screen = await render(Page, data());
+		await diffs.resolve('alpha@release-25', '');
+		await diffs.resolve('bravo@release-25', '');
+
+		await screen.getByRole('button', { name: 'Reload diff' }).click();
+		await screen.rerender({ data: data({ query: { ...QUERY, targetRef: 'release-26' } }).data });
+		await diffs.resolve('alpha@release-26', FRESH);
+		await diffs.resolve('bravo@release-26', '');
+		await expect.element(screen.getByRole('button', { name: /^alpha/ })).toMatchTextContent('+1');
+
+		await diffs.resolve('alpha@release-25', STALE);
+		await settled();
+
+		await expect.element(screen.getByRole('button', { name: /^alpha/ })).toMatchTextContent('+1');
+		await expect
+			.element(screen.getByRole('button', { name: /^alpha/ }))
+			.not.toMatchTextContent('+3');
 	});
 
 	test('surfaces an applications-level failure instead of an empty page', async () => {

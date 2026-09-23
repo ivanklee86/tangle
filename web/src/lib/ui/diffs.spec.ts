@@ -46,6 +46,23 @@ describe('diffStats', () => {
 		expect(diffStats('--- live\n+++ target\n')).toEqual({ added: 0, removed: 0 });
 	});
 
+	// Manifests are multi-document YAML, so removing a resource removes its
+	// `---` separator — a content line that looks like a header. Only the
+	// lines before the first hunk are headers.
+	it('counts a removed document separator inside a hunk', () => {
+		expect(diffStats('--- live\n+++ target\n@@ -1,3 +1,1 @@\n kind: A\n----\n-kind: B\n')).toEqual({
+			added: 0,
+			removed: 2
+		});
+	});
+
+	it('counts an added line whose content starts with ++', () => {
+		expect(diffStats('--- live\n+++ target\n@@ -1,1 +1,2 @@\n a\n+++b\n')).toEqual({
+			added: 1,
+			removed: 0
+		});
+	});
+
 	it('is zero for an empty diff', () => {
 		expect(diffStats('')).toEqual({ added: 0, removed: 0 });
 	});
