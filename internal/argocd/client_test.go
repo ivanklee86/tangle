@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/argoproj/argo-cd/v3/pkg/apiclient/application"
 	"github.com/argoproj/argo-cd/v3/pkg/apis/application/v1alpha1"
@@ -192,6 +193,7 @@ func newTestClient(t *testing.T, conns ...*scriptedConn) (*ArgoCDClient, *dialSc
 		Options: &ArgoCDClientOptions{Name: t.Name()},
 		log:     slog.New(slog.DiscardHandler),
 		dial:    script.dial,
+		backoff: func(int) time.Duration { return 0 },
 	}
 
 	return client, script
@@ -409,4 +411,99 @@ func TestArgoCDClient_CountsDials(t *testing.T) {
 	assert.Equal(t, float64(1), testutil.ToFloat64(clientDialsTotal.WithLabelValues(t.Name(), dialReasonInitial, dialResultSuccess)))
 	assert.Equal(t, float64(1), testutil.ToFloat64(clientDialsTotal.WithLabelValues(t.Name(), dialReasonReconnect, dialResultSuccess)))
 	assert.Equal(t, float64(2), testutil.ToFloat64(clientConnectionGeneration.WithLabelValues(t.Name())))
+}
+
+// A reverse proxy in front of ArgoCD (an ingress, a load balancer) can cut a
+// gRPC-Web response off partway through. argo-cd's proxy reports that as
+// codes.Unknown, which its own retry interceptor ignores, so these reached
+// users as a 500 on an otherwise healthy connection. See
+// docs/adrs/0028-retry-transient-argocd-transport-failures.md.
+func transientErrors() []error {
+	return []error{
+		status.Error(codes.Unknown, "unexpected EOF"),
+		status.Error(codes.Unknown, `Post "http://argocd.example/application.ApplicationService/List": EOF`),
+		status.Error(codes.Unknown, `Post "http://argocd.example/application.ApplicationService/List": read tcp 10.0.0.1:5000->10.0.0.2:80: read: connection reset by peer`),
+	}
+}
+
+func TestArgoCDClient_RetriesTransientTransportFailures(t *testing.T) {
+	calls := map[string]func(*ArgoCDClient) (any, error){
+		"List": func(c *ArgoCDClient) (any, error) {
+			return c.List(context.Background(), &application.ApplicationQuery{})
+		},
+		"Get": func(c *ArgoCDClient) (any, error) {
+			return c.Get(context.Background(), &application.ApplicationQuery{})
+		},
+		"GetApplicationManifests": func(c *ArgoCDClient) (any, error) {
+			return c.GetApplicationManifests(context.Background(), &application.ApplicationManifestQuery{})
+		},
+	}
+
+	for _, transient := range transientErrors() {
+		for name, call := range calls {
+			t.Run(fmt.Sprintf("%s/%s", name, status.Convert(transient).Message()), func(t *testing.T) {
+				conn := okConn(transient, nil)
+				client, script := newTestClient(t, conn)
+
+				got, err := call(client)
+
+				assert.NoError(t, err)
+				assert.NotNil(t, got)
+				assert.Equal(t, 2, conn.apps.calls, "should have retried once")
+				assert.Equal(t, 1, script.count(), "the local connection is fine, so nothing should be redialed")
+				assert.Equal(t, 0, conn.closer.count())
+			})
+		}
+	}
+}
+
+func TestArgoCDClient_GivesUpOnTransientFailuresAfterABoundedNumberOfRetries(t *testing.T) {
+	lastErr := status.Error(codes.Unknown, "unexpected EOF")
+	conn := okConn(lastErr)
+	client, _ := newTestClient(t, conn)
+
+	_, err := client.List(context.Background(), &application.ApplicationQuery{})
+
+	assert.ErrorIs(t, err, lastErr)
+	assert.Equal(t, 1+maxTransientRetries, conn.apps.calls)
+}
+
+// A caller that has gone away shouldn't be kept waiting for a backoff, or cost
+// ArgoCD another request nobody will read.
+func TestArgoCDClient_StopsRetryingWhenTheCallerGoesAway(t *testing.T) {
+	conn := okConn(status.Error(codes.Unknown, "unexpected EOF"))
+	client, _ := newTestClient(t, conn)
+	client.backoff = func(int) time.Duration { return time.Hour }
+
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(20*time.Millisecond, cancel)
+
+	start := time.Now()
+	_, err := client.List(ctx, &application.ApplicationQuery{})
+
+	assert.Error(t, err)
+	assert.Less(t, time.Since(start), 5*time.Second, "should return as soon as the caller cancels")
+	assert.Equal(t, 1, conn.apps.calls)
+}
+
+// The two recoveries are independent: a truncated response followed by a dead
+// connection should still end in an answer.
+func TestArgoCDClient_TransientRetryAndReconnectCompose(t *testing.T) {
+	dead, alive := okConn(status.Error(codes.Unknown, "unexpected EOF"), unavailable()), okConn(nil)
+	client, script := newTestClient(t, dead, alive)
+
+	got, err := client.List(context.Background(), &application.ApplicationQuery{})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+	assert.Equal(t, 2, script.count())
+}
+
+func TestArgoCDClient_CountsTransientRetries(t *testing.T) {
+	client, _ := newTestClient(t, okConn(status.Error(codes.Unknown, "unexpected EOF"), nil))
+
+	_, err := client.List(context.Background(), &application.ApplicationQuery{})
+	assert.NoError(t, err)
+
+	assert.Equal(t, float64(1), testutil.ToFloat64(clientRetriesTotal.WithLabelValues(t.Name(), "List", retryReasonTransient)))
 }

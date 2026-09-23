@@ -90,6 +90,8 @@ are counted by `argocd_client_dials_total{argocd,reason,result}` and
 `argocd_client_connection_generation{argocd}` — unlike the pool collectors, these are always
 registered. See [ADR 0025](../adrs/0025-reconnect-the-argocd-grpc-client.md).
 
+A reverse proxy in front of ArgoCD (an ingress or load balancer) occasionally cuts a gRPC-Web response off partway through. argo-cd's proxy reports that as `codes.Unknown` with the message `unexpected EOF`, and nothing in argo-cd retries it. The same retry loop therefore also repeats a call whose `Unknown` message is, or ends with, `unexpected EOF`, `: EOF` or `connection reset by peer`. It stays on the same connection, retries at most twice, and backs off about 100 ms times the attempt number, with jitter. Every RPC here is a read, so repeating one is safe. Retries of both kinds are counted by `argocd_client_retries_total{argocd,method,reason}`. See [ADR 0028](../adrs/0028-retry-transient-argocd-transport-failures.md).
+
 A client whose first dial fails is kept and connects lazily on first use, so an ArgoCD that's briefly
 down at boot doesn't take the pod with it. A missing `authTokenEnvVar` is still fatal for that
 instance: `internal/tangle/server.go` logs it and skips registering a wrapper for it.
