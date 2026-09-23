@@ -25,20 +25,23 @@ import path from 'node:path';
 const webDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const imagesDir = path.join(webDir, '..', 'docs', 'images');
 
+// The home page's include-labels input, as web/e2e/live/home.spec.ts names it.
+const INCLUDE = 'Include applications with all of these labels';
+
 const shots = [
 	{
 		path: '/',
 		file: 'TangleHome.png',
 		// Needs no backend — the home page's forms don't fetch anything until
-		// submitted, so "ready" just means the Applications form has mounted.
-		ready: (page) => page.getByRole('heading', { name: 'Applications', level: 2 }),
+		// submitted, so "ready" just means the query editor has mounted.
+		ready: (page) => page.getByRole('textbox', { name: `${INCLUDE} key` }),
 		// The home page always starts with empty label fields (unlike /diffs,
 		// which can seed its form from the URL) — drive the new key/value
 		// LabelsInput UI directly to get an `env:test` chip on screen.
 		interact: async (page) => {
-			await page.getByRole('textbox', { name: 'Labels key' }).first().fill('env');
-			await page.getByRole('textbox', { name: 'Labels value' }).first().fill('test');
-			await page.getByRole('button', { name: 'Add Labels' }).first().click();
+			await page.getByRole('textbox', { name: `${INCLUDE} key` }).fill('env');
+			await page.getByRole('textbox', { name: `${INCLUDE} value` }).fill('test');
+			await page.getByRole('button', { name: 'Add label' }).click();
 			await page.getByText('env:test').first().waitFor({ timeout: 5_000 });
 		}
 	},
@@ -54,7 +57,9 @@ const shots = [
 	{
 		path: '/diffs/?labels=env:test&targetRef=test_gitops',
 		file: 'TangleDiffs.png',
-		ready: (page) => page.getByRole('heading', { name: 'Status', level: 3 }),
+		// The detail pane opens on the first application once its diff has
+		// loaded, which is when the Diff tab appears.
+		ready: (page) => page.getByRole('tab', { name: /^Diff/ }),
 		hint: 'is the backend (tangle-server + ArgoCD, see `task services`) actually running and reachable?'
 	}
 ];
