@@ -54,9 +54,13 @@ func newTestTangle() *Tangle {
 	}
 
 	config := TangleConfig{
-		Name:            "test-tangle",
-		Domain:          "localhost",
-		Port:            8081,
+		Name:   "test-tangle",
+		Domain: "localhost",
+		Port:   8081,
+		// Handler tests go through the real router, which wraps every
+		// request in middleware.Timeout(Timeout seconds). Left at zero,
+		// that hands handlers an already-expired context.
+		Timeout:         TangleConfigDefaults.Timeout,
 		ArgoCDs:         argocdConfig,
 		DoNotInstrument: true,
 	}

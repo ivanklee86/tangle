@@ -29,9 +29,7 @@ last value. Confirmed side effects the issue doesn't mention:
   `web/src/lib/ui/validation.ts`'s `LABEL_FORMAT` regex already refuses to *produce* a malformed pair. The UI
   can still produce a duplicate key (the structured key/value inputs don't dedupe); it will now get a legible
   400 instead of a wrong result set, which is an improvement even before the UI-side check lands.
-- `tangle-cli` cannot produce either bad shape: `internal/cli/tanglecli.go:53` (`labelStringsToMap`) drops
-  anything that isn't exactly one `=`, and builds a map, so the URL it generates always has unique, well-formed
-  pairs. The CLI's exposure is only that it *receives* the 400 badly (see Step 4).
+- `tangle-cli` can't produce a duplicate key: `internal/cli/tanglecli.go` (`labelStringsToMap`) drops anything without exactly one `=` and builds a map. It doesn't check the key or value, though, so `--label env=a:b`, `--label =x` and `--label env=` reach the server as malformed segments and get the 400. That's why receiving the 400 well matters (see Step 4). *Corrected during review of #242; the original claim was that the CLI could produce neither bad shape.*
 
 ## Decisions
 

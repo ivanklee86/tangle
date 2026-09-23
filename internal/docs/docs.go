@@ -22,7 +22,8 @@ import "github.com/ivanklee86/tangle/internal/tangle"
 type applicationsQueryParams struct {
 	// Labels to filter applications by, as comma-separated key:value pairs
 	// (e.g. `env:test,team:platform`). Applications must carry all of them.
-	// Each key may appear at most once, and a key may not appear here and in
+	// Keys and values must be valid Kubernetes label keys and values, each key
+	// may appear at most once, and a key may not appear here and in
 	// excludeLabels with the same value. Anything else is a 400.
 	// in: query
 	// required: false
@@ -31,8 +32,9 @@ type applicationsQueryParams struct {
 
 	// Labels to exclude, as comma-separated key:value pairs (e.g.
 	// `env:prod`). Applications carrying any of them are omitted. Same rules
-	// as labels: each key at most once, and no key shared with labels at the
-	// same value. Anything else is a 400.
+	// as labels: valid Kubernetes label keys and values, each key at most
+	// once, and no key shared with labels at the same value. Anything else is
+	// a 400.
 	// in: query
 	// required: false
 	// example: env:prod

@@ -39,7 +39,7 @@ Chosen option: "Reject malformed segments, within-map duplicate keys, and a key 
 
 The three rules, enforced by `parseLabels` and `conflictingLabels` in `internal/tangle/labels.go`:
 
-1. Every comma-separated segment must be exactly `key:value` with both parts non-empty. This covers `env`, `env:test:extra`, `:value`, `key:` and the empty segment a trailing comma produces.
+1. Every comma-separated segment must be exactly `key:value` with both parts non-empty, the key a valid Kubernetes label key and the value a valid label value (apimachinery's `IsQualifiedName` and `IsValidLabelValue`). This covers `env`, `env:test:extra`, `:value`, `key:`, the empty segment a trailing comma produces, and values Argo CD can't parse such as `env:te=st`, which used to come back as a `500` from every instance. It also rejects a key padded with whitespace (`env:test, env:prod` has the key `" env"`), which would otherwise slip past rule 2 while the selector parser trimmed it back to `env`.
 2. A key may appear at most once within `labels`, and at most once within `excludeLabels`.
 3. A key may not appear in both parameters with the **same** value.
 
@@ -54,7 +54,7 @@ The error-level server log is kept, since operators find it useful, but the `400
 - Good, because a malformed query no longer costs a list call to every configured Argo CD.
 - Bad, because it is a breaking change: a request that returned `200` and a full list now returns `400`. That result was wrong, but a caller depending on it — a CI job passing `?labels=env` and treating the full list as intentional — will start failing. That is the intended outcome, and it is why this is written down rather than just fixed.
 - Bad, because the rules now live in three places that must agree: `parseLabels`, the OpenAPI description in `internal/docs/docs.go`, and the UI's client-side validation. The server is the authority; the other two mirror it.
-- Neutral, because `tangle-cli` cannot produce any of the rejected shapes — `labelStringsToMap` already drops anything that isn't exactly one `=` and builds a map — so its exposure is limited to receiving the `400`, which `pkg/client` now surfaces with the server's message rather than a bare status code.
+- Neutral, because `tangle-cli` can send some of the rejected shapes itself. `labelStringsToMap` drops anything without exactly one `=` and builds a map, so it never sends a duplicate key, but it doesn't check the key or value: `--label env=a:b`, `--label =x` and `--label env=` all reach the server and are refused. The CLI then exits with the `400`, which `pkg/client` surfaces with the server's message naming the bad segment, rather than a bare status code.
 
 ## Pros and Cons of the Options
 

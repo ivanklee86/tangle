@@ -2,6 +2,7 @@ package tangle
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,6 +28,42 @@ func TestParseLabels(t *testing.T) {
 			name: "empty",
 			raw:  "",
 			want: map[string]string{},
+		},
+		{
+			name: "prefixed key and a value using every allowed punctuation",
+			raw:  "app.kubernetes.io/name:v1.2-3_a",
+			want: map[string]string{"app.kubernetes.io/name": "v1.2-3_a"},
+		},
+		// Argo CD parses the selector itself, so a value it can't parse used
+		// to come back as a 500 from every instance instead of a 400 naming
+		// the segment.
+		{
+			name:    "value containing an equals sign",
+			raw:     "env:te=st",
+			wantErr: `invalid label value "te=st" in %s: a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?')`,
+		},
+		{
+			name:    "value containing a space",
+			raw:     "env:te st",
+			wantErr: `invalid label value "te st" in %s: a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?')`,
+		},
+		{
+			name:    "value longer than 63 bytes",
+			raw:     "env:" + strings.Repeat("a", 64),
+			wantErr: `invalid label value "` + strings.Repeat("a", 64) + `" in %s: must be no more than 63 bytes`,
+		},
+		// " env" is a different map key from "env", so the duplicate check
+		// missed it, while the Kubernetes selector parser trims it and ANDs
+		// env=test with env=prod.
+		{
+			name:    "key padded with whitespace",
+			raw:     "env:test, env:prod",
+			wantErr: `invalid label key " env" in %s: name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]')`,
+		},
+		{
+			name:    "key starting with a dash",
+			raw:     "-env:test",
+			wantErr: `invalid label key "-env" in %s: name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]')`,
 		},
 		{
 			name: "single pair",

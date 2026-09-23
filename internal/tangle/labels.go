@@ -5,6 +5,8 @@ import (
 	"maps"
 	"slices"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 // parseLabels splits a comma-separated "key:value,key:value" query parameter
@@ -32,6 +34,18 @@ func parseLabels(param string, raw string) (map[string]string, error) {
 		// remainder means the segment had more than one separator.
 		if !found || len(key) == 0 || len(value) == 0 || strings.Contains(value, ":") {
 			return nil, fmt.Errorf("invalid label %q in %s: expected key:value", segment, param)
+		}
+
+		// Well-shaped isn't enough: Argo CD parses the selector itself, so a
+		// value like "te=st" came back as a 500 from every instance, and a key
+		// like " env" slipped past the duplicate check below while the
+		// selector parser trimmed it back to "env". Kubernetes' own label
+		// rules decide instead.
+		if errs := validation.IsQualifiedName(key); len(errs) > 0 {
+			return nil, fmt.Errorf("invalid label key %q in %s: %s", key, param, strings.Join(errs, "; "))
+		}
+		if errs := validation.IsValidLabelValue(value); len(errs) > 0 {
+			return nil, fmt.Errorf("invalid label value %q in %s: %s", value, param, strings.Join(errs, "; "))
 		}
 
 		if _, duplicate := labels[key]; duplicate {
