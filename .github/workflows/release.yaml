@@ -25,7 +25,7 @@ jobs:
         # Solely for the runtime stage's `adduser`, which runs on the target
         # platform. Every compile stage in the Dockerfile is pinned to
         # $BUILDPLATFORM and cross-compiles, so no build work is emulated.
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: arm64
 
