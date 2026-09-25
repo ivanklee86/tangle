@@ -372,7 +372,7 @@ jobs:
     - name: Set up QEMU
       # Only for the runtime stage's `adduser`, which runs on the target
       # platform — see the Dockerfile. Every compile stage cross-compiles.
-      uses: docker/setup-qemu-action@v3
+      uses: docker/setup-qemu-action@v4
       with:
         platforms: arm64
     - name: Set up Docker Buildx
