@@ -1,0 +1,1071 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Retry ArgoCD calls whose response was lost in transit - Tangle</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#retry-argocd-calls-whose-response-was-lost-in-transit" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Tangle" class="md-header__button md-logo" aria-label="Tangle" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tangle
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Retry ArgoCD calls whose response was lost in transit
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/ivanklee86/tangle" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ivanklee86/tangle
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../Installation/" class="md-tabs__link">
+          
+  
+  
+  Usage Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
+          
+  
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Tangle" class="md-nav__button md-logo" aria-label="Tangle" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Tangle
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ivanklee86/tangle" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ivanklee86/tangle
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Usage Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuring_argocd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuring ArgoCD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context-and-problem-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context and Problem Statement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision-drivers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision Drivers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#considered-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Considered Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision-outcome" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision Outcome
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision Outcome">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pros-and-cons-of-the-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pros and Cons of the Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pros and Cons of the Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#retry-on-the-known-transport-failure-messages-in-argocdclient-chosen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retry on the known transport-failure messages, in ArgoCDClient (chosen)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retry-every-codesunknown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retry every codes.Unknown
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retry-in-the-http-handlers-or-leave-it-to-callers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retry in the HTTP handlers, or leave it to callers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-argo-cds-httpretrymax" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure argo-cd's HttpRetryMax
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#serialize-or-throttle-calls-to-argocd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Serialize or throttle calls to ArgoCD
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#more-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        More Information
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="retry-argocd-calls-whose-response-was-lost-in-transit">Retry ArgoCD calls whose response was lost in transit</h1>
+<h2 id="context-and-problem-statement">Context and Problem Statement</h2>
+<p>Users occasionally see a request fail with:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>rpc error: code = Unknown desc = unexpected EOF
+</span></code></pre></div>
+<p>It also failed CI on #242, where <code>TestE2E_ServerApplications</code> got it on four subtests while <code>cmd/tangle-cli</code>'s e2e tests were running against the same ArgoCD.</p>
+<p>This is not the failure <a href="../0025-reconnect-the-argocd-grpc-client/">ADR 0025</a> handles. That one is our local connection to argo-cd's gRPC-Web proxy dying, which arrives as <code>codes.Unavailable</code> and is fixed by redialing. Here the local connection is fine. The response was lost further out.</p>
+<p>With <code>GRPCWeb: true</code>, every RPC goes client → unix socket → argo-cd's in-process proxy → HTTP POST → ArgoCD. The proxy reads the HTTP response as a sequence of gRPC-Web frames and stops at the trailer frame. When the body ends before the trailer, it turns the short read into <code>io.ErrUnexpectedEOF</code> (<code>pkg/apiclient/grpcproxy.go</code>, <code>startGRPCProxy</code>), which reaches the caller as <code>codes.Unknown</code>.</p>
+<p>We isolated where the body gets cut off by running 80 concurrent <code>List</code> calls, 2,000 at a time, against the local k3d stack over three paths:</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Failed calls</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Port-forward straight to <code>argocd-server</code></td>
+<td>0 of 4,000</td>
+</tr>
+<tr>
+<td>Port-forward to Traefik, which routes to <code>argocd-server</code></td>
+<td>17 of 4,000</td>
+</tr>
+<tr>
+<td><code>localhost:8080</code>: k3d load balancer, then Traefik</td>
+<td>4 of 4,000</td>
+</tr>
+</tbody>
+</table>
+<p>A raw HTTP probe showed the failing responses were <code>200 OK</code>, HTTP/1.1, chunked, and ended about 6 KB into the body with no terminating chunk. The reverse proxy in front of ArgoCD closed the response partway through. Ingresses and load balancers do this under load, during rollouts, and when an idle timeout races a request, so any real deployment behind one will see it at some rate.</p>
+<p>Nothing retried it:</p>
+<ul>
+<li>argo-cd's <code>grpc_retry</code> interceptor retries only <code>Unavailable</code> and <code>ResourceExhausted</code> (go-grpc-middleware's <code>DefaultRetriableCodes</code>).</li>
+<li>ADR 0025's reconnect retries only <code>Unavailable</code> and <code>Canceled</code>, and deliberately not <code>Unknown</code>.</li>
+<li>argo-cd's <code>HttpRetryMax</code> option wraps <code>http.Client.Do</code>, which has already succeeded by the time the body is cut short. On TLS connections argo-cd also replaces the retrying transport with its own, so the option does nothing there.</li>
+</ul>
+<p>Two related findings in argo-cd v3.5.3 that we can't change without reimplementing its client:</p>
+<ul>
+<li>After every response the proxy calls <code>httpClient.CloseIdleConnections()</code>. For plaintext connections that client is a bare <code>&amp;http.Client{}</code>, which uses <code>http.DefaultTransport</code>, so every RPC empties the process-wide keep-alive pool. That makes each RPC more likely to open a fresh connection through the ingress, but it didn't cause the truncation: the direct path, which goes through the same code, never failed.</li>
+<li>The proxy reads frames up to the trailer and then closes the body, so connections are rarely reused anyway.</li>
+</ul>
+<h2 id="decision-drivers">Decision Drivers</h2>
+<ul>
+<li>The failure is transient and uncorrelated. In testing, each one succeeded on the first retry.</li>
+<li>Every RPC Tangle makes is a read (<code>List</code>, <code>Get</code>, <code>GetManifests</code>), so repeating one is safe.</li>
+<li>The failure arrives as <code>codes.Unknown</code>, the same code ArgoCD uses for its own errors, so it can't be told apart by code.</li>
+<li>A retry must not keep a caller waiting after it has gone away, and must not multiply load during a real outage.</li>
+<li>Per <code>AGENTS.md</code>, retries have to be visible, so a rising rate is noticed rather than hidden.</li>
+</ul>
+<h2 id="considered-options">Considered Options</h2>
+<ul>
+<li><strong>Retry on the known transport-failure messages, in <code>ArgoCDClient</code></strong> (chosen)</li>
+<li><strong>Retry every <code>codes.Unknown</code></strong></li>
+<li><strong>Retry in the HTTP handlers, or leave it to callers such as <code>tangle-cli --retries</code></strong></li>
+<li><strong>Configure argo-cd's <code>HttpRetryMax</code></strong></li>
+<li><strong>Serialize or throttle calls to ArgoCD</strong> (what #242 tried first, with <code>go test -p 1</code>)</li>
+</ul>
+<h2 id="decision-outcome">Decision Outcome</h2>
+<p>Chosen: <strong>retry on the known transport-failure messages, in <code>ArgoCDClient</code></strong>.</p>
+<p><code>callWithReconnect</code> becomes one loop with two independent recoveries:</p>
+<ul>
+<li>A lost connection (ADR 0025) still redials once.</li>
+<li>A transient transport failure is retried on the same connection up to <code>maxTransientRetries</code> (2) times. The backoff is 100 ms × attempt, with jitter of up to half.</li>
+</ul>
+<p>A call can use both recoveries, for example a truncated response followed by a dead connection. A caller whose context ends during a backoff gets its answer immediately, with no further attempt.</p>
+<p>A failure counts as transient when it is <code>codes.Unknown</code> and its message is, or ends with, one of these:</p>
+<ul>
+<li><code>unexpected EOF</code>: the body ended before the trailer.</li>
+<li><code>: EOF</code>: <code>http.Client.Do</code> found the connection closed before any response arrived, reported as <code>Post "&lt;url&gt;": EOF</code>.</li>
+<li><code>connection reset by peer</code>.</li>
+</ul>
+<p>Each retry is counted in <code>argocd_client_retries_total{argocd,method,reason}</code>, where <code>reason</code> is <code>transient</code> or <code>reconnect</code>. Each retry logs a warning, and a call that succeeds after retrying logs at info.</p>
+<h3 id="consequences">Consequences</h3>
+<ul>
+<li>Good, because a truncated response no longer fails the user's request. After the change, the same stress test succeeded on 8,000 of 8,000 calls through Traefik. The parallel Go e2e suite, which failed about 1 run in 4 before, passed 8 of 8, so the <code>-p 1</code> workaround is reverted.</li>
+<li>Good, because the retry rate per instance is on <code>/metrics</code>, which gives an operator a direct measure of how often their ingress is cutting responses off.</li>
+<li>Bad, because this matches error text, which ADR 0025 chose not to do. The code carries no signal here, so text is all there is. The match is anchored to the whole message or its suffix, and the texts come from Go's standard library (<code>io.ErrUnexpectedEOF</code>, <code>net/http</code>'s <code>url.Error</code> wording, and the <code>ECONNRESET</code> string), which are stable.</li>
+<li>Bad, because an ArgoCD error whose own message happens to end in one of those texts will be retried twice before it's returned. An example is a repo-server Git fetch that failed with <code>EOF</code>. The cost is bounded at two extra calls and at most about 300 ms, and the final error is unchanged.</li>
+<li>Bad, because a retried <code>GetManifests</code> repeats the hard-refresh <code>Get</code> that precedes it. ADR 0025 already accepts that cost for reconnects, for the same reason.</li>
+<li>Neutral, because the argo-cd behaviours above (emptying the default transport's idle pool, no retry on <code>Unknown</code>) remain. If a future argo-cd major version retries these itself, this becomes a second layer and stays harmless.</li>
+</ul>
+<h2 id="pros-and-cons-of-the-options">Pros and Cons of the Options</h2>
+<h3 id="retry-on-the-known-transport-failure-messages-in-argocdclient-chosen">Retry on the known transport-failure messages, in <code>ArgoCDClient</code> (chosen)</h3>
+<ul>
+<li>Good, because it covers every caller: the Applications and Diffs handlers, the manifest fan-out, and so <code>tangle-cli</code> and the web UI.</li>
+<li>Good, because it sits next to ADR 0025's reconnect, where the knowledge of how argo-cd's proxy fails already lives.</li>
+<li>Bad, because it depends on error text.</li>
+</ul>
+<h3 id="retry-every-codesunknown">Retry every <code>codes.Unknown</code></h3>
+<ul>
+<li>Good, because it needs no text matching.</li>
+<li>Bad, because <code>codes.Unknown</code> is also what ArgoCD returns for real failures, such as a manifest generation error or a bad selector. Retrying those would triple their cost and delay every such error for nothing.</li>
+</ul>
+<h3 id="retry-in-the-http-handlers-or-leave-it-to-callers">Retry in the HTTP handlers, or leave it to callers</h3>
+<ul>
+<li>Good, because a whole request can be retried.</li>
+<li>Bad, because the handlers fan out over many applications, so one lost response would redo all of them.</li>
+<li>Bad, because the web UI has no retry, and <code>tangle-cli --retries</code> only helps CLI users who remember to pass it.</li>
+</ul>
+<h3 id="configure-argo-cds-httpretrymax">Configure argo-cd's <code>HttpRetryMax</code></h3>
+<ul>
+<li>Good, because it's one option.</li>
+<li>Bad, because it wraps <code>http.Client.Do</code>, which has already returned successfully when the body is cut short, so it wouldn't catch the observed failure.</li>
+<li>Bad, because on TLS connections argo-cd overwrites the retrying transport with its own, silently disabling the option.</li>
+</ul>
+<h3 id="serialize-or-throttle-calls-to-argocd">Serialize or throttle calls to ArgoCD</h3>
+<ul>
+<li>Good, because less concurrency means fewer truncations.</li>
+<li>Bad, because it only lowers the rate. The failure happened even with one client and 20 concurrent calls.</li>
+<li>Bad, because it slows every fan-out down for everyone to avoid a rare failure that a retry absorbs in about 100 ms.</li>
+</ul>
+<h2 id="more-information">More Information</h2>
+<ul>
+<li><a href="../0025-reconnect-the-argocd-grpc-client/">ADR 0025</a>: the reconnect this extends.</li>
+<li>Evidence, at the pinned <code>github.com/argoproj/argo-cd/v3 v3.5.3</code>:</li>
+<li>the frame loop and <code>io.ErrUnexpectedEOF</code> in <code>pkg/apiclient/grpcproxy.go</code> (<code>startGRPCProxy</code>), and the <code>CloseIdleConnections()</code> call after each response in the same function;</li>
+<li>the bare <code>&amp;http.Client{}</code> for plaintext and the transport override for TLS in <code>pkg/apiclient/apiclient.go</code> (<code>NewClient</code>);</li>
+<li>the <code>grpc_retry</code> options in <code>newConn</code> in the same file.</li>
+<li>The stress harness was a temporary e2e test running concurrent <code>List</code> calls from 1–10 <code>ArgoCDClient</code>s at a time; it isn't kept in the repository.</li>
+</ul>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["header.autohide", "navigation.tabs", "navigation.path", "navigation.sections", "toc.follow", "search.suggest", "search.share"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

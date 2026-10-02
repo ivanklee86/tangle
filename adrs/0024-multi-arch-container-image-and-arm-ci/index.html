@@ -1,0 +1,1200 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Publish a multi-arch container image and test the full pyramid on ARM - Tangle</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#publish-a-multi-arch-container-image-and-test-the-full-pyramid-on-arm" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Tangle" class="md-header__button md-logo" aria-label="Tangle" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tangle
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Publish a multi-arch container image and test the full pyramid on ARM
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/ivanklee86/tangle" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ivanklee86/tangle
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../Installation/" class="md-tabs__link">
+          
+  
+  
+  Usage Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
+          
+  
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Tangle" class="md-nav__button md-logo" aria-label="Tangle" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Tangle
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ivanklee86/tangle" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ivanklee86/tangle
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Usage Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuring_argocd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuring ArgoCD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context-and-problem-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context and Problem Statement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision-drivers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision Drivers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#considered-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Considered Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Considered Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-to-build-the-image-for-two-platforms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to build the image for two platforms
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-to-handle-the-runtime-stages-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to handle the runtime stage's RUN
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-far-to-take-arm-testing-in-ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How far to take ARM testing in CI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-matrixed-jobs-should-report-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How matrixed jobs should report results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision-outcome" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision Outcome
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision Outcome">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pros-and-cons-of-the-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pros and Cons of the Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pros and Cons of the Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-job-cross-compiled-chosen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One job, cross-compiled (chosen)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#one-job-platforms-only-dockerfile-unchanged" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One job, platforms: only, Dockerfile unchanged
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#native-matrix-imagetools-create-merge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native matrix + imagetools create merge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#matrix-go-e2e-a-non-pushing-image-job-chosen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Matrix go + e2e + a non-pushing image job (chosen)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#matrix-go-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Matrix go only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#matrix-ts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Matrix ts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#more-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        More Information
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="More Information">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisite-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisite verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="publish-a-multi-arch-container-image-and-test-the-full-pyramid-on-arm">Publish a multi-arch container image and test the full pyramid on ARM</h1>
+<h2 id="context-and-problem-statement">Context and Problem Statement</h2>
+<p><code>ghcr.io/ivanklee86/tangle</code> is a single-platform <code>linux/amd64</code> image. <code>release.yaml</code>'s <code>docker</code> job runs <code>docker/build-push-action@v7</code> with no <code>platforms:</code> input and no <code>docker/setup-buildx-action</code> step at all, so the build uses the runner's default <code>docker</code> driver and produces exactly one image manifest, for the architecture of the <code>ubuntu-latest</code> runner it happened to run on. Anyone pulling that image onto an arm64 node — an Apple Silicon laptop running <code>docker run</code>, a Graviton/Ampere Kubernetes node, a Raspberry Pi — gets either QEMU emulation (Docker Desktop, silently slow) or a hard <code>exec format error</code> (a real arm64 cluster, at pod start). The <code>tangle-cli</code> binaries are not affected: GoReleaser already cross-compiles the default matrix, and <a href="../0021-automate-tangle-deployments-chart-version-bump/">ADR 0021</a>'s Homebrew cask picks up <code>darwin/arm64</code> from it. The container image is the one artifact that is amd64-only, and it is the artifact <code>tangle-deployments</code> installs.</p>
+<p>CI has a matching gap in the other direction. Every job in <code>ci.yaml</code> runs on <code>ubuntu-latest</code>, so no test in this repository has ever executed on ARM. Nothing here is obviously architecture-sensitive — there is no <code>import "C"</code> anywhere, no build-tagged assembly, no <code>unsafe</code> pointer arithmetic over struct layouts — but "obviously" is doing load-bearing work in that sentence, and the usual portability traps (<code>int</code> width, unaligned 64-bit atomics, map or goroutine scheduling order leaking into a test's expectations) are exactly the kind of thing a test suite finds and a code review does not. Publishing an arm64 image means claiming the server works on arm64, and today nothing in the pipeline substantiates that claim.</p>
+<p>The claim being made is also bigger than "the Go unit suite passes." What ships is a <em>container image</em> that talks to a real ArgoCD over gRPC-Web and serves a frontend that a real browser drives. <a href="../0009-ci-pipeline-test-taxonomy-and-conditional-jobs/">ADR 0009</a> built a full test pyramid precisely because the layers catch different things; an arm64 image validated only at the pyramid's base is validated at the layer least likely to be where an architecture problem actually bites. The interesting failures — a gRPC-Web client behaving differently, a timing-sensitive interaction with a real cluster, the arm64 image itself being subtly wrong in a way no unit test touches — live in <code>e2e</code>.</p>
+<p>There is a third problem, orthogonal to both. Even once the Dockerfile builds for two platforms, nothing would exercise the <em>cross-compilation</em> path until a release is cut. A Dockerfile edit that breaks it — an added <code>RUN</code> in the runtime stage, a build-stage tool that needs to execute a target-platform binary — would pass every PR check and fail at release time, after a tag exists and a GitHub Release is already published. That is the worst possible moment to discover it, and, importantly, an arm64 <code>e2e</code> job does <em>not</em> catch it: on an arm64 runner <code>BUILDPLATFORM</code> equals <code>TARGETPLATFORM</code>, so <code>GOOS</code>/<code>GOARCH</code> are a no-op and the cross-build is never attempted.</p>
+<p>The repository is public, which matters concretely: GitHub's hosted arm64 runners (<code>ubuntu-24.04-arm</code>) are free for public repositories, so ARM coverage costs wall-clock time and nothing else.</p>
+<h2 id="decision-drivers">Decision Drivers</h2>
+<ul>
+<li>The image is the artifact <code>tangle-deployments</code> consumes; an arm64 node cannot run it at all today, and the failure surfaces at pod start rather than at install.</li>
+<li>Nothing in this build needs a native toolchain. The Go code is pure Go with no cgo, so <code>GOOS</code>/<code>GOARCH</code> cross-compilation is exact, not approximate; the frontend build emits static assets that are byte-identical regardless of which architecture ran <code>npm run build</code>. Any design that pays for native arm64 build capacity is paying for something this repo does not need.</li>
+<li>Emulation is the thing to avoid, not multi-arch itself. A QEMU-emulated <code>go build</code> of a project this size is minutes, not seconds, and it would land on the critical path of every release. A build that cross-compiles costs approximately one extra <code>go build</code>.</li>
+<li>Confidence should match the claim. Shipping an arm64 image is a statement about the server running against a real ArgoCD on arm64, so the evidence should come from the layer that tests that, not only from the hermetic unit layer.</li>
+<li>The prerequisites that previously argued against ARM <code>e2e</code> have been checked and are not blockers (see <strong>More Information</strong> for the commands and results): <code>argo-cd</code> v3.5.3 publishes an <code>argocd-linux-arm64</code> asset; k3d publishes <code>k3d-linux-arm64</code> and its <code>install.sh</code> detects the architecture itself; Playwright 1.63.0 recognizes <code>ubuntu24.04-arm64</code> as a host platform and serves both <code>chromium-linux-arm64.zip</code> and <code>chromium-headless-shell-linux-arm64.zip</code>; and <code>quay.io/argoproj/argocd:v3.5.3</code>, <code>alpine</code>, <code>golang:1.27-alpine</code>, and <code>node:24-alpine</code> are all manifest lists including <code>linux/arm64</code>. What remained was one hardcoded asset name, not a missing capability.</li>
+<li>Matrix legs run concurrently, so the cost of an ARM leg is paid in runner-minutes (free here) rather than in wall-clock, up to arm64 runner availability. Doubling <code>e2e</code> is not the same as making every PR wait twice as long.</li>
+<li>Shared Actions caches are keyed by content today, not by architecture — and three separate keys are affected. <code>go-tools-${{ hashFiles('tasks/go.yaml') }}</code> (in <code>go</code> and <code>e2e</code>), <code>cli-tools-k3d-…-argocd-…</code> (in <code>e2e</code>), and <code>playwright-${{ runner.os }}-1.63.0</code> (in <code>ts</code> and <code>e2e</code>) all cache <em>compiled binaries</em> under keys with no architecture component; <code>runner.os</code> is <code>Linux</code> on both, so it does not discriminate. Adding an arm64 writer to any of them poisons it for the amd64 readers. This is a correctness prerequisite, not a nicety.</li>
+<li><code>report</code>'s centralized octocov run reads fixed artifact filenames (<code>.octocov.yml</code>'s <code>coverage/coverage.out</code>, <code>coverage/coverage-e2e.out</code>). Matrixed jobs that upload from every leg collide on artifact name, and <code>merge-multiple: true</code> would silently overwrite same-named files inside them.</li>
+</ul>
+<h2 id="considered-options">Considered Options</h2>
+<h3 id="how-to-build-the-image-for-two-platforms">How to build the image for two platforms</h3>
+<ul>
+<li><strong>One <code>docker</code> job, <code>platforms: linux/amd64,linux/arm64</code>, Dockerfile rewritten to cross-compile</strong> (chosen) — pin the Go and Node build stages to <code>--platform=$BUILDPLATFORM</code> and compile with <code>GOOS</code>/<code>GOARCH</code> taken from buildx's <code>TARGETOS</code>/<code>TARGETARCH</code> args. Both platforms' expensive work runs natively on the amd64 runner.</li>
+<li><strong>One job, <code>platforms:</code> added and the Dockerfile left as-is</strong> — rejected: correct output, wrong cost. With no <code>--platform=$BUILDPLATFORM</code> pin, buildx runs the entire <code>golang:1.27-alpine</code> and <code>node:24-alpine</code> stages under QEMU for the arm64 leg — <code>go mod download</code>, <code>go install swagger</code>, <code>swagger generate spec</code>, <code>go build ./...</code>, and <code>npm install &amp;&amp; npm run build</code>, all emulated, on every release.</li>
+<li><strong>Native matrix (amd64 + <code>ubuntu-24.04-arm</code>), push by digest, merge with <code>buildx imagetools create</code></strong> — rejected: this is the right pattern when a build genuinely cannot cross-compile, and it buys nothing here. It turns one job into three, introduces digest-passing between jobs via artifacts, splits the layer cache across two runners, and makes the release's success depend on three jobs coordinating instead of one succeeding. Note that the arm64 <code>e2e</code> leg does build the image natively on arm64 — but as a test fixture, not as a release artifact, which is a different job with different failure consequences.</li>
+</ul>
+<h3 id="how-to-handle-the-runtime-stages-run">How to handle the runtime stage's <code>RUN</code></h3>
+<p>The runtime stage executes one command on the <em>target</em> platform: <code>RUN addgroup -S tangle &amp;&amp; adduser -S tangle -G tangle</code>. Cross-compilation does not help here — a <code>RUN</code> in an arm64 stage needs an arm64 <code>busybox</code> to execute.</p>
+<ul>
+<li><strong>Add <code>docker/setup-qemu-action@v3</code> and keep the user creation as-is</strong> (chosen) — registers <code>binfmt_misc</code> handlers so that one trivial busybox invocation can run emulated. The emulated work is two <code>busybox</code> calls writing a few lines to <code>/etc/passwd</code> and <code>/etc/group</code>; the setup step itself is the larger cost, and both are seconds. Only the jobs that <em>cross</em>-build need it: the arm64 <code>e2e</code> leg builds natively and needs no QEMU at all.</li>
+<li><strong>Drop the <code>RUN</code> and use a numeric <code>USER 65532:65532</code> with <code>COPY --chown=65532:65532</code></strong> — rejected for now, though genuinely tempting: it removes QEMU from the pipeline entirely and produces a distroless-style image. It also changes the container's runtime UID (alpine's <code>adduser -S</code> allocates a low system UID; 65532 is not it) and removes the <code>tangle</code> entry from <code>/etc/passwd</code>. Whether that breaks anything depends on <code>tangle-deployments</code>' <code>securityContext</code>, which is outside this repository. Worth doing deliberately, with that chart checked, rather than as a side effect of a multi-arch change.</li>
+<li><strong>Move user creation into a build-stage-generated <code>/etc/passwd</code> copied into the runtime stage</strong> — rejected: it achieves the same thing as the numeric-UID option with more machinery and the same unverified UID question.</li>
+</ul>
+<h3 id="how-far-to-take-arm-testing-in-ci">How far to take ARM testing in CI</h3>
+<ul>
+<li><strong>Matrix <code>go</code> <em>and</em> <code>e2e</code> over amd64/arm64, plus a new always-run <code>image</code> job that cross-builds both platforms without pushing</strong> (chosen) — <code>go</code> covers the hermetic unit/integration layer, <code>e2e</code> covers the arm64 image running against a real ArgoCD with a real browser, and <code>image</code> covers the one thing neither does: that the amd64-hosted cross-build still works.</li>
+<li><strong>Matrix <code>go</code> only, plus the <code>image</code> job</strong> — rejected: cheaper, and it was the initial direction, but it validates an arm64 image at the layer least likely to expose an arm64 problem. The prerequisites that made <code>e2e</code> look expensive turned out to be one hardcoded <code>argocd-linux-amd64</code> asset name (see <strong>More Information</strong>), which is a two-line fix, not a project.</li>
+<li><strong>Matrix <code>ts</code></strong> — rejected: the frontend's test and build output does not depend on the runner's architecture, and its mocked Playwright suite has no native component whose behavior could differ. The live browser suite <em>is</em> covered on ARM, via the <code>e2e</code> matrix, which is the place where a real browser on a real arm64 kernel actually gets exercised.</li>
+<li><strong>Matrix <code>go</code>/<code>e2e</code> but skip the <code>image</code> job</strong> — rejected: leaves cross-compilation untested until release. The arm64 <code>e2e</code> leg builds the image with <code>BUILDPLATFORM == TARGETPLATFORM</code>, so it never exercises the cross-build the release depends on.</li>
+</ul>
+<h3 id="how-matrixed-jobs-should-report-results">How matrixed jobs should report results</h3>
+<ul>
+<li><strong>Only the amd64 leg uploads artifacts; the arm64 leg publishes its own separate check</strong> (chosen) — keeps <code>report</code>'s merge inputs exactly as they are today (fixed filenames, no collisions, no double-counted coverage) while still surfacing <em>which test</em> failed on ARM rather than only <em>that</em> the job went red.</li>
+<li><strong>Both legs upload, with arch-suffixed artifact names</strong> — rejected: the artifact names would be unique but the files inside them are not (<code>report-e2e.xml</code> from both legs), and <code>report</code>'s <code>merge-multiple: true</code> download would silently overwrite one with the other. Fixing that means renaming files in a shell step before upload, which is more machinery than a <code>check_name</code> input.</li>
+<li><strong>Only the amd64 leg reports anything at all</strong> — rejected as the whole answer: simplest, and fine for <code>go</code>, but an arm64-only <code>e2e</code> failure would then offer nothing but raw job logs, which is exactly the situation where test-level detail is worth the most.</li>
+</ul>
+<h2 id="decision-outcome">Decision Outcome</h2>
+<p>Chosen: <strong>cross-compile a two-platform image from one release job, and prove it across the whole test pyramid — <code>go</code> and <code>e2e</code> both matrixed over amd64/arm64 — with a non-pushing <code>image</code> job guarding the cross-build itself.</strong></p>
+<p>Concretely:</p>
+<ol>
+<li><strong><code>Dockerfile</code></strong> — pin the <code>go</code> and <code>node</code> stages to <code>--platform=$BUILDPLATFORM</code>, declare <code>ARG TARGETOS TARGETARCH</code> immediately before the build command, and set <code>CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH</code> on the <code>go build</code> invocation only. The <code>GOOS</code>/<code>GOARCH</code> assignment is scoped to that one command deliberately: the same stage also runs <code>go install github.com/go-swagger/go-swagger/cmd/swagger</code> and then <em>executes</em> the result to generate the Swagger spec, so a stage-wide <code>ENV GOARCH</code> would cross-compile the <code>swagger</code> binary and then fail to run it.</li>
+<li><strong><code>release.yaml</code>'s <code>docker</code> job</strong> — add <code>docker/setup-qemu-action@v3</code> and <code>docker/setup-buildx-action@v4</code>, and add <code>platforms: linux/amd64,linux/arm64</code> to the build step. The buildx setup step is not optional housekeeping: the default <code>docker</code> driver cannot produce a multi-platform result, so without it the <code>platforms:</code> input fails the build rather than being ignored.</li>
+<li><strong><code>ci.yaml</code>'s <code>go</code> job</strong> — matrix over <code>ubuntu-latest</code> (amd64) and <code>ubuntu-24.04-arm</code> (arm64), <code>fail-fast: false</code>.</li>
+<li><strong><code>ci.yaml</code>'s <code>e2e</code> job</strong> — the same matrix, plus one substantive fix: the <code>Install argocd</code> step hardcodes the <code>argocd-linux-amd64</code> release asset and becomes <code>argocd-linux-${{ matrix.arch }}</code>. The matrix values are chosen to be Go's <code>GOARCH</code> spellings (<code>amd64</code>/<code>arm64</code>) precisely so they can be substituted straight into that asset name. <code>k3d</code>'s installer detects the architecture itself and needs no change.</li>
+<li><strong><code>ci.yaml</code>'s new <code>image</code> job</strong> — <code>docker/setup-qemu-action</code> + <code>docker/setup-buildx-action</code>, then a <code>--platform linux/amd64,linux/arm64</code> build with <code>push: false</code> and its own GitHub Actions cache scope.</li>
+<li><strong>Cache keys</strong> — add <code>${{ runner.os }}-${{ runner.arch }}</code> to the <code>go-tools-</code> key (in <code>go</code> and <code>e2e</code>), the <code>cli-tools-</code> key (in <code>e2e</code>), and the <code>playwright-</code> key (in <code>ts</code> and <code>e2e</code>); give <code>e2e</code>'s buildx cache a per-arch scope and the <code>image</code> job its own.</li>
+<li><strong>Reporting</strong> — amd64 legs upload artifacts exactly as today; arm64 legs publish a separate, per-job check instead.</li>
+<li><strong><code>tasks/docker.yaml</code></strong> — add a <code>docker:build:multiarch</code> task so the cross-build is reproducible locally, keeping <code>docker:build</code> as the fast single-platform <code>--load</code> build the e2e stack depends on.</li>
+</ol>
+<p>The division of labor is the point, and each piece covers something the others cannot. Cross-compilation removes emulation from the expensive stages, which is what makes a two-platform release build affordable. QEMU stays only for the one target-platform <code>RUN</code> that no amount of cross-compilation can eliminate. The matrixed <code>go</code> job catches portability bugs cheaply and early; the matrixed <code>e2e</code> job is the only place the arm64 image itself runs against a real ArgoCD and a real browser; and the <code>image</code> job is the only place the amd64-hosted cross-build is exercised at all.</p>
+<h3 id="consequences">Consequences</h3>
+<ul>
+<li>Good, because <code>ghcr.io/ivanklee86/tangle:&lt;tag&gt;</code> becomes a manifest list serving both <code>linux/amd64</code> and <code>linux/arm64</code>. Consumers change nothing — the tag is the same, and the registry hands each node its own architecture — so <code>tangle-deployments</code>' chart and ADR 0021's version bump keep working untouched.</li>
+<li>Good, because the release build stays fast. The only emulated instruction in the whole pipeline is one <code>busybox adduser</code>; every compile runs natively.</li>
+<li>Good, because arm64 support is evidenced at the same depth as amd64: the same unit/integration suite, the same live-ArgoCD Go suite, and the same live Playwright suite, all on a real arm64 kernel, on every push and PR.</li>
+<li>Good, because a Dockerfile change that breaks cross-compilation fails in the <code>image</code> job on the PR that introduced it, with nothing published and no tag to clean up.</li>
+<li>Good, because three latent cache bugs get fixed. <code>go-tools-</code>, <code>cli-tools-</code>, and <code>playwright-</code> all cache compiled binaries under architecture-blind keys today; nothing but the absence of an ARM job keeps them from being wrong, and this change would have made them wrong in a confusing, intermittent way.</li>
+<li>Neutral, because the frontend build stays on the build platform in the image. That is correct rather than a compromise: <code>npm run build</code> emits static assets, and the <code>node</code> stage's output is copied, never executed, in the runtime image.</li>
+<li>Bad, because matrixing renames status checks: <code>go</code> becomes <code>go (amd64)</code>/<code>go (arm64)</code> and <code>e2e</code> becomes <code>e2e (amd64)</code>/<code>e2e (arm64)</code>. Branch-protection rules naming <code>go</code> or <code>e2e</code> silently stop being satisfiable by anything, which fails closed (PRs block) rather than open — but it blocks every PR until the rules are updated. This needs doing in the same change window, and it is the one step that cannot be done from this repository's files. Both jobs carry an explicit <code>name:</code> to get those names: GitHub's default is derived from <em>every</em> matrix dimension (<code>go (amd64, ubuntu-latest)</code>), which would embed the runner label in a name branch protection depends on, so a future <code>ubuntu-latest</code> bump would silently rename a required check a second time. Observed on the first CI run of this change, not predicted.</li>
+<li>Bad, because CI roughly doubles its runner-minutes: two full k3d + ArgoCD bring-ups per run instead of one, plus a Docker build in the new <code>image</code> job. Free on a public repository, but not free in the abstract, and worth revisiting if this ever goes private.</li>
+<li>Bad, because wall-clock is now hostage to arm64 runner availability. The legs run concurrently, so in the normal case the pipeline is no slower than its slowest single leg — but if the arm64 pool queues, every PR waits on it, and <code>e2e</code> was already the critical path.</li>
+<li>Bad, because arm64 failures are reported through a different mechanism than amd64 ones (a separate check rather than the unified <code>report</code> output). That asymmetry is deliberate, and documented, but it is one more thing a contributor has to know when a PR goes red.</li>
+<li>Bad, because the release <code>docker</code> job grows two setup steps for a build that used to be one action invocation. <code>setup-qemu-action</code> in particular is there for a single <code>RUN</code>, which reads as disproportionate until you know what it is for; the workflow comment has to carry that.</li>
+</ul>
+<h2 id="pros-and-cons-of-the-options">Pros and Cons of the Options</h2>
+<h3 id="one-job-cross-compiled-chosen">One job, cross-compiled (chosen)</h3>
+<ul>
+<li>Good, because it keeps the release workflow's shape — one <code>docker</code> job — while doubling what it produces, and because a pure-Go, no-cgo codebase makes the cross-compile exact rather than a best effort.</li>
+<li>Good, because the layer cache stays in one place instead of being split across two runners with different architectures.</li>
+<li>Bad, because the Dockerfile stops being a plain Dockerfile: <code>$BUILDPLATFORM</code>, <code>TARGETOS</code>, and <code>TARGETARCH</code> are buildx concepts, so <code>docker build</code> without buildx no longer reproduces what CI does.</li>
+</ul>
+<h3 id="one-job-platforms-only-dockerfile-unchanged">One job, <code>platforms:</code> only, Dockerfile unchanged</h3>
+<ul>
+<li>Good, because it is a one-line change and produces a correct manifest list.</li>
+<li>Bad, because every expensive build stage runs under QEMU for the arm64 leg on every release — <code>go mod download</code>, <code>go install</code>, <code>swagger generate</code>, <code>go build ./...</code>, <code>npm install</code>, <code>npm run build</code> — for no benefit, since none of that work needs to be native.</li>
+</ul>
+<h3 id="native-matrix-imagetools-create-merge">Native matrix + <code>imagetools create</code> merge</h3>
+<ul>
+<li>Good, because it never emulates anything and is the standard answer for builds with native-toolchain requirements (cgo, platform-specific native npm modules that ship in the output).</li>
+<li>Bad, because it triples the job count, adds digest-passing plumbing between jobs, splits the cache, and solves a problem this build does not have.</li>
+</ul>
+<h3 id="matrix-go-e2e-a-non-pushing-image-job-chosen">Matrix <code>go</code> + <code>e2e</code> + a non-pushing <code>image</code> job (chosen)</h3>
+<ul>
+<li>Good, because every layer of ADR 0009's pyramid runs on both architectures, and the one gap none of them covers (cross-compilation) gets its own job.</li>
+<li>Good, because the prerequisites turned out to be one hardcoded asset name rather than missing upstream support, so the cost is far below what it looked like before checking.</li>
+<li>Bad, because it renames two required checks, doubles the pipeline's heaviest job in runner-minutes, and makes wall-clock depend on arm64 runner availability.</li>
+</ul>
+<h3 id="matrix-go-only">Matrix <code>go</code> only</h3>
+<ul>
+<li>Good, because it is the cheapest credible ARM signal and touches nothing about the <code>e2e</code> job's already-delicate bring-up.</li>
+<li>Bad, because it validates an arm64 <em>image</em> without ever running that image, at the pyramid layer least likely to surface an architecture problem.</li>
+</ul>
+<h3 id="matrix-ts">Matrix <code>ts</code></h3>
+<ul>
+<li>Good, because it would be consistent with matrixing everything else.</li>
+<li>Bad, because vitest and a network-mocked Playwright suite produce architecture-independent results; the real browser on real arm64 is already covered by <code>e2e</code>'s live suite.</li>
+</ul>
+<h2 id="more-information">More Information</h2>
+<ul>
+<li>Implementation plan: <a href="../../agents/plans/multi-arch-image-and-arm-ci/">Multi-arch container image and ARM CI coverage</a></li>
+<li>Current-state reference: <a href="../../agents/ci/">docs/agents/ci.md</a> — the pipeline diagram and per-job walkthroughs this changes</li>
+<li>Related: <a href="../0009-ci-pipeline-test-taxonomy-and-conditional-jobs/">ADR 0009</a> — the test pyramid this now replicates on a second architecture, and the ADR that accepts <code>e2e</code>'s cost</li>
+<li>Related: <a href="../0017-always-run-go-and-ts-ci-jobs/">ADR 0017</a> — <code>go</code> and <code>e2e</code> run on every push and PR, so their matrices double on every run rather than occasionally</li>
+<li>Related: <a href="../0021-automate-tangle-deployments-chart-version-bump/">ADR 0021</a> — the consumer of this image; a manifest list keeps its <code>image.tag</code> bump working unchanged</li>
+<li>Related: <a href="../0018-pin-and-cache-the-task-cli-in-ci/">ADR 0018</a> — <code>./.github/actions/setup-task</code> already keys its cache on <code>runner.arch</code>, so it needs no change for an ARM runner; the three keys that do need fixing predate that habit</li>
+<li>Upstream: <a href="https://docs.docker.com/reference/dockerfile/#automatic-platform-args-in-the-global-scope">buildx automatic platform ARGs</a> (<code>BUILDPLATFORM</code>, <code>TARGETOS</code>, <code>TARGETARCH</code>)</li>
+<li>Upstream: GitHub's <code>ubuntu-24.04-arm</code> hosted runners, free for public repositories</li>
+</ul>
+<h3 id="prerequisite-verification">Prerequisite verification</h3>
+<p>Every arm64 dependency of the <code>e2e</code> job was checked before choosing to matrix it, rather than assumed:</p>
+<table>
+<thead>
+<tr>
+<th>Dependency</th>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>argocd</code> CLI v3.5.3</td>
+<td><code>gh api repos/argoproj/argo-cd/releases/tags/v3.5.3 --jq '.assets[].name'</code></td>
+<td><code>argocd-linux-arm64</code> present — the pipeline's only real gap was <code>ci.yaml</code> hardcoding <code>argocd-linux-amd64</code></td>
+</tr>
+<tr>
+<td><code>k3d</code> v5.9.0</td>
+<td><code>gh api repos/k3d-io/k3d/releases/tags/v5.9.0 --jq '.assets[].name'</code></td>
+<td><code>k3d-linux-arm64</code> present; <code>install.sh</code> selects by architecture itself, so the install step needs no change</td>
+</tr>
+<tr>
+<td>Playwright 1.63.0 host platform</td>
+<td><code>grep -roh 'ubuntu2[0-9]\.04-arm64' web/node_modules/playwright-core/lib/</code></td>
+<td><code>ubuntu24.04-arm64</code> recognized</td>
+</tr>
+<tr>
+<td>Playwright Chromium (rev 1243)</td>
+<td><code>curl -o /dev/null -w '%{http_code}' -L https://cdn.playwright.dev/dbazure/download/playwright/builds/chromium/1243/chromium-linux-arm64.zip</code></td>
+<td><code>200</code></td>
+</tr>
+<tr>
+<td>Playwright headless shell (rev 1243)</td>
+<td>same, <code>chromium-headless-shell-linux-arm64.zip</code></td>
+<td><code>200</code></td>
+</tr>
+<tr>
+<td>ArgoCD server image</td>
+<td><code>docker buildx imagetools inspect quay.io/argoproj/argocd:v3.5.3</code></td>
+<td>manifest list including <code>linux/arm64</code></td>
+</tr>
+<tr>
+<td>Image base layers</td>
+<td><code>docker buildx imagetools inspect</code> on <code>alpine:latest</code>, <code>golang:1.27-alpine</code>, <code>node:24-alpine</code></td>
+<td>all manifest lists including <code>linux/arm64</code></td>
+</tr>
+<tr>
+<td><code>EnricoMi/publish-unit-test-result-action</code></td>
+<td><code>docker buildx imagetools inspect ghcr.io/enricomi/publish-unit-test-result-action:v2.20.0</code></td>
+<td><code>linux/amd64</code> + <code>linux/arm64</code> — so the amd64-only artifact gating is about filename collisions, not about the action's architecture support</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Superseded by, if adopted later: none.</li>
+</ul>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["header.autohide", "navigation.tabs", "navigation.path", "navigation.sections", "toc.follow", "search.suggest", "search.share"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
