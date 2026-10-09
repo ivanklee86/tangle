@@ -18,7 +18,7 @@ RUN curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=$
 COPY --from=rancher/kubectl:v1.36.2 /bin/kubectl /usr/local/bin/kubectl
 COPY --from=alpine/helm:4.3.0 /usr/bin/helm /usr/local/bin
 COPY --from=derailed/k9s:v0.50.18 /bin/k9s /usr/local/bin
-COPY --from=quay.io/argoproj/argocd:v3.5.3 /usr/local/bin/argocd /usr/local/bin
+COPY --from=quay.io/argoproj/argocd:v3.5.4 /usr/local/bin/argocd /usr/local/bin
 
 # Playwright (for web/ e2e tests and vitest-browser-svelte component tests) —
 # keep the version in sync with playwright/@playwright/test in web/package.json.
