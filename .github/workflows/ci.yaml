@@ -211,11 +211,11 @@ jobs:
     - name: Run pre-commit hooks via prek
       # web-lint stays skipped here, same as it always was under
       # pre-commit.ci's `ci: skip:` — see .pre-commit-config.yaml's comment.
-      uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+      uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204 # v3.0.1
       env:
         SKIP: web-lint
       with:
-        prek-version: 0.5.3
+        prek-version: v0.5.5
 
   e2e:
     # See the go job — pins the check name against the runner label.
