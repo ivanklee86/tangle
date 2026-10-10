@@ -13,7 +13,7 @@ inputs:
     # pinned version makes no api.github.com request at all.
     description: 'Exact Task version to install, without the leading `v`.'
     required: false
-    default: '3.53.1' # github-releases/go-task/task
+    default: '3.54.0' # github-releases/go-task/task
   repo-token:
     # Unused while `version` stays pinned (see above); it only matters if the
     # pin is ever loosened to a range, and then it makes the tag listing an
