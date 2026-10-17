@@ -130,3 +130,5 @@ Multi-stage [`Dockerfile`](https://github.com/ivanklee86/tangle/blob/main/Docker
 [SvelteKit](https://svelte.dev/docs/kit) app; stage 3 is a non-root Alpine image holding
 `tangle-server`, `tangle-cli`, and `./build`. The server resolves static assets from `./build`
 relative to its working directory, so the API and the SPA are always the same deploy.
+
+The frontend is on SvelteKit 3, which has no `svelte.config.js`: the preprocessor, `adapter-static` options, and a `$lib` → `src/lib` alias are all passed to `sveltekit({...})` in `web/vite.config.ts`. The alias is a deprecated stopgap until the imports move to Kit 3's `#lib` subpath imports ([ADR 0029](../adrs/0029-adopt-sveltekit-3.md)). Environment variables have to be declared in `web/src/env.ts`. `PUBLIC_BASE_URL` is declared there as public and static, inlined at build time, and imported from `$app/env/public`. `web/tsconfig.json` extends the generated `$app/tsconfig` and carries its own `include`/`exclude`, because Kit 3 stopped generating them.

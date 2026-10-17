@@ -4,7 +4,7 @@ import {
 	type ApplicationDiff,
 	type ApplicationDiffResponse
 } from '$lib/backend/data';
-import { PUBLIC_BASE_URL } from '$env/static/public';
+import { PUBLIC_BASE_URL } from '$app/env/public';
 import { fetchEnvelope } from '$lib/backend/http';
 import { buildQuery } from '$lib/backend/url';
 
