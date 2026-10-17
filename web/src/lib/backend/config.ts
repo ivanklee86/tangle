@@ -1,4 +1,4 @@
-import { PUBLIC_BASE_URL } from '$env/static/public';
+import { PUBLIC_BASE_URL } from '$app/env/public';
 
 interface TangleConfig {
 	/** Public base URL of this Tangle, without a trailing slash. Empty when unset. */

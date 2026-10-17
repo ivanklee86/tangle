@@ -192,7 +192,7 @@ matters, and the failure mode is indirect — a cache *hit* that skips an instal
 | --- | --- | --- |
 | `go-tools-<os>-<arch>-<hash>` | `~/go/bin` (Go CI tooling) | `go` and `e2e`, both legs each — four writers |
 | `cli-tools-<arch>-k3d-…-argocd-…` | `/usr/local/bin/k3d`, `/usr/local/bin/argocd` | `e2e`, both legs |
-| `playwright-<os>-<arch>-1.63.0` | `~/.cache/ms-playwright` (browser binaries) | `ts` (amd64) and `e2e`, both legs |
+| `playwright-<os>-<arch>-<version>` | `~/.cache/ms-playwright` (browser binaries; `<version>` read from the installed `playwright` package) | `ts` (amd64) and `e2e`, both legs |
 
 `e2e`'s buildx layer cache needs the same treatment for the same reason, via a scope rather than a
 key: `scope=e2e-${{ matrix.arch }}`, so the two legs don't export mutually useless layers over each
