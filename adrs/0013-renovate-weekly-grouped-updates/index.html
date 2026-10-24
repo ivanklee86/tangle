@@ -1,0 +1,978 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Restructure Renovate into weekly grouped updates with gated automerge - Tangle</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#restructure-renovate-into-weekly-grouped-updates-with-gated-automerge" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Tangle" class="md-header__button md-logo" aria-label="Tangle" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Tangle
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Restructure Renovate into weekly grouped updates with gated automerge
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/ivanklee86/tangle" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ivanklee86/tangle
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../Installation/" class="md-tabs__link">
+          
+  
+  
+  Usage Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
+          
+  
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Tangle" class="md-nav__button md-logo" aria-label="Tangle" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Tangle
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ivanklee86/tangle" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ivanklee86/tangle
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Usage Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuring_argocd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuring ArgoCD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context-and-problem-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context and Problem Statement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision-drivers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision Drivers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#considered-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Considered Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision-outcome" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision Outcome
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision Outcome">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pros-and-cons-of-the-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pros and Cons of the Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pros and Cons of the Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automerge-everything-including-majors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automerge everything including majors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#leave-renovate-invisible-pins-out-of-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Leave Renovate-invisible pins out of scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#more-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        More Information
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="restructure-renovate-into-weekly-grouped-updates-with-gated-automerge">Restructure Renovate into weekly grouped updates with gated automerge</h1>
+<h2 id="context-and-problem-statement">Context and Problem Statement</h2>
+<p><code>renovate.json</code> today has three problems now that <a href="../0003-svelte-e2e-testing-strategy/">ADR 0003</a>/the e2e work has landed and dependency PRs are cheap to trust again: it fires only every two weeks (<code>"every 2 weeks on friday"</code>), which lets updates pile up and makes each PR riskier to review; it groups only <code>gomod</code> deps (<code>"go.mod dependencies"</code>) and leaves <code>npm</code>, <code>helmv3</code>, and <code>github-actions</code> deps ungrouped, so every individual TypeScript/Helm/Action bump opens its own PR; and it has no <code>minimumReleaseAge</code>, so a PR can land the same day a package is released, before a supply-chain problem or a bad release would typically surface. Separately, a real review of every file Renovate can reach in this repo found several pinned tool versions that Renovate cannot see at all today — <code>go install</code> lines in <code>tasks/go.yaml</code> and <code>Dockerfile</code>, <code>ARG K3D_VERSION</code>/<code>ARG PLAYWRIGHT_VERSION</code> in <code>.devcontainer/Dockerfile</code>, and the <code>gateway-api</code> release URL in <code>tasks/k8s.yaml</code> — which is at odds with AGENTS.md's "versions should always be pinned" standard, since a pin nobody bumps just goes stale in place. Two Docker image references (<code>alpine/helm</code>, <code>derailed/k9s</code> in <code>.devcontainer/Dockerfile</code>) are not pinned to a tag at all, so Renovate has nothing to bump even after the fix above. <code>.devcontainer/Dockerfile</code>'s "Go extras not in the central go image" section (added after this ADR was first drafted, by since-merged work) goes further still: <code>go install github.com/air-verse/air@latest</code> and <code>...swagger@latest</code> are pinned to nothing at all — the same failure mode as the untracked pins above, just with no version string for Renovate's <code>go install</code> custom manager to even capture.</p>
+<h2 id="decision-drivers">Decision Drivers</h2>
+<ul>
+<li>Weekly cadence with per-ecosystem grouping (go/ts/k8s/ci) keeps each PR reviewable and predictable, instead of a biweekly grab-bag.</li>
+<li>A 5-day <code>minimumReleaseAge</code> with <code>timestamp-optional</code> behavior gives a real safety buffer against yanked/compromised releases, without permanently blocking updates from datasources that don't report release timestamps.</li>
+<li><code>automerge</code>/<code>platformAutomerge</code> (already used for the <code>devcontainer</code> group) removes babysitting for low-risk bumps, but major-version bumps carry real breaking-change risk (Sveltekit, <code>argo-cd</code>/<code>traefik</code> chart majors, Go major bumps) and should stay a manual merge.</li>
+<li>A repo-wide "review" was asked for, not just the four named groups — leaving known-stale, Renovate-invisible pins in place while restructuring everything else around them would be inconsistent with the pinning standard this same change is meant to uphold.</li>
+<li><code>renovatebot/pre-commit-hooks</code>' <code>renovate-config-validator</code> hook is <code>language: node</code>, so (unlike the repo's existing <code>web-lint</code> hook) it runs under pre-commit.ci per <a href="../0012-pre-commit-ts-and-markdown-checks/">ADR 0012</a>, giving <code>renovate.json</code> a real, CI-enforced syntax/schema gate instead of only local, pre-push convenience.</li>
+</ul>
+<h2 id="considered-options">Considered Options</h2>
+<ul>
+<li><strong>Schedule</strong>: keep biweekly vs. move to weekly (chosen) vs. daily (too noisy for a grouped-PR model).</li>
+<li><strong>Grouping</strong>: leave ungrouped (today) vs. one group per Renovate <em>manager</em> (chosen: go=<code>gomod</code>, ts=<code>npm</code>, k8s=<code>helmv3</code>, ci=<code>github-actions</code>, each also absorbing the same-ecosystem <code>dockerfile</code>/custom-manager deps) vs. one single "everything" group (rejected — defeats reviewability, and mixes unrelated blast radii in one PR).</li>
+<li><strong>Automerge scope</strong>: automerge everything including majors (rejected — a major bump automerging unattended is exactly the risk <code>minimumReleaseAge</code> doesn't fully cover) vs. automerge minor/patch/pin/digest only, majors always manual (chosen) vs. no automerge at all (rejected — loses the point of the existing <code>devcontainer</code> precedent and doubles review load for no real benefit on low-risk bumps).</li>
+<li><strong>Renovate-invisible pins</strong> (<code>go install</code> lines, <code>K3D_VERSION</code>, <code>PLAYWRIGHT_VERSION</code>, gateway-api URL): leave as-is, out of scope (rejected — see Decision Drivers) vs. add <code>customManagers</code> (<code>customType: "regex"</code>) entries so they're tracked and grouped like everything else (chosen).</li>
+<li><strong>Config validation</strong>: no validation, rely on the Renovate app's own dashboard errors after the fact (today's state) vs. <code>renovatebot/pre-commit-hooks</code>' <code>renovate-config-validator</code> (chosen, <code>language: node</code>, runs under pre-commit.ci) vs. a bespoke CI job step running <code>npx renovate-config-validator</code> (rejected — duplicates what the pre-commit hook already gives for free under pre-commit.ci, per the <code>markdownlint-cli2</code> precedent in ADR 0012, without the local pre-commit feedback loop).</li>
+<li><strong><code>pre-commit</code> manager</strong> (Renovate updating <code>.pre-commit-config.yaml</code>'s own <code>rev:</code> pins): considered and rejected — it's disabled by default upstream (a deliberate, indefinite decision by the Renovate maintainers, not a gap), and pre-commit.ci already auto-updates those <code>rev</code>s on its own weekly schedule per ADR 0012, so enabling it would just create two systems fighting over the same file.</li>
+</ul>
+<h2 id="decision-outcome">Decision Outcome</h2>
+<p>Chosen options, landed together in one <code>renovate.json</code> restructure (see <a href="../../agents/plans/renovate-weekly-grouped-updates/">the implementation plan</a> for the exact config and file-by-file changes):</p>
+<ol>
+<li><strong>Weekly schedule</strong>: <code>"schedule": ["on friday"]</code> (same day as today, biweekly modifier dropped).</li>
+<li><strong>Four ecosystem groups</strong> — <code>go</code>, <code>ts</code>, <code>k8s</code>, <code>ci</code> — each grouping its native Renovate manager (<code>gomod</code>, <code>npm</code>, <code>helmv3</code>, <code>github-actions</code> respectively) together with the same-ecosystem <code>dockerfile</code> images (by <code>matchPackageNames</code>) and the new <code>customManagers</code> entries below (by <code>matchDatasources</code>).</li>
+<li><strong><code>minimumReleaseAge: "5 days"</code> with <code>minimumReleaseAgeBehaviour: "timestamp-optional"</code></strong>, set at the config root so it applies to every manager, including datasources that don't return a release timestamp.</li>
+<li><strong>Automerge (<code>automerge: true</code>, <code>platformAutomerge: true</code>) for every non-major update</strong>, and an explicit <code>matchUpdateTypes: ["major"]</code> rule keeping <code>automerge: false</code> — applied repo-wide, not just to the four groups, which also tightens the existing <code>devcontainer</code> group (today it automerges majors unconditionally; after this change it doesn't).</li>
+<li><strong>New <code>customManagers</code> entries</strong> (regex, following Renovate's own documented <code>ENV X_VERSION=... # datasource/depName</code> convention, adapted to <code>ARG</code> and to bare <code>go install</code> lines) so the <code>go install</code> pins, <code>K3D_VERSION</code>, <code>PLAYWRIGHT_VERSION</code>, and the gateway-api release URL are tracked and grouped like every other dependency.</li>
+<li><strong>Pin <code>alpine/helm</code> and <code>derailed/k9s</code> to explicit tags</strong> (<code>4.3.0</code>, <code>v0.50.18</code> as of 2026-09-20) in <code>.devcontainer/Dockerfile</code> — a prerequisite for Renovate to track them at all, and a direct fix for an existing AGENTS.md pinning-rule violation found during this review.</li>
+<li><strong>Pin <code>air-verse/air</code> and the devcontainer's own <code>go-swagger</code> install to explicit versions</strong> (<code>v1.67.4</code>, <code>v0.36.6</code> as of 2026-09-20, the latter matching <code>tasks/go.yaml</code>'s pin) in <code>.devcontainer/Dockerfile</code> — same rationale as 6, for the <code>@latest</code> pins found in that file's "Go extras" section.</li>
+<li><strong><code>renovatebot/pre-commit-hooks</code>' <code>renovate-config-validator</code> hook</strong>, added to <code>.pre-commit-config.yaml</code>, pinned to <code>44.103.6</code>.</li>
+<li><strong>Track <code>.github/workflows/ci.yaml</code>'s own <code>k3d</code>/<code>argocd</code> version copies</strong> (a CodeRabbit finding on the PR) — the <code>e2e</code> job hardcoded both versions a second time (cache key, install commands) with only a comment asking a human to keep them in sync with <code>.devcontainer/Dockerfile</code>. Collapsed to a job-level <code>env:</code> block and tracked by a new <code>customManagers</code> entry, joining the same <code>k8s</code> group so a bump moves every occurrence together.</li>
+</ol>
+<h3 id="consequences">Consequences</h3>
+<ul>
+<li>Good, because each of the four weekly PRs (when there's anything to update) stays scoped to one ecosystem, and low-risk bumps land without manual merges.</li>
+<li>Good, because previously-invisible pins (Go tool installs, k3d, Playwright, gateway-api) are now tracked and will actually get bumped instead of silently going stale.</li>
+<li>Good, because <code>renovate.json</code> gets a real syntax/schema check before merge, the same way TypeScript/Svelte and Markdown already do (ADR 0012).</li>
+<li>Neutral, because <code>PLAYWRIGHT_VERSION</code> (<code>.devcontainer/Dockerfile</code>) and <code>@playwright/test</code>/<code>playwright</code> (<code>web/package.json</code>) are grouped into the same <code>ts</code> PR but are not forced to bump together — if only one has a new release in a given week, the "these must match exactly" invariant documented in <code>.devcontainer/Dockerfile</code> can be briefly out of sync until the next PR catches the other one up. Grouping narrows this window to at most a week; it doesn't close it.</li>
+<li>Neutral, because the <code>ci</code> group covers the whole <code>github-actions</code> manager, i.e. <code>release.yaml</code> and <code>release-docs.yaml</code> too, not just <code>ci.yaml</code> — there was no finer-grained split requested, and splitting further would need per-workflow <code>matchFileNames</code> rules with no clear benefit today.</li>
+<li>Bad, because <code>minimumReleaseAge</code> delays every update by 5 days regardless of how urgent it is (e.g. a security patch); <code>dependencyDashboard</code> (already on via <code>config:recommended</code>) remains the way to see what's pending and, if needed, manually bypass the wait for an individual PR.</li>
+</ul>
+<h2 id="pros-and-cons-of-the-options">Pros and Cons of the Options</h2>
+<h3 id="automerge-everything-including-majors">Automerge everything including majors</h3>
+<ul>
+<li>Good, because it matches the literal wording of the existing <code>devcontainer</code> precedent with no carve-out.</li>
+<li>Bad, because a major-version automerge (e.g. Sveltekit, <code>argo-cd</code>/<code>traefik</code> chart majors) can break the build or runtime behavior with nobody having looked at the diff first, and <code>minimumReleaseAge</code> alone doesn't mitigate a bad <em>design</em>, only a bad or yanked <em>release</em>.</li>
+</ul>
+<h3 id="leave-renovate-invisible-pins-out-of-scope">Leave Renovate-invisible pins out of scope</h3>
+<ul>
+<li>Good, because it's a smaller, more literal implementation of "go/ts/k8s/ci groups."</li>
+<li>Bad, because those pins (four <code>go install</code> tool versions, <code>k3d</code>, Playwright, gateway-api) stay permanently stale unless someone remembers to bump them by hand — the exact failure mode AGENTS.md's pinning rule exists to prevent, and this review was the natural point to catch it.</li>
+</ul>
+<h2 id="more-information">More Information</h2>
+<ul>
+<li>Plan: <a href="../../agents/plans/renovate-weekly-grouped-updates/">Renovate weekly grouped updates</a></li>
+<li><a href="https://docs.renovatebot.com/configuration-options/#minimumreleaseage">Renovate: <code>minimumReleaseAge</code></a> / <a href="https://docs.renovatebot.com/configuration-options/#minimumreleaseagebehaviour"><code>minimumReleaseAgeBehaviour</code></a></li>
+<li><a href="https://docs.renovatebot.com/configuration-options/#custommanagers">Renovate: <code>customManagers</code></a></li>
+<li><a href="https://github.com/renovatebot/pre-commit-hooks"><code>renovatebot/pre-commit-hooks</code></a></li>
+<li><a href="../0012-pre-commit-ts-and-markdown-checks/">ADR 0012</a> (pre-commit.ci's <code>language: node</code> vs. <code>language: system</code> distinction this decision relies on)</li>
+<li>Superseded by, if adopted later: <a href="../0015-restrict-argo-cd-go-module-updates-to-major-only/">ADR 0015</a> narrows Go module automerge further (argo-cd's own minor/patch updates); <a href="../0016-automerge-major-updates-outside-go-and-ts/">ADR 0016</a> narrows this ADR's repo-wide "majors always manual" rule to Go/TypeScript only, automerging majors everywhere else.</li>
+</ul>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["header.autohide", "navigation.tabs", "navigation.path", "navigation.sections", "toc.follow", "search.suggest", "search.share"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
