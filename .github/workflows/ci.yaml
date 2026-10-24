@@ -246,7 +246,7 @@ jobs:
       # .devcontainer/Dockerfile's own K3D_VERSION/argocd copies, so a
       # Renovate bump moves every occurrence together in one PR.
       K3D_VERSION: v5.9.0 # github-releases/k3d-io/k3d
-      ARGOCD_VERSION: v3.5.4 # github-releases/argoproj/argo-cd
+      ARGOCD_VERSION: v3.5.5 # github-releases/argoproj/argo-cd
     steps:
     - name: Checkout code
       uses: actions/checkout@v7
@@ -315,6 +315,15 @@ jobs:
         DOCKER_BUILD_CACHE_FLAGS: --cache-from type=gha,scope=e2e-${{ matrix.arch }} --cache-to type=gha,scope=e2e-${{ matrix.arch }},mode=max
     - name: Run Go e2e tests
       run: task go:test:e2e:ci
+    - name: Dump cluster state on failure
+      # The cluster is gone once the job ends, so this is the only chance to see why an ArgoCD
+      # component (e.g. argocd-redis) was unreachable.
+      if: failure()
+      run: |
+        kubectl get pods -o wide || true
+        kubectl get events --sort-by=.lastTimestamp || true
+        kubectl describe pods -l app.kubernetes.io/part-of=argocd || true
+        kubectl logs -l app.kubernetes.io/part-of=argocd --all-containers --tail=200 --prefix || true
     - name: Install frontend packages
       run: task ts:install-ci
     - name: Resolve Playwright version

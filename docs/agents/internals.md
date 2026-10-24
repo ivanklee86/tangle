@@ -122,6 +122,12 @@ with the same `TANGLE_` prefix.
 
 The live stack (`task services:cicd`) seeds the four Applications in `integration/kubernetes/example/`, all tracking `main` on GitHub rather than the local checkout. The `test_gitops` branch on `origin` stands in for "a change the user pushed": it enables `test-1`'s ingress (so its diff adds one `Ingress`) and deliberately breaks `test-3`'s `values.yaml` (so manifest generation fails), leaving `test-2` and `test-4` unchanged. The scenario tests for [test_cases.md](test_cases.md) (`cmd/tangle-cli/main_e2e_test.go`, `web/e2e/live/ci-scenarios.spec.ts`) and the other live suites rely on exactly this, so treat `test_gitops` as a test fixture: don't rebase or "fix" it.
 
+`task argocd:healthcheck` gates the live suites on every ArgoCD Deployment being `Available` and the `argocd-application-controller` StatefulSet being rolled out, not just on `argocd-server`. Manifest generation goes through `argocd-repo-server`, which needs `argocd-redis`, so a server-only wait let e2e start against an unreachable Redis. When the CI e2e job fails, it dumps pod state, events, and ArgoCD logs before the cluster is torn down.
+
+## Client IP
+
+Request logs report `client.ip` as the rightmost `X-Forwarded-For` entry, which assumes exactly one trusted proxy in front of Tangle. `resolveClientIP` (`internal/tangle/server.go`) does this with chi's `ClientIPFromXFFTrustedProxies(1)` and then copies the result into `r.RemoteAddr` for httplog. Without the header, or when the rightmost entry doesn't parse, the TCP peer is reported.
+
 ## Build
 
 Multi-stage [`Dockerfile`](https://github.com/ivanklee86/tangle/blob/main/Dockerfile): stage 1 runs
