@@ -18,10 +18,14 @@ tasks:
         sh: kubectl get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
 
   healthcheck:
-    desc: "Wait for servies to start"
+    desc: "Wait for services to start"
     cmds:
-      - kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=argocd-server
-      - kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=traefik
+      # Every ArgoCD workload, not just argocd-server: manifest generation goes through the
+      # repo-server, which needs argocd-redis. Waiting only on argocd-server let e2e start while
+      # Redis was still unavailable ("dial tcp ...:6379: connect: connection refused").
+      - kubectl wait --for=condition=Available deployment -l app.kubernetes.io/part-of=argocd --timeout=300s
+      - kubectl rollout status statefulset/argocd-application-controller --timeout=300s
+      - kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=traefik --timeout=300s
 
   token:
     desc: "Generate token for service account."

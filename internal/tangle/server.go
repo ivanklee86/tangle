@@ -137,12 +137,7 @@ func New(config *TangleConfig, version string) *Tangle {
 	// Middlewares
 	router.Use(httplog.RequestLogger(logger, &requestLoggerOptions))
 	router.Use(middleware.RequestID)
-	// middleware.RealIP is deprecated (IP-spoofable); resolve the client IP with the
-	// rightmost X-Forwarded-For entry (safe for exactly one trusted hop, e.g. an
-	// ingress/reverse proxy immediately in front of this server) and copy it into
-	// RemoteAddr so it still shows up in httplog's ECS-schema "client.ip" field.
-	router.Use(middleware.ClientIPFromXFF())
-	router.Use(setRemoteAddrFromClientIP)
+	router.Use(resolveClientIP)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(time.Duration(config.Timeout) * time.Second))
 	if !config.DoNotInstrument {
@@ -182,6 +177,16 @@ func New(config *TangleConfig, version string) *Tangle {
 	router.Handle("/*", http.FileServer(fileDir))
 
 	return &tangle
+}
+
+// resolveClientIP replaces the deprecated (IP-spoofable) middleware.RealIP: it
+// takes the rightmost X-Forwarded-For entry (safe for exactly one trusted hop,
+// e.g. an ingress/reverse proxy immediately in front of this server) and copies
+// it into RemoteAddr so it still shows up in httplog's ECS-schema "client.ip"
+// field. chi v5.4+ panics on ClientIPFromXFF() with no trusted prefixes; the
+// hop-counting variant with 1 is what that zero-prefix call used to do.
+func resolveClientIP(next http.Handler) http.Handler {
+	return middleware.ClientIPFromXFFTrustedProxies(1)(setRemoteAddrFromClientIP(next))
 }
 
 // setRemoteAddrFromClientIP copies the client IP resolved by one of chi's
