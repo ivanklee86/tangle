@@ -246,7 +246,7 @@ jobs:
       # .devcontainer/Dockerfile's own K3D_VERSION/argocd copies, so a
       # Renovate bump moves every occurrence together in one PR.
       K3D_VERSION: v5.9.0 # github-releases/k3d-io/k3d
-      ARGOCD_VERSION: v3.5.5 # github-releases/argoproj/argo-cd
+      ARGOCD_VERSION: v3.5.6 # github-releases/argoproj/argo-cd
     steps:
     - name: Checkout code
       uses: actions/checkout@v7
