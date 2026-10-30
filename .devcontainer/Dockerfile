@@ -1,4 +1,4 @@
-ARG NODE_VERSION=24
+ARG NODE_VERSION=26
 FROM node:${NODE_VERSION} AS node
 
 FROM ghcr.io/ivanklee86/devcontainer/go:1.27
