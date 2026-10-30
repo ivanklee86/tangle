@@ -193,7 +193,7 @@ jobs:
       with:
         python-version: '3.15'
     - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.0
+      uses: astral-sh/setup-uv@v10.3.2
     - name: Install Task
       uses: ./.github/actions/setup-task
     - name: Install dependencies
@@ -218,11 +218,11 @@ jobs:
     - name: Run pre-commit hooks via prek
       # web-lint stays skipped here, same as it always was under
       # pre-commit.ci's `ci: skip:` — see .pre-commit-config.yaml's comment.
-      uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204 # v3.0.1
+      uses: j178/prek-action@44924fe9ef4a6f88253c4b6b1bf11c689d3ce53d # v3.1.0
       env:
         SKIP: web-lint
       with:
-        prek-version: v0.5.5
+        prek-version: v0.5.7
 
   e2e:
     # See the go job — pins the check name against the runner label.
