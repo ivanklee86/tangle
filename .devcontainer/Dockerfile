@@ -48,4 +48,4 @@ ENV UV_LINK_MODE=copy
 
 # Go extras not in the central go image
 RUN go install github.com/air-verse/air@v1.67.4 && \
-    go install github.com/go-swagger/go-swagger/cmd/swagger@v0.36.6
+    go install github.com/go-swagger/go-swagger/cmd/swagger@v0.36.7
