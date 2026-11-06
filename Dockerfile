@@ -10,7 +10,7 @@ FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS go
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download -x
-RUN go install github.com/go-swagger/go-swagger/cmd/swagger@v0.36.6
+RUN go install github.com/go-swagger/go-swagger/cmd/swagger@v0.36.7
 COPY . .
 RUN swagger generate spec -o ./internal/tangle/swagger.json --scan-models
 
