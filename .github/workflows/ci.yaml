@@ -222,7 +222,7 @@ jobs:
       env:
         SKIP: web-lint
       with:
-        prek-version: v0.5.9
+        prek-version: v0.5.10
 
   e2e:
     # See the go job — pins the check name against the runner label.
