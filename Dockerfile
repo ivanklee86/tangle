@@ -36,7 +36,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 # image serves, never runs, so the output is identical whichever architecture
 # produced it. Emulating this stage would cost minutes for a byte-identical
 # result.
-FROM --platform=$BUILDPLATFORM node:24-alpine AS node
+FROM --platform=$BUILDPLATFORM node:26-alpine AS node
 
 WORKDIR /app
 COPY ./web .
