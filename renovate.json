@@ -46,9 +46,10 @@
       "groupName": "k8s"
     },
     {
-      "matchManagers": ["dockerfile"],
+      "matchManagers": ["dockerfile", "custom.regex"],
       "matchPackageNames": [
         "rancher/kubectl",
+        "rancher/k3s",
         "alpine/helm",
         "derailed/k9s",
         "quay.io/argoproj/argocd"
@@ -125,6 +126,13 @@
       "matchStrings": ["gateway-api/releases/download/(?<currentValue>v[0-9.]+)/"],
       "datasourceTemplate": "github-releases",
       "depNameTemplate": "kubernetes-sigs/gateway-api"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^k3d-config\\.yaml$/"],
+      "matchStrings": ["image: (?<depName>rancher/k3s):(?<currentValue>\\S+)"],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-k3s(?<build>\\d+)$"
     },
     {
       "customType": "regex",

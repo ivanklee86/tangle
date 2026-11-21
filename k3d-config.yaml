@@ -2,6 +2,9 @@ kind: Simple
 apiVersion: k3d.io/v1alpha5
 servers: 1
 agents: 1
+# Pinned (Renovate tracks it via a regex manager) instead of inheriting k3d's built-in default,
+# which moves whenever k3d is bumped. See docs/adrs/0031-pin-k3s-version.md.
+image: rancher/k3s:v1.37.2-k3s1
 ports:
   - port: 8080:80
     nodeFilters:
@@ -14,6 +17,12 @@ options:
       # k3s's bundled Traefik is disabled in favor of a pinned Traefik Helm install
       # (integration/kubernetes/traefik), matching how the rest of the stack's versions are pinned.
       - arg: --disable=traefik
+        nodeFilters:
+          - server:*
+      # k3s >= 1.37 also bundles a gateway-api-crd add-on. Its helm-controller job races the pinned
+      # Gateway API CRDs that bootstrap:traefik applies (server-side apply conflicts with the "helm"
+      # field manager), so the add-on is disabled and tasks/k8s.yaml stays the only source of the CRDs.
+      - arg: --disable=gateway-api-crd
         nodeFilters:
           - server:*
   kubeconfig:
