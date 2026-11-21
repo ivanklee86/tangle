@@ -13,7 +13,7 @@ changelog:
 homebrew_casks:
   - name: tangle-cli
     homepage: "https://github.com/ivanklee86/tangle"
-    description: "A CLI to configure/clear SyncWindows on ArgoCD projects."
+    description: "CLI for working with multiple Argo CD instances in a hub-and-spoke setup."
     directory: Casks
     binaries:
       - tangle-cli
