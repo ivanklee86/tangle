@@ -287,9 +287,19 @@ func (t *Tangle) applicationManifestsHandler(w http.ResponseWriter, req *http.Re
 	argocdName := chi.URLParam(req, "argocd")
 	applicationName := chi.URLParam(req, "name")
 
+	// An instance name that isn't configured is a 404, not a nil wrapper:
+	// before this check it panicked, which chi's Recoverer turned into a bare
+	// 500 with no body.
+	wrapper, configured := t.ArgoCDs[argocdName]
+	if !configured {
+		t.Log.Error("Unknown ArgoCD instance", "argocd", argocdName, "application", applicationName)
+		t.respondError(w, http.StatusNotFound, fmt.Errorf("no ArgoCD instance named %q is configured", argocdName))
+		return
+	}
+
 	var diffsRequest DiffsRequest
 	if err := json.NewDecoder(req.Body).Decode(&diffsRequest); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		t.respondError(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %w", err))
 		return
 	}
 
@@ -299,7 +309,7 @@ func (t *Tangle) applicationManifestsHandler(w http.ResponseWriter, req *http.Re
 		return
 	}
 
-	generatedManifests, err := t.ArgoCDs[argocdName].GetManifests(req.Context(), argocd.ManifestsRequest{
+	generatedManifests, err := wrapper.GetManifests(req.Context(), argocd.ManifestsRequest{
 		ApplicationName: applicationName,
 		LiveRef:         diffsRequest.LiveRef,
 		TargetRef:       diffsRequest.TargetRef,
