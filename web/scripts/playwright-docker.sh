@@ -8,7 +8,7 @@
 # images, test results and the production build (web/build, as `npm run
 # build` would write it) land in your checkout owned by you. node_modules and
 # .svelte-kit are container-only tmpfs mounts: a container `npm ci` must not
-# replace the host's node_modules, and `svelte-kit sync` must not rewrite the
+# replace the host's node_modules, and the container's build must not rewrite the
 # .svelte-kit/generated files a running `vite dev` reads.
 set -euo pipefail
 

@@ -5,11 +5,17 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 import { playwright } from '@vitest/browser-playwright';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
 	plugins: [
 		tailwindcss(),
 		sveltekit({
 			preprocess: vitePreprocess(),
+			// Vitest runs Vite, and this plugin, in test mode, which writes
+			// .env.test's values (an empty PUBLIC_BASE_URL) into the outDir's
+			// generated env modules. Sharing .svelte-kit with a running `vite dev`
+			// meant a test run pointed the dev server's API calls at itself, so
+			// tests get their own.
+			outDir: mode === 'test' ? '.svelte-kit-vitest' : '.svelte-kit',
 			// SvelteKit 3 replaced $lib with #lib subpath imports; this keeps
 			// $lib working until that migration lands (deprecated, warns on build).
 			// https://github.com/ivanklee86/tangle/issues/258
@@ -51,4 +57,4 @@ export default defineConfig({
 			}
 		]
 	}
-});
+}));
