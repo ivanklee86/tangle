@@ -94,8 +94,13 @@
 						Infer target repo
 					</Toggle>
 					<Helper id={inferHelpId} class="mt-1">
-						With no target repo, an application whose git sources are all in one repo uses that
-						repo.
+						{#if targetRepos.length > 0 && inferTargetRepo}
+							<!-- The server only infers without target repos, so say so rather than imply it adds to them. -->
+							Ignored while target repos are set: they decide which sources get the target ref.
+						{:else}
+							With no target repo, an application whose git sources are all in one repo uses that
+							repo.
+						{/if}
 					</Helper>
 				</div>
 			</div>

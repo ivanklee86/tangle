@@ -374,7 +374,15 @@
 												path or chart muted behind a folder or chart glyph, and
 												the revision in a pill.
 											-->
-											<table class="text-xs">
+											<!-- Fixed widths, so these line up between applications. -->
+											<table class="w-full table-fixed text-xs">
+												<colgroup>
+													<col class="w-8" />
+													<col class="w-16" />
+													<col class="w-[24rem]" />
+													<col class="w-[28rem]" />
+													<col />
+												</colgroup>
 												<caption class="sr-only">Sources of {application.name}</caption>
 												<thead class="sr-only">
 													<tr>
@@ -401,9 +409,9 @@
 																>
 															</td>
 															<td class="py-1 pe-4">
-																<span class="inline-flex items-center gap-2">
+																<span class="flex min-w-0 items-center gap-2">
 																	<span
-																		class="font-mono font-semibold text-gray-900 dark:text-white"
+																		class="truncate font-mono font-semibold text-gray-900 dark:text-white"
 																		title={source.repoURL}>{shortRepo(source.repoURL)}</span
 																	>
 																	{#if source.ref}
@@ -415,17 +423,23 @@
 															<td class="py-1 pe-4">
 																{#if source.chart}
 																	<span
-																		class="inline-flex items-center gap-1 font-mono text-gray-600 dark:text-gray-400"
+																		class="flex min-w-0 items-center gap-1 font-mono text-gray-600 dark:text-gray-400"
 																		title="Chart"
 																	>
-																		<ChartPieOutline class="h-3.5 w-3.5 shrink-0" />{source.chart}
+																		<ChartPieOutline class="h-3.5 w-3.5 shrink-0" /><span
+																			class="truncate"
+																			title={source.chart}>{source.chart}</span
+																		>
 																	</span>
 																{:else if source.path}
 																	<span
-																		class="inline-flex items-center gap-1 font-mono text-gray-600 dark:text-gray-400"
+																		class="flex min-w-0 items-center gap-1 font-mono text-gray-600 dark:text-gray-400"
 																		title="Path"
 																	>
-																		<FolderOutline class="h-3.5 w-3.5 shrink-0" />{source.path}
+																		<FolderOutline class="h-3.5 w-3.5 shrink-0" /><span
+																			class="truncate"
+																			title={source.path}>{source.path}</span
+																		>
 																	</span>
 																{/if}
 															</td>

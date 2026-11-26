@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { Badge } from 'flowbite-svelte';
-	import { ChevronDownOutline } from 'flowbite-svelte-icons';
+	import { ChartPieOutline, ChevronDownOutline, FolderOutline } from 'flowbite-svelte-icons';
 	import { type DiffSource } from '$lib/backend/data';
 	import { shortRepo, shortRevision } from '$lib/ui/repos';
+	import RevisionPill from './RevisionPill.svelte';
 
 	interface Props {
 		sources: DiffSource[];
@@ -55,51 +56,50 @@
 							: ''}"
 					>
 						<td class="px-4 py-2 font-mono text-gray-500 dark:text-gray-400">{source.position}</td>
+						<!-- The same look as the Applications page's source rows. -->
 						<td class="px-4 py-2">
-							<div class="flex flex-wrap items-center gap-1.5">
+							<div class="flex flex-wrap items-center gap-2">
 								<Badge color="gray">{kindLabels[source.kind] ?? source.kind}</Badge>
-								<span class="font-mono text-gray-900 dark:text-white" title={source.repoURL}
-									>{shortRepo(source.repoURL)}</span
+								<span
+									class="font-mono font-semibold text-gray-900 dark:text-white"
+									title={source.repoURL}>{shortRepo(source.repoURL)}</span
 								>
 								{#if source.ref}
-									<Badge color="gray" class="font-mono">ref: {source.ref}</Badge>
+									<Badge color="indigo" class="font-mono">ref: {source.ref}</Badge>
 								{/if}
 							</div>
 							{#if source.chart}
-								<div class="mt-1 text-gray-500 dark:text-gray-400">
-									Chart <span class="font-mono text-gray-700 dark:text-gray-300"
-										>{source.chart}</span
-									>
+								<div
+									class="mt-1 inline-flex items-center gap-1 font-mono text-xs text-gray-600 dark:text-gray-400"
+									title="Chart"
+								>
+									<ChartPieOutline class="h-3.5 w-3.5 shrink-0" />{source.chart}
 								</div>
 							{:else if source.path}
-								<div class="mt-1 text-gray-500 dark:text-gray-400">
-									Path <span class="font-mono text-gray-700 dark:text-gray-300">{source.path}</span>
+								<div
+									class="mt-1 inline-flex items-center gap-1 font-mono text-xs text-gray-600 dark:text-gray-400"
+									title="Path"
+								>
+									<FolderOutline class="h-3.5 w-3.5 shrink-0" />{source.path}
 								</div>
 							{/if}
 						</td>
-						<td class="px-4 py-2 font-mono" title={source.liveRevision}>
-							{shortRevision(source.liveRevision)}
+						<td class="px-4 py-2">
+							<RevisionPill revision={source.liveRevision} kind={source.kind} />
 						</td>
 						<td class="px-4 py-2">
 							{#if !rendered}
 								<span class="text-gray-500 dark:text-gray-400">Not rendered</span>
 							{:else if source.moved}
-								<span
-									class="font-mono font-semibold text-gray-900 dark:text-white"
-									title={source.targetRevision}>{shortRevision(source.targetRevision)}</span
-								>
+								<RevisionPill revision={source.targetRevision} kind={source.kind} />
 								<!-- D9: where it moved from, whatever kind of revision that was. -->
-								<div class="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
+								<div class="mt-1 text-xs text-gray-600 dark:text-gray-400">
 									moved from <span class="font-mono" title={source.liveRevision}
 										>{shortRevision(source.liveRevision)}</span
 									>
 								</div>
 							{:else}
-								<span
-									class="font-mono text-gray-500 dark:text-gray-400"
-									title={source.targetRevision}>{shortRevision(source.targetRevision)}</span
-								>
-								<span class="text-xs text-gray-500 dark:text-gray-400">· unchanged</span>
+								<span class="text-xs text-gray-500 dark:text-gray-400">unchanged</span>
 							{/if}
 						</td>
 					</tr>

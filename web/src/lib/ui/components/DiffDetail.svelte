@@ -31,6 +31,13 @@
 
 	let { row, targetRef, targetRepos = [], onReload, onAddTargetRepos }: Props = $props();
 
+	// Explicit colours: Flowbite's alerts render as a light block in dark mode,
+	// with text that is hard to read in either theme.
+	const WARNING_ALERT =
+		'border-yellow-400 bg-yellow-50 text-yellow-900 dark:border-yellow-600 dark:bg-gray-800 dark:text-yellow-200';
+	const ERROR_ALERT =
+		'border-red-400 bg-red-50 text-red-900 dark:border-red-700 dark:bg-gray-800 dark:text-red-300';
+
 	let response = $derived(row.diff?.response);
 	let sources = $derived(response?.sources ?? []);
 	let candidates = $derived(response?.candidateRepos ?? []);
@@ -95,15 +102,19 @@
 				the ref belongs to. The fix is one action, and it changes the whole
 				query, because a target repo applies to every application (D8).
 			-->
-			<Alert color="yellow" border>
+			<Alert color="yellow" border class={WARNING_ALERT}>
 				<span class="font-medium">Which repo is <span class="font-mono">{targetRef}</span> in?</span
 				>
 				<p class="mt-2 text-sm">
-					{#if candidates.length > 0}
-						This application has sources in {candidates.length === 1
-							? 'one repo'
-							: `${candidates.length} repos`}, and the query doesn't say which one the target ref
-						belongs to, so nothing was rendered. CI fails on this until a target repo is given.
+					{#if candidates.length === 1}
+						Its git sources are all in <span class="font-mono" title={candidates[0]}
+							>{shortRepo(candidates[0])}</span
+						>, but the query has no target repo, so nothing was rendered. Add it below, or turn on
+						Infer target repo. CI fails on this until one of them is set.
+					{:else if candidates.length > 1}
+						This application has sources in {candidates.length} repos, and the query doesn't say which
+						one the target ref belongs to, so nothing was rendered. CI fails on this until a target repo
+						is given.
 					{:else}
 						This application has several sources and none of them is a git repo, so a git ref can't
 						apply to it.
@@ -117,7 +128,7 @@
 							<label class="flex items-center gap-2 text-sm">
 								<input
 									type="checkbox"
-									class="h-4 w-4 rounded"
+									class="text-primary-600 h-4 w-4 rounded"
 									value={candidate}
 									bind:group={picked}
 								/>
@@ -169,7 +180,7 @@
 				{/if}
 			</div>
 		{:else if row.diff && row.diff.response.manifestGenerationError.length > 0}
-			<Alert color="red" border>
+			<Alert color="red" border class={ERROR_ALERT}>
 				<span class="font-medium">Couldn't generate manifests</span>
 				<p class="mt-2 text-sm">{row.diff.response.manifestGenerationError}</p>
 			</Alert>
