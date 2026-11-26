@@ -120,7 +120,7 @@ func TestFakeWrapper_GetManifests(t *testing.T) {
 				wrapper.ErrOnGetManifests = tt.errOnGetManifests
 			}
 
-			got, err := wrapper.GetManifests(context.Background(), tt.appName, "main", "test_gitops")
+			got, err := wrapper.GetManifests(context.Background(), argocd.ManifestsRequest{ApplicationName: tt.appName, LiveRef: "main", TargetRef: "test_gitops"})
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -128,7 +128,11 @@ func TestFakeWrapper_GetManifests(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, &fakeManifestsResponse, got)
+			// A fixture with no plan reads as an OK diff, so handler tests
+			// needn't spell one out.
+			want := fakeManifestsResponse
+			want.Plan.Status = argocd.DiffStatusOK
+			assert.Equal(t, &want, got)
 		})
 	}
 }

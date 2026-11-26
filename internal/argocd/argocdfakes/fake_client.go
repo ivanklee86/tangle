@@ -52,6 +52,34 @@ type FakeClient struct {
 	// ErrOnGetManifests, keyed by application name, is returned by
 	// GetApplicationManifests for that name.
 	ErrOnGetManifests map[string]error
+
+	// ManifestsFunc, if set, answers every GetApplicationManifests call that
+	// ErrOnGetManifests doesn't, in place of ManifestsByApp. Use it when the
+	// live and target sides must differ, by looking at the query's revisions.
+	ManifestsFunc func(*application.ApplicationManifestQuery) (*repoServerApiClient.ManifestResponse, error)
+
+	// GetQueries and ManifestQueries record every Get and
+	// GetApplicationManifests call, in order, so tests can assert on exactly
+	// what reached ArgoCD. Guarded by callMu: both run on worker pools.
+	callMu          sync.Mutex
+	GetQueries      []*application.ApplicationQuery
+	ManifestQueries []*application.ApplicationManifestQuery
+}
+
+// RecordedGets returns a copy of the Get queries seen so far.
+func (f *FakeClient) RecordedGets() []*application.ApplicationQuery {
+	f.callMu.Lock()
+	defer f.callMu.Unlock()
+
+	return append([]*application.ApplicationQuery(nil), f.GetQueries...)
+}
+
+// RecordedManifestQueries returns a copy of the manifest queries seen so far.
+func (f *FakeClient) RecordedManifestQueries() []*application.ApplicationManifestQuery {
+	f.callMu.Lock()
+	defer f.callMu.Unlock()
+
+	return append([]*application.ApplicationManifestQuery(nil), f.ManifestQueries...)
 }
 
 // NewFakeClient returns a FakeClient seeded with apps and ready to use.
@@ -128,6 +156,10 @@ func (f *FakeClient) Get(_ context.Context, in *application.ApplicationQuery) (*
 		return nil, fmt.Errorf("argocdfakes: Get requires a query with Name set")
 	}
 
+	f.callMu.Lock()
+	f.GetQueries = append(f.GetQueries, in)
+	f.callMu.Unlock()
+
 	if err, ok := f.ErrOnGet[*in.Name]; ok {
 		return nil, err
 	}
@@ -147,8 +179,16 @@ func (f *FakeClient) GetApplicationManifests(_ context.Context, in *application.
 		return nil, fmt.Errorf("argocdfakes: GetApplicationManifests requires a query with Name set")
 	}
 
+	f.callMu.Lock()
+	f.ManifestQueries = append(f.ManifestQueries, in)
+	f.callMu.Unlock()
+
 	if err, ok := f.ErrOnGetManifests[*in.Name]; ok {
 		return nil, err
+	}
+
+	if f.ManifestsFunc != nil {
+		return f.ManifestsFunc(in)
 	}
 
 	manifests, ok := f.ManifestsByApp[*in.Name]

@@ -17,7 +17,7 @@ const (
 
 type IArgoCDWrapper interface {
 	ListApplicationsByLabels(ctx context.Context, labels map[string]string, excludeLabels map[string]string) ([]ListApplicationsResult, error)
-	GetManifests(ctx context.Context, applicationName string, liveRef string, targetRef string) (*GetManifestsResponse, error)
+	GetManifests(ctx context.Context, request ManifestsRequest) (*GetManifestsResponse, error)
 	GetUrl() string
 	GetScheme() string
 	// Close releases the underlying ArgoCD connection.
@@ -39,9 +39,28 @@ type ArgoCDWrapper struct {
 	ApplicationClient   IArgoCDClient
 }
 
+// ManifestsRequest asks for both sides of one Application's diff.
+type ManifestsRequest struct {
+	ApplicationName string
+	// LiveRef is the revision a single-source Application renders on the live
+	// side, as the caller read it from the applications list. Multi-source
+	// Applications ignore it and use each source's own targetRevision.
+	LiveRef   string
+	TargetRef string
+	// TargetRepos and InferTargetRepo choose which sources get TargetRef
+	// (ADR 0032). Both empty behaves as Tangle always has for a
+	// single-source Application.
+	TargetRepos     []string
+	InferTargetRepo bool
+}
+
 type GetManifestsResponse struct {
 	LiveManifests   []string
 	TargetManifests []string
+	// Plan is how each side was, or would have been, rendered. When
+	// Plan.Status isn't DiffStatusOK, nothing was rendered and both manifest
+	// lists are empty.
+	Plan RevisionPlan
 }
 
 func New(client IArgoCDClient, argoCDName string, options *ArgoCDWrapperOptions) (IArgoCDWrapper, error) {
@@ -135,6 +154,7 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map
 				Health:       app.Status.Health,
 				SyncStatus:   app.Status.Sync,
 				LiveRevision: liveRevision,
+				Sources:      SourcesOf(&app),
 			})
 		}
 
@@ -154,7 +174,28 @@ func (a *ArgoCDWrapper) ListApplicationsByLabels(ctx context.Context, labels map
 	return apps, nil
 }
 
-func (a *ArgoCDWrapper) GetManifests(ctx context.Context, applicationName string, liveRef string, targetRef string) (*GetManifestsResponse, error) {
+func (a *ArgoCDWrapper) GetManifests(ctx context.Context, request ManifestsRequest) (*GetManifestsResponse, error) {
+	applicationName := request.ApplicationName
+
+	// Plan from a plain read first. An Application the target repos don't
+	// touch, or one that needs a target repo, is answered without the hard
+	// refresh below, which is the expensive call: in CI with --target-repo
+	// most Applications are usually in the first group.
+	app, err := a.ApplicationClient.Get(ctx, &application.ApplicationQuery{Name: &applicationName})
+	if err != nil {
+		return nil, err
+	}
+
+	plan := PlanRevisions(SourcesOf(app), request.TargetRef, request.TargetRepos, request.InferTargetRepo)
+	if !plan.MultiSource && len(plan.Sources) == 1 && plan.Status == DiffStatusOK {
+		// What a single-source Application renders on the live side has
+		// always been the caller's liveRef, so report that.
+		plan.Sources[0].LiveRevision = request.LiveRef
+	}
+	if plan.Status != DiffStatusOK {
+		return &GetManifestsResponse{Plan: plan}, nil
+	}
+
 	refreshGroup := a.HardRefreshPool.NewGroup()
 	refreshGroup.SubmitErr(func() error {
 		// This is the one call Tangle makes that isn't a pure read: ArgoCD
@@ -169,20 +210,15 @@ func (a *ArgoCDWrapper) GetManifests(ctx context.Context, applicationName string
 		_, err := a.ApplicationClient.Get(ctx, &application.ApplicationQuery{Name: &applicationName, Refresh: &refresh})
 		return err
 	})
-	err := refreshGroup.Wait()
+	err = refreshGroup.Wait()
 	if err != nil {
 		return nil, err
 	}
 
 	group := a.ManifestsWorkerPool.NewGroup()
-	for _, ref := range []string{liveRef, targetRef} {
+	for _, query := range manifestQueries(applicationName, request, plan) {
 		group.SubmitErr(func() ([]string, error) {
-			manifestsQuery := &application.ApplicationManifestQuery{
-				Name:     &applicationName,
-				Revision: &ref,
-			}
-
-			manifestsResp, err := a.ApplicationClient.GetApplicationManifests(ctx, manifestsQuery)
+			manifestsResp, err := a.ApplicationClient.GetApplicationManifests(ctx, query)
 			if err != nil {
 				return nil, err
 			}
@@ -196,9 +232,31 @@ func (a *ArgoCDWrapper) GetManifests(ctx context.Context, applicationName string
 		return nil, err
 	}
 
-	response := GetManifestsResponse{LiveManifests: poolResults[0], TargetManifests: poolResults[1]}
+	response := GetManifestsResponse{LiveManifests: poolResults[0], TargetManifests: poolResults[1], Plan: plan}
 
 	return &response, nil
+}
+
+// manifestQueries builds the live and target queries, in that order.
+//
+// A single-source Application sends Revision, exactly as Tangle always has. A
+// multi-source one sends Revisions with every SourcePosition on both sides:
+// ArgoCD ignores Revision for it, and an explicit render differs from a
+// default one (Helm test hooks, dropped namespaces, reordering), so both sides
+// have to be rendered the same way for those differences to cancel out.
+func manifestQueries(applicationName string, request ManifestsRequest, plan RevisionPlan) []*application.ApplicationManifestQuery {
+	if !plan.MultiSource {
+		live, target := request.LiveRef, request.TargetRef
+		return []*application.ApplicationManifestQuery{
+			{Name: &applicationName, Revision: &live},
+			{Name: &applicationName, Revision: &target},
+		}
+	}
+
+	return []*application.ApplicationManifestQuery{
+		{Name: &applicationName, Revisions: plan.LiveRevisions(), SourcePositions: plan.Positions()},
+		{Name: &applicationName, Revisions: plan.TargetRevisions(), SourcePositions: plan.Positions()},
+	}
 }
 
 func (a *ArgoCDWrapper) GetUrl() string {

@@ -281,13 +281,10 @@ func TestE2E_ServerSourceFixtures(t *testing.T) {
 		assert.Empty(t, result.Diffs)
 	})
 
-	// Each multi-source fixture has a real change on test_gitops, but Tangle
-	// sends the pushed ref as Revision, which ArgoCD ignores for a
-	// multi-source app (see TestE2E_SourceFixtures), so today every one of
-	// these comes back as an empty diff. That's the gap in
-	// docs/agents/plans/integration-manifests-repo.md, not behavior to keep,
-	// so these assert the change and stay skipped until Tangle sends
-	// Revisions and SourcePositions.
+	// Each multi-source fixture has a real change on test_gitops, in
+	// tangle-integration-manifests. With that repo as the target repo, only
+	// its sources move (ADR 0032), and both sides are rendered with explicit
+	// Revisions, so the diff is exactly the pushed change.
 	multiSource := []struct {
 		app            string
 		added, removed []string
@@ -298,24 +295,51 @@ func TestE2E_ServerSourceFixtures(t *testing.T) {
 	}
 	for _, test := range multiSource {
 		t.Run(test.app, func(t *testing.T) {
-			t.Skip("known gap: Tangle doesn't send Revisions/SourcePositions for multi-source apps yet")
+			result := postDiffsRequest(t, server.URL, test.app, DiffsRequest{TargetRef: "test_gitops", TargetRepos: []string{fixtureManifestsRepo}})
 
-			result := postDiffs(t, server.URL, test.app, findApplication(t, sources, test.app).LiveRef, "test_gitops")
-
-			// Contains rather than an exact match: rendered by hand with
-			// argocd (2026-11-26), a multi-source app's render at explicit
-			// Revisions also differs from its default render in ways the
-			// pushed change didn't cause (Helm test hooks appear, namespace
-			// is dropped, resources reorder). Whoever closes the gap should
-			// decide whether Tangle renders both sides with Revisions to
-			// avoid that, and tighten these to exact matches if so.
+			assert.Equal(t, "ok", result.Status)
 			assert.Empty(t, result.ManifestGenerationError)
 			added, removed := changedLines(result.Diffs)
-			assert.Subset(t, added, test.added)
-			assert.Subset(t, removed, test.removed)
+			assert.ElementsMatch(t, test.added, added)
+			assert.ElementsMatch(t, test.removed, removed)
 		})
 	}
+
+	t.Run("multi_source_needs_target_repo", func(t *testing.T) {
+		// two-repos spans podinfo and the manifests repo, so without a
+		// target repo Tangle won't guess, even with inference on.
+		result := postDiffsRequest(t, server.URL, "two-repos", DiffsRequest{TargetRef: "test_gitops", InferTargetRepo: true})
+
+		assert.Equal(t, "needsTargetRepo", result.Status)
+		assert.Equal(t, []string{"github.com/stefanprodan/podinfo", "github.com/ivanklee86/tangle-integration-manifests"}, result.CandidateRepos)
+		assert.Contains(t, result.ManifestGenerationError, "needs target repo")
+		assert.Empty(t, result.Diffs)
+	})
+
+	t.Run("multi_source_inferred", func(t *testing.T) {
+		// helm-repo-git-values' only git source is the manifests repo.
+		result := postDiffsRequest(t, server.URL, "helm-repo-git-values", DiffsRequest{TargetRef: "test_gitops", InferTargetRepo: true})
+
+		assert.Equal(t, "ok", result.Status)
+		assert.True(t, result.InferredTargetRepo)
+		added, removed := changedLines(result.Diffs)
+		assert.ElementsMatch(t, []string{"replicas: 2"}, added)
+		assert.ElementsMatch(t, []string{"replicas: 1"}, removed)
+	})
+
+	t.Run("not_affected", func(t *testing.T) {
+		// tanka has no source in podinfo's repo.
+		result := postDiffsRequest(t, server.URL, "tanka", DiffsRequest{LiveRef: "main", TargetRef: "test_gitops", TargetRepos: []string{"https://github.com/stefanprodan/podinfo"}})
+
+		assert.Equal(t, "notAffected", result.Status)
+		assert.Empty(t, result.ManifestGenerationError)
+		assert.Empty(t, result.Diffs)
+	})
 }
+
+// fixtureManifestsRepo is the repo the source-type fixtures' test_gitops
+// change is in, spelled without .git to show any spelling matches.
+const fixtureManifestsRepo = "https://github.com/ivanklee86/tangle-integration-manifests"
 
 // listApplications returns each ArgoCD's applications for a query string.
 func listApplications(t *testing.T, serverURL string, query string) map[string][]ApplicationLinks {
@@ -363,7 +387,14 @@ func findApplication(t *testing.T, applications []ApplicationLinks, name string)
 func postDiffs(t *testing.T, serverURL string, app string, liveRef string, targetRef string) DiffsResponse {
 	t.Helper()
 
-	requestBody, err := json.Marshal(DiffsRequest{LiveRef: liveRef, TargetRef: targetRef})
+	return postDiffsRequest(t, serverURL, app, DiffsRequest{LiveRef: liveRef, TargetRef: targetRef})
+}
+
+// postDiffsRequest sends a whole diffs request to the sources ArgoCD.
+func postDiffsRequest(t *testing.T, serverURL string, app string, request DiffsRequest) DiffsResponse {
+	t.Helper()
+
+	requestBody, err := json.Marshal(request)
 	require.NoError(t, err)
 
 	resp, err := http.Post(serverURL+"/api/argocd/sources/applications/"+app+"/diffs", "application/json", bytes.NewBuffer(requestBody))

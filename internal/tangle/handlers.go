@@ -2,12 +2,24 @@ package tangle
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	"github.com/ivanklee86/tangle/internal/argocd"
 )
+
+// diffsTotal counts diff requests by outcome, so a rise in applications that
+// need a target repo, or a spike in errors, shows up on a dashboard.
+var diffsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "tangle_diffs_total",
+	Help: "Diff requests by ArgoCD and outcome (ok, notAffected, needsTargetRepo, error).",
+}, []string{"argocd", "status"})
 
 type ApplicationLinks struct {
 	Name       string `json:"name"`
@@ -20,6 +32,36 @@ type ApplicationLinks struct {
 	// frontend read was always undefined — invisible until a column actually
 	// displayed it.
 	LiveRef string `json:"liveRef"`
+	// Every source of the application, in ArgoCD's order: one for a
+	// single-source application.
+	Sources []ApplicationSource `json:"sources"`
+}
+
+// ApplicationSource is one entry of an application's sources.
+type ApplicationSource struct {
+	Position       int64  `json:"position"`
+	Kind           string `json:"kind"`
+	RepoURL        string `json:"repoURL"`
+	Path           string `json:"path,omitempty"`
+	Chart          string `json:"chart,omitempty"`
+	Ref            string `json:"ref,omitempty"`
+	TargetRevision string `json:"targetRevision"`
+}
+
+func applicationSources(sources []argocd.Source) []ApplicationSource {
+	result := make([]ApplicationSource, 0, len(sources))
+	for _, source := range sources {
+		result = append(result, ApplicationSource{
+			Position:       source.Position,
+			Kind:           string(source.Kind),
+			RepoURL:        source.RepoURL,
+			Path:           source.Path,
+			Chart:          source.Chart,
+			Ref:            source.Ref,
+			TargetRevision: source.TargetRevision,
+		})
+	}
+	return result
 }
 
 type ArgoCDApplicationResults struct {
@@ -56,10 +98,44 @@ type DiffsRequest struct {
 	// example: main
 	LiveRef string `json:"liveRef"`
 
-	// Target git ref to compare to
+	// Target ref to compare to: a branch, a tag or a commit SHA.
 	// required: true
 	// example: feature-branch
 	TargetRef string `json:"targetRef"`
+
+	// Repos the target ref belongs to. The ref goes to every source in any of
+	// them, and every other source stays at its own targetRevision. Any
+	// spelling of a repo URL matches (https, ssh, with or without .git).
+	// Leave it out to diff single-source applications as before.
+	// example: ["https://github.com/org/values.git"]
+	TargetRepos []string `json:"targetRepos,omitempty"`
+
+	// With no targetRepos, let a multi-source application whose git sources
+	// are all in one repo use that repo.
+	InferTargetRepo bool `json:"inferTargetRepo,omitempty"`
+}
+
+// Diff statuses, beyond the ones argocd.DiffStatus plans.
+const (
+	diffStatusError = "error"
+)
+
+// DiffSource is one source of the application, with the revision each side of
+// the diff used.
+type DiffSource struct {
+	// 1-based source position, as ArgoCD counts them.
+	Position int64 `json:"position"`
+	// git, helm or oci.
+	Kind    string `json:"kind"`
+	RepoURL string `json:"repoURL"`
+	Path    string `json:"path,omitempty"`
+	Chart   string `json:"chart,omitempty"`
+	Ref     string `json:"ref,omitempty"`
+	// The revision the live side used.
+	LiveRevision string `json:"liveRevision"`
+	// The revision the target side used: the target ref when moved is true.
+	TargetRevision string `json:"targetRevision"`
+	Moved          bool   `json:"moved"`
 }
 
 type DiffsResponse struct {
@@ -67,6 +143,21 @@ type DiffsResponse struct {
 	TargetManifests         string `json:"targetManifests"`
 	Diffs                   string `json:"diffs"`
 	ManifestGenerationError string `json:"manifestGenerationError"`
+
+	// ok, notAffected (target repos were given and none of the sources use
+	// them, so nothing was rendered), needsTargetRepo (the application has
+	// several sources and the request didn't say which repo the target ref
+	// belongs to; manifestGenerationError says so too) or error.
+	Status string `json:"status"`
+	// The application's sources and the revision each side used.
+	Sources []DiffSource `json:"sources,omitempty"`
+	// The normalized repos the target ref went to.
+	TargetRepos []string `json:"targetRepos,omitempty"`
+	// True when targetRepos was inferred rather than given.
+	InferredTargetRepo bool `json:"inferredTargetRepo,omitempty"`
+	// For needsTargetRepo: the application's git repos, normalized, in
+	// source order.
+	CandidateRepos []string `json:"candidateRepos,omitempty"`
 }
 
 func (t *Tangle) sortResults(apiResults []ArgoCDApplicationResults) []ArgoCDApplicationResults {
@@ -170,6 +261,7 @@ func (t *Tangle) applicationsHandler(w http.ResponseWriter, req *http.Request) {
 				Health:     string(queryResult.Health.Status),
 				SyncStatus: string(queryResult.SyncStatus.Status),
 				LiveRef:    queryResult.LiveRevision,
+				Sources:    applicationSources(queryResult.Sources),
 			})
 		}
 
@@ -196,31 +288,115 @@ func (t *Tangle) applicationManifestsHandler(w http.ResponseWriter, req *http.Re
 		return
 	}
 
-	generatedManifests, err := t.ArgoCDs[argocdName].GetManifests(req.Context(), applicationName, diffsRequest.LiveRef, diffsRequest.TargetRef)
-	if err != nil {
-		t.Log.Error("Failed to get manifests", "argocd", argocdName, "error", err)
-		response := DiffsResponse{
-			ManifestGenerationError: err.Error(),
-		}
-		err = json.NewEncoder(w).Encode(response)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+	if err := validateTargetRepos(diffsRequest.TargetRepos); err != nil {
+		t.Log.Error("Invalid target repos", "argocd", argocdName, "application", applicationName, "error", err)
+		t.respondError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	live, _ := assembleManifests(generatedManifests.LiveManifests)
-	target, _ := assembleManifests(generatedManifests.TargetManifests)
-	diff, _ := diffManifests(*live, *target)
-	response := DiffsResponse{
-		LiveManifests:   *live,
-		TargetManifests: *target,
-		Diffs:           *diff,
+	generatedManifests, err := t.ArgoCDs[argocdName].GetManifests(req.Context(), argocd.ManifestsRequest{
+		ApplicationName: applicationName,
+		LiveRef:         diffsRequest.LiveRef,
+		TargetRef:       diffsRequest.TargetRef,
+		TargetRepos:     diffsRequest.TargetRepos,
+		InferTargetRepo: diffsRequest.InferTargetRepo,
+	})
+	if err != nil {
+		t.Log.Error("Failed to get manifests", "argocd", argocdName, "application", applicationName, "error", err)
+		diffsTotal.WithLabelValues(argocdName, diffStatusError).Inc()
+		t.writeDiffsResponse(w, DiffsResponse{
+			ManifestGenerationError: err.Error(),
+			Status:                  diffStatusError,
+		})
+		return
 	}
 
-	err = json.NewEncoder(w).Encode(response)
-	if err != nil {
+	plan := generatedManifests.Plan
+	t.Log.Info("Planned diff",
+		"argocd", argocdName,
+		"application", applicationName,
+		"status", plan.Status,
+		"multiSource", plan.MultiSource,
+		"targetRepos", plan.TargetRepos,
+		"inferredTargetRepo", plan.Inferred,
+		"positions", plan.Positions(),
+		"liveRevisions", plan.LiveRevisions(),
+		"targetRevisions", plan.TargetRevisions(),
+	)
+	diffsTotal.WithLabelValues(argocdName, string(plan.Status)).Inc()
+
+	response := DiffsResponse{
+		Status:             string(plan.Status),
+		Sources:            diffSources(plan),
+		TargetRepos:        plan.TargetRepos,
+		InferredTargetRepo: plan.Inferred,
+		CandidateRepos:     plan.CandidateRepos,
+	}
+
+	switch plan.Status {
+	case argocd.DiffStatusNeedsTargetRepo:
+		// Also an error, so a CLI that predates the status field still fails
+		// under --fail-on-error (ADR 0032) instead of passing on an empty diff.
+		response.ManifestGenerationError = needsTargetRepoMessage(applicationName, plan.CandidateRepos)
+	case argocd.DiffStatusOK:
+		live, _ := assembleManifests(generatedManifests.LiveManifests)
+		target, _ := assembleManifests(generatedManifests.TargetManifests)
+		diff, _ := diffManifests(*live, *target)
+		response.LiveManifests = *live
+		response.TargetManifests = *target
+		response.Diffs = *diff
+	}
+
+	t.writeDiffsResponse(w, response)
+}
+
+func (t *Tangle) writeDiffsResponse(w http.ResponseWriter, response DiffsResponse) {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
 
+// validateTargetRepos rejects a blank entry. Dropping it would quietly turn
+// `--target-repo ""` into "no target repos", which changes what every
+// multi-source application reports.
+func validateTargetRepos(repos []string) error {
+	for _, repo := range repos {
+		if strings.TrimSpace(repo) == "" {
+			return errors.New("targetRepos: entries must not be blank")
+		}
+	}
+	return nil
+}
+
+func needsTargetRepoMessage(applicationName string, candidates []string) string {
+	switch len(candidates) {
+	case 0:
+		return fmt.Sprintf("needs target repo: %s has several sources and none of them is a git repo a git ref could apply to", applicationName)
+	case 1:
+		return fmt.Sprintf("needs target repo: %s has several sources, with its git sources in %s. Pass that repo with --target-repo (targetRepos in the API), or turn on --infer-target-repo", applicationName, candidates[0])
+	default:
+		return fmt.Sprintf("needs target repo: %s has git sources in %d repos (%s). Pass the one the target ref belongs to with --target-repo (targetRepos in the API)", applicationName, len(candidates), strings.Join(candidates, ", "))
+	}
+}
+
+func diffSources(plan argocd.RevisionPlan) []DiffSource {
+	if len(plan.Sources) == 0 {
+		return nil
+	}
+
+	sources := make([]DiffSource, 0, len(plan.Sources))
+	for _, source := range plan.Sources {
+		sources = append(sources, DiffSource{
+			Position:       source.Position,
+			Kind:           string(source.Kind),
+			RepoURL:        source.RepoURL,
+			Path:           source.Path,
+			Chart:          source.Chart,
+			Ref:            source.Ref,
+			LiveRevision:   source.LiveRevision,
+			TargetRevision: source.TargetRevision,
+			Moved:          source.Moved,
+		})
+	}
+	return sources
 }

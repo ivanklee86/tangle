@@ -73,7 +73,9 @@ func NewGenerateManifests(tanglecli *cli.TangleCLI) *cobra.Command {
 	cmd.PersistentFlags().StringSliceVar(&tanglecli.LabelsAsStrings, "label", []string{}, "Labels to filter projects on in format 'key=value'.  Can be used multiple times.")
 	cmd.PersistentFlags().StringSliceVar(&tanglecli.ExcludeLabelsAsStrings, "exclude-label", []string{}, "Labels to exclude projects on in format 'key=value'.  Can be used multiple times.")
 	cmd.PersistentFlags().StringVar(&tanglecli.Folder, "folder", "", "Folder to generate manifests in.  Defaults to current folder.")
-	cmd.PersistentFlags().StringVar(&tanglecli.TargetRef, "target-ref", "", "Git refernce to generate manifests.")
+	cmd.PersistentFlags().StringVar(&tanglecli.TargetRef, "target-ref", "", "Git reference to generate manifests at: a branch, a tag or a commit SHA.")
+	cmd.PersistentFlags().StringArrayVar(&tanglecli.TargetRepos, "target-repo", []string{}, "Repo the target ref belongs to. Sources in it get the target ref, every other source stays at its live revision, and applications with no source in it are not affected.  Can be used multiple times.")
+	cmd.PersistentFlags().BoolVar(&tanglecli.InferTargetRepo, "infer-target-repo", false, "With no --target-repo, let a multi-source application whose git sources are all in one repo use that repo.")
 	cmd.PersistentFlags().BoolVar(&tanglecli.FailOnErrors, "fail-on-error", false, "Fail command if errors are found.")
 	cmd.PersistentFlags().IntVar(&tanglecli.Retries, "retries", 0, "Number of retried for failed calls.  Must be between 0 (no retries) and 5.")
 

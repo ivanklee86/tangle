@@ -3,6 +3,7 @@ package argocdfakes
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/argoproj/argo-cd/v3/pkg/apis/application/v1alpha1"
 
@@ -23,6 +24,7 @@ type FakeApplication struct {
 	Health       v1alpha1.AppHealthStatus
 	SyncStatus   v1alpha1.SyncStatus
 	LiveRevision string
+	Sources      []argocd.Source
 }
 
 // FakeWrapper is an in-memory argocd.IArgoCDWrapper backed by a fixed list
@@ -48,6 +50,11 @@ type FakeWrapper struct {
 	// ErrOnGetManifests, keyed by application name, is returned by
 	// GetManifests for that name.
 	ErrOnGetManifests map[string]error
+
+	// requests records every GetManifests request, in arrival order. Guarded
+	// by requestsMu: the CLI sends its diff requests concurrently.
+	requestsMu sync.Mutex
+	requests   []argocd.ManifestsRequest
 }
 
 // NewFakeWrapper returns a FakeWrapper seeded with apps and ready to use.
@@ -79,20 +86,34 @@ func (f *FakeWrapper) ListApplicationsByLabels(_ context.Context, includeLabels 
 			Health:       app.Health,
 			SyncStatus:   app.SyncStatus,
 			LiveRevision: app.LiveRevision,
+			Sources:      app.Sources,
 		})
 	}
 
 	return results, nil
 }
 
-func (f *FakeWrapper) GetManifests(_ context.Context, applicationName string, _ string, _ string) (*argocd.GetManifestsResponse, error) {
-	if err, ok := f.ErrOnGetManifests[applicationName]; ok {
+// GetManifests returns the canned response for the application. It doesn't
+// plan revisions: a fixture with no Plan reports an OK single-source diff. Tests
+// of revision planning use a real argocd.ArgoCDWrapper over FakeClient.
+func (f *FakeWrapper) GetManifests(_ context.Context, request argocd.ManifestsRequest) (*argocd.GetManifestsResponse, error) {
+	f.requestsMu.Lock()
+	f.requests = append(f.requests, request)
+	f.requestsMu.Unlock()
+
+	if err, ok := f.ErrOnGetManifests[request.ApplicationName]; ok {
 		return nil, err
 	}
 
-	manifests, ok := f.ManifestsByApp[applicationName]
+	manifests, ok := f.ManifestsByApp[request.ApplicationName]
 	if !ok {
-		return nil, fmt.Errorf("argocdfakes: no manifests fixture for application %q", applicationName)
+		return nil, fmt.Errorf("argocdfakes: no manifests fixture for application %q", request.ApplicationName)
+	}
+
+	if manifests.Plan.Status == "" {
+		withPlan := *manifests
+		withPlan.Plan.Status = argocd.DiffStatusOK
+		return &withPlan, nil
 	}
 
 	return manifests, nil
@@ -140,4 +161,12 @@ var _ argocd.IArgoCDWrapper = (*FakeWrapper)(nil)
 // so there's nothing to release.
 func (f *FakeWrapper) Close() error {
 	return nil
+}
+
+// Requests returns a copy of the GetManifests requests seen so far.
+func (f *FakeWrapper) Requests() []argocd.ManifestsRequest {
+	f.requestsMu.Lock()
+	defer f.requestsMu.Unlock()
+
+	return append([]argocd.ManifestsRequest(nil), f.requests...)
 }

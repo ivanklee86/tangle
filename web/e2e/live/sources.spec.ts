@@ -84,10 +84,17 @@ test.describe('source-type fixtures (live)', () => {
 
 		await openDiffs(page, 'suite:sources', 'test_gitops', SOURCES.length);
 
-		// Only the multi-source apps' changes are missing from this count; see
-		// the fixme below.
+		// The page sends no target repo yet, so each multi-source app reports
+		// "needs target repo", which reaches this page as an error (ADR 0032,
+		// D2) instead of the false "No changes" it used to show. Their changes
+		// are covered by the fixme below.
 		await expect(page.getByText('1 changed', { exact: true })).toBeVisible();
-		await expect(page.getByText('1 error', { exact: true })).toBeVisible();
+		await expect(
+			page.getByText(`${1 + MULTI_SOURCE.length} errors`, { exact: true })
+		).toBeVisible();
+		for (const name of MULTI_SOURCE) {
+			await expect(diffsEntry(page, name)).toContainText('Error');
+		}
 
 		// tanka: one line modified, one removed.
 		await expect(diffsEntry(page, 'tanka')).toContainText('+1');
@@ -118,10 +125,9 @@ test.describe('source-type fixtures (live)', () => {
 		expect(errors).toEqual([]);
 	});
 
-	// Known gap: Tangle sends the pushed ref as Revision, which ArgoCD ignores
-	// for a multi-source app, so today each of these shows "No changes". This
-	// asserts the behavior users need; remove the fixme once Tangle sends
-	// Revisions and SourcePositions (docs/agents/plans/integration-manifests-repo.md).
+	// The server diffs multi-source apps once it's told the target repo, but
+	// the page can't pass one yet. Remove the fixme, and add targetRepo to
+	// openDiffs, in the UI phase of docs/agents/plans/multi-source-applications.md.
 	test.fixme('the Diffs page shows each multi-source app’s change', async ({ page }) => {
 		await openDiffs(page, 'source:multi-source', 'test_gitops', MULTI_SOURCE.length);
 

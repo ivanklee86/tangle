@@ -21,6 +21,8 @@ type Config struct {
 	ExcludeLabels          map[string]string
 	Folder                 string
 	TargetRef              string
+	TargetRepos            []string
+	InferTargetRepo        bool
 	FailOnErrors           bool
 	Retries                int
 }
@@ -71,16 +73,33 @@ func (t *TangleCLI) renderApplicationsTable(applications []*ApplicationDiffDetai
 	applicationsTable := table.NewWriter()
 	applicationsTable.SetOutputMirror(t.Out)
 	applicationsTable.SetStyle(table.StyleColoredBright)
-	applicationsTable.AppendHeader(table.Row{"ArgoCD", "Application", "Error"})
+	applicationsTable.AppendHeader(table.Row{"ArgoCD", "Application", "Status", "Error"})
 	for _, application := range applications {
 		manifestGenError := "False ✅"
 		if application.Response.ManifestGenerationError != "" {
 			manifestGenError = "True 🔥"
 		}
 
-		applicationsTable.AppendRow(table.Row{application.ArgoCD, application.Application, manifestGenError})
+		applicationsTable.AppendRow(table.Row{application.ArgoCD, application.Application, statusLabel(application.Response.Status), manifestGenError})
 	}
 	applicationsTable.Render()
+}
+
+// statusLabel spells a diff status for the results table. An older server
+// sends no status, which shows as blank.
+func statusLabel(status string) string {
+	switch status {
+	case "ok":
+		return "OK"
+	case "notAffected":
+		return "Not affected"
+	case "needsTargetRepo":
+		return "Needs target repo"
+	case "error":
+		return "Error"
+	default:
+		return status
+	}
 }
 
 func (t *TangleCLI) WriteFiles(applicationDiffsDetail *ApplicationDiffDetail) error {
@@ -223,18 +242,25 @@ func (t *TangleCLI) GenerateManifests() {
 		group.SubmitErr(func() (*ApplicationDiffDetail, error) {
 			diffUrl := client.GenerateDiffUrl(t.ServerAddr, t.Insecure, diff.ArgoCD, diff.Application)
 
+			request := tangle.DiffsRequest{
+				LiveRef:         diff.LiveRef,
+				TargetRef:       t.TargetRef,
+				TargetRepos:     t.TargetRepos,
+				InferTargetRepo: t.InferTargetRepo,
+			}
+
 			var response *tangle.DiffsResponse
 			var err error
 			if t.Retries > 0 {
 				options := client.ClientOptions{
 					Retries: t.Retries,
 				}
-				response, err = client.GetDiffsWithRetries(diffUrl, diff.LiveRef, t.TargetRef, &options)
+				response, err = client.GetDiffsForRequestWithRetries(diffUrl, request, &options)
 				if err != nil {
 					return nil, err
 				}
 			} else {
-				response, err = client.GetDiffs(diffUrl, diff.LiveRef, t.TargetRef)
+				response, err = client.GetDiffsForRequest(diffUrl, request)
 				if err != nil {
 					return nil, err
 				}

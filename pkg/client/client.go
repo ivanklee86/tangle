@@ -213,25 +213,26 @@ func GetApplicationWithRetries(url string, options *ClientOptions) (*tangle.Appl
 
 // GetDiffs retrieves the diffs for an ArgoCD Application.
 func GetDiffs(url string, liveRef string, targetRef string) (*tangle.DiffsResponse, error) {
-	// Build request
-	requestBody := tangle.DiffsRequest{
-		LiveRef:   liveRef,
-		TargetRef: targetRef,
-	}
-	requestJson, err := json.Marshal(requestBody)
+	return GetDiffsForRequest(url, tangle.DiffsRequest{LiveRef: liveRef, TargetRef: targetRef})
+}
+
+// GetDiffsForRequest retrieves the diffs for an ArgoCD Application, sending
+// the whole request: use it to pass target repos or inference.
+func GetDiffsForRequest(url string, request tangle.DiffsRequest) (*tangle.DiffsResponse, error) {
+	requestJson, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
 
-	request, err := http.NewRequest("POST", url, bytes.NewBuffer(requestJson))
+	httpRequest, err := http.NewRequest("POST", url, bytes.NewBuffer(requestJson))
 	if err != nil {
 		return nil, err
 	}
-	request.Header.Set("Content-Type", "application/json")
+	httpRequest.Header.Set("Content-Type", "application/json")
 
 	// Send request
 	client := &http.Client{}
-	resp, err := client.Do(request)
+	resp, err := client.Do(httpRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -257,6 +258,13 @@ func GetDiffs(url string, liveRef string, targetRef string) (*tangle.DiffsRespon
 }
 
 func GetDiffsWithRetries(url string, liveRef string, targetRef string, options *ClientOptions) (*tangle.DiffsResponse, error) {
+	return GetDiffsForRequestWithRetries(url, tangle.DiffsRequest{LiveRef: liveRef, TargetRef: targetRef}, options)
+}
+
+// GetDiffsForRequestWithRetries is GetDiffsForRequest, retried with backoff.
+// A 4xx isn't retried: the request itself is wrong, so repeating it only
+// delays the server's explanation.
+func GetDiffsForRequestWithRetries(url string, request tangle.DiffsRequest, options *ClientOptions) (*tangle.DiffsResponse, error) {
 	var retries = 0
 	var backoff = DEFAULT_BACKOFF
 	if options != nil {
@@ -271,14 +279,21 @@ func GetDiffsWithRetries(url string, liveRef string, targetRef string, options *
 	}
 
 	for i := 0; i <= retries; i++ {
-		diffs, err := GetDiffs(url, liveRef, targetRef)
+		diffs, err := GetDiffsForRequest(url, request)
 		if err == nil {
 			return diffs, nil
-		} else if err != nil && i == retries {
-			return nil, err
-		} else if err != nil {
-			time.Sleep(time.Duration(backoff[i]) * time.Second)
 		}
+
+		var statusErr *StatusError
+		if errors.As(err, &statusErr) && !statusErr.Retryable() {
+			return nil, err
+		}
+
+		if i == retries {
+			return nil, err
+		}
+
+		time.Sleep(time.Duration(backoff[i]) * time.Second)
 	}
 
 	return nil, nil

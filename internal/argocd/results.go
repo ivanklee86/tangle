@@ -5,10 +5,13 @@ import (
 )
 
 type ListApplicationsResult struct {
-	Name         string
-	Project      string
-	Namespace    string
-	Health       v1alpha1.AppHealthStatus
-	SyncStatus   v1alpha1.SyncStatus
+	Name       string
+	Project    string
+	Namespace  string
+	Health     v1alpha1.AppHealthStatus
+	SyncStatus v1alpha1.SyncStatus
+	// LiveRevision is spec.source.targetRevision, and empty for a
+	// multi-source Application: Sources carries one revision per source.
 	LiveRevision string
+	Sources      []Source
 }
