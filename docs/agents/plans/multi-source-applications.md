@@ -1,6 +1,6 @@
 # Support multi-source Applications
 
-Status: requirements and design reviewed, decisions recorded in [ADR 0032](../../adrs/0032-choose-multi-source-revisions-by-target-repo.md) · 2026-11-26
+Status: ready for phase 1, decisions recorded in [ADR 0032](../../adrs/0032-choose-multi-source-revisions-by-target-repo.md) and below · 2026-11-26
 
 Make Tangle diff Applications that use `spec.sources` (ArgoCD multi-source) correctly, while every existing caller (CLI, UI, API, single-source apps) keeps working unchanged. This document covers requirements and use cases only. No implementation is planned yet, and the UI pattern was worked out with Claude Design (see [Design](#design-2026-11-26)).
 
@@ -183,13 +183,13 @@ Questions for a UI pattern:
 
 The Claude Design canvas is [Tangle — multi-source Applications](https://claude.ai/artifact/QfXVUKyGpP1Z7no8Eav1RN). It covers all six brief items, plus the "needs target repo" detail and a dark-mode check. Single-source rows and detail panes look as they do today, and every status pairs its colour with a word or an icon.
 
-### Proposed defaults to confirm
+### Decisions from the design review
 
-The mockups imply three behaviours the decisions above don't settle. These are the recommended defaults. Confirm or override each one before implementation starts.
+The mockups implied three behaviours the decisions below didn't settle. These were accepted on 2026-11-26 and are listed with the other decisions as D8 to D10.
 
-- **P1. Fixing "needs target repo" changes the query, not one app.** The mockup offers "Re-run both apps" and "Re-run this app". Adding a target repo changes the whole query: single-source apps in other repos become "not affected" (S3). So a per-app re-run would need an override that isn't in the URL, which breaks D5. **Default:** one action, "Add `<repo>` to target repos". It updates the URL and re-runs the query, and the panel says that other apps may change status. "Re-run this app" is dropped.
-- **P2. Moved sources say where they moved from, with no "pinned tag" label.** Tangle only sees the `targetRevision` string, so it can't tell the tag `v1.2` from the branch `release-4.2`. **Default:** every moved source shows "moved from `<live revision>`" (D4 already accepts that pinned sources move). Rejected: guessing from the string (semver or 40-character hex counts as pinned), which is wrong for branches like `v2`; and asking ArgoCD's repository `ListRefs` API, which costs a call per repo and needs a new `repositories, get` RBAC grant.
-- **P3. "All" counts what's visible.** In the mockup, "Show not affected (4)" is on but the segment reads "All 8". **Default:** "Not affected" apps are hidden unless the toggle is on, and the toggle label always carries their count. "All" counts the rows the list shows, so it's 12 with the toggle on and 8 with it off. The query bar's total counts every app the labels matched, with "not affected" as its own count.
+- **D8. Fixing "needs target repo" changes the query, not one app.** The mockup offers "Re-run both apps" and "Re-run this app". Adding a target repo changes the whole query: single-source apps in other repos become "not affected" (S3). So a per-app re-run would need an override that isn't in the URL, which breaks D5. **Decision:** one action, "Add `<repo>` to target repos". It updates the URL and re-runs the query, and the panel says that other apps may change status. "Re-run this app" is dropped.
+- **D9. Moved sources say where they moved from, with no "pinned tag" label.** Tangle only sees the `targetRevision` string, so it can't tell the tag `v1.2` from the branch `release-4.2`. **Decision:** every moved source shows "moved from `<live revision>`" (D4 already accepts that pinned sources move). Rejected: guessing from the string (semver or 40-character hex counts as pinned), which is wrong for branches like `v2`; and asking ArgoCD's repository `ListRefs` API, which costs a call per repo and needs a new `repositories, get` RBAC grant.
+- **D10. "All" counts what's visible.** In the mockup, "Show not affected (4)" is on but the segment reads "All 8". **Decision:** "Not affected" apps are hidden unless the toggle is on, and the toggle label always carries their count. "All" counts the rows the list shows, so it's 12 with the toggle on and 8 with it off. The query bar's total counts every app the labels matched, with "not affected" as its own count.
 
 ### Data the design needs
 
@@ -209,17 +209,17 @@ Beyond the per-source detail already listed under [Compatibility requirements](#
 - **Target repos input:** the chip input from `LabelsInput`, plus a keyboard-accessible suggestion list (ARIA combobox and listbox). Flowbite has no chip multi-select, so this is the largest new component. A shared helper shortens `https://host/org/repo.git` to `org/repo`, with the full URL on hover. The query bar, drawer, sources table and candidate list all use it.
 - **Infer switch:** Flowbite `Toggle`. The mockup's switch stands in for it.
 - **Query bar:** extend the existing summary snippet with "in `<repo>`…" chips, the "repo inferred" badge and a "+N more" overflow from three repos up.
-- **Diffs list:** new outcomes in `outcomeDot` and the outcome text: "Not affected" gets a dashed hollow dot and grey text, "Needs repo" a warning triangle. Add a "Needs repo" segment, shown only when its count is above zero, and the "Show not affected" toggle (P3).
+- **Diffs list:** new outcomes in `outcomeDot` and the outcome text: "Not affected" gets a dashed hollow dot and grey text, "Needs repo" a warning triangle. Add a "Needs repo" segment, shown only when its count is above zero, and the "Show not affected" toggle (D10).
 - **Detail header:** for multi-source apps, "N sources → `<ref>`" replaces `liveRef → targetRef` (`DiffDetail.svelte:42`).
 - **Sources panel:** a new collapsible component above the tabs, rendered only for apps with more than one source.
-- **Needs-repo panel:** an Alert with a fieldset of candidate repos as checkboxes, and the single action from P1.
+- **Needs-repo panel:** an Alert with a fieldset of candidate repos as checkboxes, and the single action from D8.
 - **Applications table:** an expandable sub-row inside the existing `Table`, with a summary of the revisions (`6.17.0 · main · v1.2`) when collapsed. The mockup also shortens SHAs, including for single-source rows (`3f9c2a1` with a copy button). That's a small change to today's output, so call it out in the PR.
 
 Ignore what the mockup tool brought in. The design uses Flowbite's blue (`#1A56DB`) as its accent, but the app's `primary` is indigo (`web/src/app.css`), so use the `primary-*` classes, never the hex values. It uses Inter and JetBrains Mono, but the app keeps its current fonts. It adds a "Tangle" wordmark in the query bar, a white left pane and a blue selected row, none of which the brief asked for. Today's styling stays.
 
 ### Phases
 
-1. **Core:** the API and CLI changes, the target repos input (no suggestions), the infer switch, the query bar summary, the two new outcomes and the toggle, the sources panel, the needs-repo panel with P1's action, and the applications sub-rows.
+1. **Core:** the API and CLI changes, the target repos input (no suggestions), the infer switch, the query bar summary, the two new outcomes and the toggle, the sources panel, the needs-repo panel with D8's action, and the applications sub-rows.
 2. **Polish:** drawer suggestions and the unused-repo hint, "+N more" in the query bar, "used by N other apps" on candidates, "used by source N" on `ref` sources, and shortened SHAs.
 
 ## Decisions (2026-11-26)
@@ -231,9 +231,12 @@ Ignore what the mockup tool brought in. The design uses Flowbite's blue (`#1A56D
 - **D5. Inference in the UI is a query parameter.** `inferTargetRepo=true` sits in the URL next to `targetRef` and `targetRepo`, so a shared link reproduces the same result. It's off when absent, as on the CLI and API.
 - **D6. The target repo is a list, with one ref.** `--target-repo` repeats, `targetRepo` repeats in the URL, and the API takes `targetRepos`. This covers a change made under the same branch name in several repos. Taking a list from the start avoids adding a second field later. One repo is the common case, and it's simply a list of one.
 - **D7. The target ref may be a branch, a tag or a commit SHA,** passed to ArgoCD unchanged. Use cases R1 to R6 test it. This closes gap G3 from the [manifests-repo plan](integration-manifests-repo.md).
+- **D8. Fixing "needs target repo" adds the repo to the query.** It updates the URL and re-runs every app. There's no per-app re-run. See [Decisions from the design review](#decisions-from-the-design-review).
+- **D9. Moved sources show "moved from `<live revision>`",** with no "pinned tag" label, because Tangle can't tell a tag from a branch.
+- **D10. "All" counts the visible rows.** "Not affected" apps are hidden by default, and their toggle label always shows how many there are.
 
 ## Deferred
 
 - **A different ref per repo** (`repo=ref` pairs: a coordinated change whose PRs use different branch names). It would need a repeatable `--target repo=ref`, `targets: [{repo, ref}]` on the API with the single-ref fields as shorthand (sending both forms is a 400), a URL encoding that survives the `:` and `/` in repo URLs, a row editor in the UI, and a second repo we control with its own change branch for fixtures. The hard part sits outside Tangle: the CI run for one PR has to know the other PR's branch. D6 doesn't rule it out. Pick it up when someone needs it.
 
-D1 to D7 are recorded in [ADR 0032](../../adrs/0032-choose-multi-source-revisions-by-target-repo.md). The design is reviewed in [Design](#design-2026-11-26). Next: confirm P1 to P3, then start phase 1.
+D1 to D7 are recorded in [ADR 0032](../../adrs/0032-choose-multi-source-revisions-by-target-repo.md), and D8 to D10 in [Design](#design-2026-11-26). Next: phase 1.
