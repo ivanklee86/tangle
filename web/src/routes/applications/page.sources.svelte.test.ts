@@ -65,6 +65,7 @@ const FLEET: ApplicationResponseStore = {
 								kind: 'git',
 								repoURL: 'https://github.com/org/values.git',
 								ref: 'values',
+								usedBy: [1],
 								targetRevision: 'main'
 							}
 						]
@@ -117,6 +118,7 @@ describe('applications +page.svelte with multi-source applications', () => {
 		await expect.element(toggle).toHaveAttribute('aria-expanded', 'true');
 		await expect.element(screen.getByText('org/values')).toBeVisible();
 		await expect.element(screen.getByText('ref: values')).toBeVisible();
+		await expect.element(screen.getByText('used by source 1')).toBeVisible();
 		await expect.element(screen.getByText('6.17.0')).toBeVisible();
 		await expect.element(screen.getByText('stefanprodan.github.io/podinfo')).toBeVisible();
 	});

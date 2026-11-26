@@ -3,6 +3,7 @@
 	import { ArrowRightOutline, CloseOutline } from 'flowbite-svelte-icons';
 	import { isValidLabelQuery } from '$lib/ui/validation';
 	import { NO_TARGET_REF_REASON, type Query } from '$lib/ui/query';
+	import { type RepoUsage } from '$lib/ui/repos';
 	import QueryEditor from './QueryEditor.svelte';
 	import QueryPreview from './QueryPreview.svelte';
 	import DisabledReason from './DisabledReason.svelte';
@@ -28,6 +29,8 @@
 		 * Only the diffs flow has one — see QueryPreview.
 		 */
 		showCli?: boolean;
+		/** Repos the page's applications use, suggested in the target repos field. */
+		knownRepos?: RepoUsage[];
 		onApply: (query: Query) => void;
 	}
 
@@ -40,6 +43,7 @@
 		applyLabel = 'Apply',
 		hrefFor,
 		showCli = false,
+		knownRepos = [],
 		onApply
 	}: Props = $props();
 
@@ -136,6 +140,7 @@
 					bind:targetRef
 					bind:targetRepos
 					bind:inferTargetRepo
+					{knownRepos}
 					{targetRefMode}
 				/>
 			{/key}

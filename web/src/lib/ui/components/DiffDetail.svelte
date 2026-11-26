@@ -13,7 +13,7 @@
 	import { CodeBlock } from 'svhighlight';
 	import 'highlight.js/styles/an-old-hope.css';
 	import { type DiffRow } from '$lib/ui/diffs';
-	import { shortRepo } from '$lib/ui/repos';
+	import { normalizeRepo, shortRepo, type RepoUsage } from '$lib/ui/repos';
 	import ArgoCDHealthStatus from './ArgoCDHealthStatus.svelte';
 	import ArgoCDSyncStatus from './ArgoCDSyncStatus.svelte';
 	import ErrorAlert from './ErrorAlert.svelte';
@@ -27,9 +27,35 @@
 		onReload: (row: DiffRow) => void;
 		/** Adds repos to the query's target repos, which re-runs every diff (D8). */
 		onAddTargetRepos?: (repos: string[]) => void;
+		/** Which repos the listed applications use, to say how far a candidate reaches. */
+		usage?: RepoUsage[];
 	}
 
-	let { row, targetRef, targetRepos = [], onReload, onAddTargetRepos }: Props = $props();
+	let {
+		row,
+		targetRef,
+		targetRepos = [],
+		onReload,
+		onAddTargetRepos,
+		usage = []
+	}: Props = $props();
+
+	/**
+	 * "used by 6 other apps": adding a candidate re-runs every application,
+	 * and those that use it may change from "not affected" to a diff. The
+	 * count leaves this application out, when the list says it uses the repo.
+	 */
+	let ownRepos = $derived(
+		new Set(row.sources.filter((s) => s.kind === 'git').map((s) => normalizeRepo(s.repoURL)))
+	);
+
+	function otherApps(candidate: string): string {
+		const repo = normalizeRepo(candidate);
+		const apps = usage.find((entry) => entry.repo === repo)?.apps ?? 0;
+		const others = apps - (ownRepos.has(repo) ? 1 : 0);
+		if (others <= 0) return '';
+		return `used by ${others} other ${others === 1 ? 'app' : 'apps'}`;
+	}
 
 	// Explicit colours: Flowbite's alerts render as a light block in dark mode,
 	// with text that is hard to read in either theme.
@@ -133,6 +159,9 @@
 									bind:group={picked}
 								/>
 								<span class="font-mono" title={candidate}>{shortRepo(candidate)}</span>
+								{#if otherApps(candidate)}
+									<span class="text-xs opacity-80">· {otherApps(candidate)}</span>
+								{/if}
 							</label>
 						{/each}
 					</fieldset>

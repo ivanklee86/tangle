@@ -227,4 +227,26 @@ func TestDiffsSources(t *testing.T) {
 		}, byName["multi"].Sources)
 		assert.Equal(t, "", byName["multi"].LiveRef)
 	})
+
+	t.Run("a ref source says which sources read through it", func(t *testing.T) {
+		app := v1alpha1.Application{}
+		app.Name = "helm-values"
+		app.Spec.Sources = v1alpha1.ApplicationSources{
+			{RepoURL: "https://stefanprodan.github.io/podinfo", Chart: "podinfo", TargetRevision: "6.17.0", Helm: &v1alpha1.ApplicationSourceHelm{ValueFiles: []string{"$values/podinfo/values.yaml"}}},
+			{RepoURL: valuesRepoURL, Ref: "values", TargetRevision: "main"},
+		}
+		server, _ := newSourcesServerWith(t, []v1alpha1.Application{app})
+
+		_, result := postSourceDiffs(t, server, "helm-values", `{"targetRef":"feature-x","targetRepos":["https://github.com/org/values"]}`)
+		require.Len(t, result.Sources, 2)
+		assert.Nil(t, result.Sources[0].UsedBy)
+		assert.Equal(t, []int64{1}, result.Sources[1].UsedBy)
+
+		resp, err := http.Get(server.URL + "/api/applications")
+		require.NoError(t, err)
+		defer func() { _ = resp.Body.Close() }()
+		var listed ApplicationsResponse
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&listed))
+		assert.Equal(t, []int64{1}, listed.Results[0].Applications[0].Sources[1].UsedBy)
+	})
 }

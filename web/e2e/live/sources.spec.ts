@@ -161,6 +161,8 @@ test.describe('source-type fixtures (live)', () => {
 
 		await selectApplication(page, 'helm-repo-git-values');
 		await expect(diffLine(page, /replicas: 2/)).toBeVisible();
+		// Its chart reads values.yaml through the values ref (`$values/...`).
+		await expect(page.getByText('used by source 1')).toBeVisible();
 
 		await selectApplication(page, 'git-chart-git-values');
 		await expect(diffLine(page, /greeting: hello, world/)).toBeVisible();

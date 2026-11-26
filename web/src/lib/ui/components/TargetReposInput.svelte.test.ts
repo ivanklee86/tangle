@@ -57,4 +57,51 @@ describe('TargetReposInput', () => {
 		await expect.element(screen.getByText('org/values')).not.toBeInTheDocument();
 		await expect.element(screen.getByText('org/charts')).toBeVisible();
 	});
+
+	// Test cases (suggestions from the page's applications):
+	//   - the repos they use are offered, most used first, with their counts,
+	//     leaving out any already added
+	//   - a target repo none of them use gets a warning; one they use doesn't
+	//   - with no applications loaded there's nothing to compare, so no warning
+	const suggestions = [
+		{ repo: 'github.com/org/values', url: 'https://github.com/org/values.git', apps: 9 },
+		{ repo: 'github.com/org/charts', url: 'https://github.com/org/charts.git', apps: 1 }
+	];
+
+	test('offers the repos the applications use', async () => {
+		const screen = await render(TargetReposInput, {
+			value: ['git@github.com:org/charts.git'],
+			suggestions
+		});
+
+		// With suggestions attached, the field is a combobox.
+		const field = screen.getByRole('combobox', { name: 'Target repos' });
+		const options = [...screen.container.querySelectorAll('datalist option')];
+		expect(
+			options.map((option) => [option.getAttribute('value'), option.getAttribute('label')])
+		).toEqual([['https://github.com/org/values.git', 'org/values · 9 apps']]);
+		expect(field.element().getAttribute('list')).toBe(
+			screen.container.querySelector('datalist')?.id
+		);
+	});
+
+	test('warns about a target repo no application uses', async () => {
+		const screen = await render(TargetReposInput, {
+			value: ['https://github.com/org/values', 'https://github.com/org/typo.git'],
+			suggestions
+		});
+
+		await expect
+			.element(screen.getByText('No application in this query uses org/typo.'))
+			.toBeVisible();
+	});
+
+	test('says nothing without applications to compare against', async () => {
+		const screen = await render(TargetReposInput, { value: ['https://github.com/org/typo.git'] });
+
+		await expect
+			.element(screen.getByText(/No application in this query uses/))
+			.not.toBeInTheDocument();
+		expect(screen.container.querySelector('datalist')).toBeNull();
+	});
 });

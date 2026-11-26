@@ -3,6 +3,7 @@
 	import { CodeBranchOutline } from 'flowbite-svelte-icons';
 	import LabelsInput from './LabelsInput.svelte';
 	import TargetReposInput from './TargetReposInput.svelte';
+	import { type RepoUsage } from '$lib/ui/repos';
 
 	interface Props {
 		labels?: string;
@@ -12,6 +13,8 @@
 		targetRepos?: string[];
 		/** Let a multi-source app whose git sources are all in one repo use it. */
 		inferTargetRepo?: boolean;
+		/** Repos the page's applications use, suggested in the target repos field. */
+		knownRepos?: RepoUsage[];
 		/** Diffs can't run without a ref; Applications ignores it entirely. */
 		targetRefMode?: 'hidden' | 'optional' | 'required';
 	}
@@ -22,6 +25,7 @@
 		targetRef = $bindable(''),
 		targetRepos = $bindable([]),
 		inferTargetRepo = $bindable(false),
+		knownRepos = [],
 		targetRefMode = 'optional'
 	}: Props = $props();
 
@@ -88,7 +92,7 @@
 				always have, and multi-source ones say they need a target repo.
 			-->
 			<div class="space-y-4 border-t border-gray-200 pt-4 dark:border-gray-700">
-				<TargetReposInput bind:value={targetRepos} />
+				<TargetReposInput bind:value={targetRepos} suggestions={knownRepos} />
 				<div>
 					<Toggle bind:checked={inferTargetRepo} aria-describedby={inferHelpId}>
 						Infer target repo

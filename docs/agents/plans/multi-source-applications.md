@@ -1,6 +1,6 @@
 # Support multi-source Applications
 
-Status: ready for phase 1, decisions recorded in [ADR 0032](../../adrs/0032-choose-multi-source-revisions-by-target-repo.md) and below · 2026-11-26
+Status: phase 1 and phase 2 done, decisions recorded in [ADR 0032](../../adrs/0032-choose-multi-source-revisions-by-target-repo.md) and below · 2026-11-26
 
 Make Tangle diff Applications that use `spec.sources` (ArgoCD multi-source) correctly, while every existing caller (CLI, UI, API, single-source apps) keeps working unchanged. This document covers requirements and use cases only. No implementation is planned yet, and the UI pattern was worked out with Claude Design (see [Design](#design-2026-11-26)).
 
@@ -220,7 +220,7 @@ Ignore what the mockup tool brought in. The design uses Flowbite's blue (`#1A56D
 ### Phases
 
 1. **Core:** the API and CLI changes, the target repos input (no suggestions), the infer switch, the query bar summary, the two new outcomes and the toggle, the sources panel, the needs-repo panel with D8's action, and the applications sub-rows.
-2. **Polish:** drawer suggestions and the unused-repo hint, "+N more" in the query bar, "used by N other apps" on candidates, "used by source N" on `ref` sources, and shortened SHAs.
+2. **Polish:** drawer suggestions and the unused-repo hint, "+N more" in the query bar, "used by N other apps" on candidates, "used by source N" on `ref` sources, and shortened SHAs. Done: shortened SHAs shipped with phase 1 (#292), and the rest in the phase 2 PR. One deviation from the data table above: suggestions come from the applications the page has already loaded, not a fresh `/applications` call when the field gets focus. That spares a fan-out to every ArgoCD, at the cost of suggestions not following label edits made in the drawer.
 
 ## Decisions (2026-11-26)
 
@@ -239,4 +239,4 @@ Ignore what the mockup tool brought in. The design uses Flowbite's blue (`#1A56D
 
 - **A different ref per repo** (`repo=ref` pairs: a coordinated change whose PRs use different branch names). It would need a repeatable `--target repo=ref`, `targets: [{repo, ref}]` on the API with the single-ref fields as shorthand (sending both forms is a 400), a URL encoding that survives the `:` and `/` in repo URLs, a row editor in the UI, and a second repo we control with its own change branch for fixtures. The hard part sits outside Tangle: the CI run for one PR has to know the other PR's branch. D6 doesn't rule it out. Pick it up when someone needs it.
 
-D1 to D7 are recorded in [ADR 0032](../../adrs/0032-choose-multi-source-revisions-by-target-repo.md), and D8 to D10 in [Design](#design-2026-11-26). Next: phase 1.
+D1 to D7 are recorded in [ADR 0032](../../adrs/0032-choose-multi-source-revisions-by-target-repo.md), and D8 to D10 in [Design](#design-2026-11-26). Follow-ups: #293 (show which sources got the ref when a render fails) and #294 (screenshot tests).

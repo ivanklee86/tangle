@@ -43,4 +43,52 @@ describe('QueryBar', () => {
 			`${window.location.origin}${window.location.pathname}${window.location.search}`
 		);
 	});
+
+	// More than two target repos: two shown, then "+N more", which names the
+	// rest and opens the editor.
+	test('shows two target repos, then how many more', async () => {
+		const onEdit = vi.fn();
+		const screen = await render(QueryBar, {
+			title: 'Diffs',
+			showTargetRef: true,
+			query: {
+				...emptyQuery(),
+				targetRef: 'feature-x',
+				targetRepos: [
+					'https://github.com/org/charts.git',
+					'https://github.com/org/values.git',
+					'https://github.com/org/platform.git'
+				]
+			},
+			onEdit
+		});
+
+		await expect.element(screen.getByText('org/charts')).toBeVisible();
+		await expect.element(screen.getByText('org/values')).toBeVisible();
+		await expect.element(screen.getByText('org/platform')).not.toBeInTheDocument();
+
+		await screen.getByRole('button', { name: /^1 more target repos: org\/platform/ }).click();
+		expect(onEdit).toHaveBeenCalled();
+	});
+
+	// The server only infers without target repos, so the badge only shows then.
+	test('shows "repo inferred" only without target repos', async () => {
+		const screen = await render(QueryBar, {
+			title: 'Diffs',
+			showTargetRef: true,
+			query: { ...emptyQuery(), targetRef: 'feature-x', inferTargetRepo: true },
+			onEdit: () => {}
+		});
+		await expect.element(screen.getByText('repo inferred')).toBeVisible();
+
+		await screen.rerender({
+			query: {
+				...emptyQuery(),
+				targetRef: 'feature-x',
+				inferTargetRepo: true,
+				targetRepos: ['https://github.com/org/values.git']
+			}
+		});
+		await expect.element(screen.getByText('repo inferred')).not.toBeInTheDocument();
+	});
 });

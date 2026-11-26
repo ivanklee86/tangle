@@ -37,7 +37,17 @@ const FLEET: ApplicationResponseStore = {
 							{ position: 2, kind: 'git', repoURL: VALUES, ref: 'values', targetRevision: 'v1.2' }
 						]
 					},
-					{ name: 'needs-repo-app', url: '', health: 'Healthy', syncStatus: 'Synced', liveRef: '' },
+					{
+						name: 'needs-repo-app',
+						url: '',
+						health: 'Healthy',
+						syncStatus: 'Synced',
+						liveRef: '',
+						sources: [
+							{ position: 1, kind: 'git', repoURL: CHARTS, path: 'chart', targetRevision: 'main' },
+							{ position: 2, kind: 'git', repoURL: VALUES, path: 'values', targetRevision: 'main' }
+						]
+					},
 					{ name: 'quiet-app', url: '', health: 'Healthy', syncStatus: 'Synced', liveRef: 'main' }
 				]
 			}
@@ -68,6 +78,7 @@ const RESPONSES: Record<string, object> = {
 				kind: 'git',
 				repoURL: VALUES,
 				ref: 'values',
+				usedBy: [1],
 				liveRevision: 'v1.2',
 				targetRevision: 'feature-x',
 				moved: true
@@ -173,7 +184,7 @@ describe('diffs +page.svelte with multi-source applications', () => {
 		await expect.element(screen.getByText('Which repo is', { exact: false })).toBeVisible();
 
 		// The first candidate starts picked; pick the second as well.
-		await screen.getByRole('checkbox', { name: 'org/values' }).click();
+		await screen.getByRole('checkbox', { name: /^org\/values/ }).click();
 		await screen.getByRole('button', { name: 'Add 2 repos to target repos' }).click();
 
 		const expected = new URLSearchParams();
@@ -204,5 +215,26 @@ describe('diffs +page.svelte with multi-source applications', () => {
 
 		await expect.element(screen.getByRole('button', { name: 'Changed 1' })).toBeVisible();
 		await expect.element(screen.getByRole('button', { name: 'Errors 0' })).toBeVisible();
+	});
+
+	// Phase 2 polish:
+	//   - a candidate repo says how many other listed applications use it, and
+	//     says nothing when none do
+	//   - a ref source says which source reads through it
+	test('a candidate says how many other applications use it', async () => {
+		stubDiffs();
+		const screen = await render(Page, data({ ...emptyQuery(), targetRef: 'feature-x' }));
+
+		await screen.getByRole('button', { name: /needs-repo-app/ }).click();
+		await expect.element(screen.getByText('· used by 1 other app')).toBeVisible();
+		expect(screen.container.textContent).not.toContain('used by 0');
+	});
+
+	test('a ref source says which source reads through it', async () => {
+		stubDiffs();
+		const screen = await render(Page, data());
+
+		await screen.getByRole('button', { name: /changed-app/ }).click();
+		await expect.element(screen.getByText('used by source 1')).toBeVisible();
 	});
 });

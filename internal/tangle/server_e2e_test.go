@@ -335,6 +335,16 @@ func TestE2E_ServerSourceFixtures(t *testing.T) {
 		assert.Empty(t, result.Diffs)
 	})
 
+	t.Run("ref_source_users", func(t *testing.T) {
+		// helm-repo-git-values' chart reads $values/... through source 2.
+		result := postDiffsRequest(t, server.URL, "helm-repo-git-values", DiffsRequest{TargetRef: "test_gitops", TargetRepos: []string{fixtureManifestsRepo}})
+
+		require.Len(t, result.Sources, 2)
+		assert.Equal(t, "values", result.Sources[1].Ref)
+		assert.Equal(t, []int64{1}, result.Sources[1].UsedBy)
+		assert.Equal(t, []int64{1}, findApplication(t, sources, "helm-repo-git-values").Sources[1].UsedBy)
+	})
+
 	t.Run("multi_source_inferred", func(t *testing.T) {
 		// helm-repo-git-values' only git source is the manifests repo.
 		result := postDiffsRequest(t, server.URL, "helm-repo-git-values", DiffsRequest{TargetRef: "test_gitops", InferTargetRepo: true})

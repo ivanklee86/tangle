@@ -35,6 +35,10 @@ type Source struct {
 	Ref            string
 	TargetRevision string
 	Kind           SourceKind
+	// UsedBy lists the positions of the sources that read files through this
+	// source's Ref (a Helm valueFiles entry like `$values/...`). Empty when
+	// it has no Ref or nothing uses it.
+	UsedBy []int64
 }
 
 // SourcesOf returns an Application's sources in ArgoCD's order. A single-source
@@ -55,6 +59,7 @@ func SourcesOf(app *v1alpha1.Application) []Source {
 		return nil
 	}
 
+	users := refUsers(specSources)
 	sources := make([]Source, 0, len(specSources))
 	for i, specSource := range specSources {
 		sources = append(sources, Source{
@@ -65,6 +70,7 @@ func SourcesOf(app *v1alpha1.Application) []Source {
 			Ref:            specSource.Ref,
 			TargetRevision: specSource.TargetRevision,
 			Kind:           kindOf(specSource),
+			UsedBy:         users[specSource.Ref],
 		})
 	}
 
@@ -127,4 +133,38 @@ func NormalizeRepoURL(raw string) string {
 	path = strings.Trim(path, "/")
 
 	return strings.ToLower(host) + "/" + path
+}
+
+// refUsers returns, for each source with a `ref`, the positions of the other
+// sources that read files through it: a Helm valueFiles entry or
+// fileParameters path starting with `$<ref>/`, which is how ArgoCD lets one
+// source read files from another.
+func refUsers(specSources []v1alpha1.ApplicationSource) map[string][]int64 {
+	users := map[string][]int64{}
+	for _, source := range specSources {
+		if source.Ref != "" {
+			users[source.Ref] = nil
+		}
+	}
+
+	for i, source := range specSources {
+		if source.Helm == nil {
+			continue
+		}
+		paths := append([]string{}, source.Helm.ValueFiles...)
+		for _, parameter := range source.Helm.FileParameters {
+			paths = append(paths, parameter.Path)
+		}
+
+		for ref := range users {
+			for _, path := range paths {
+				if strings.HasPrefix(path, "$"+ref+"/") {
+					users[ref] = append(users[ref], int64(i+1))
+					break
+				}
+			}
+		}
+	}
+
+	return users
 }
