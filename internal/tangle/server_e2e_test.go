@@ -8,12 +8,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
 	"github.com/knadh/koanf/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // newE2ETangle builds a real *Tangle from integration/tangle.yaml against
@@ -200,4 +202,194 @@ func TestE2E_ServerDiffs(t *testing.T) {
 			assert.NotEmpty(t, result.TargetManifests)
 		})
 	}
+}
+
+// TestE2E_ServerSourceFixtures covers the source-type fixture Applications
+// (integration/kubernetes/sources/) through Tangle's real router, the way the
+// UI and CLI reach them: list the applications, then ask for each one's diff
+// from its listed liveRef to the pushed ref. internal/argocd's
+// TestE2E_SourceFixtures pins what each fixture renders at either ref, which
+// is what the expected diffs below are built from.
+func TestE2E_ServerSourceFixtures(t *testing.T) {
+	tangle := newE2ETangle(t)
+	server := httptest.NewServer(tangle.Server.Handler)
+	defer server.Close()
+
+	t.Run("applications", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			query    string
+			expected []string
+		}{
+			{name: "suite", query: "labels=suite:sources", expected: []string{"git-chart-git-values", "helm-repo", "helm-repo-git-values", "tanka", "two-repos"}},
+			{name: "multi_source", query: "labels=source:multi-source", expected: []string{"git-chart-git-values", "helm-repo-git-values", "two-repos"}},
+			{name: "single_source", query: "labels=suite:sources&excludeLabels=source:multi-source", expected: []string{"helm-repo", "tanka"}},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				byArgoCD := listApplications(t, server.URL, test.query)
+
+				// Only the sources token can see the sources project, so the
+				// test and prod ArgoCDs return nothing for these queries.
+				assert.Empty(t, byArgoCD["test"])
+				assert.Empty(t, byArgoCD["prod"])
+				assert.ElementsMatch(t, test.expected, applicationNames(byArgoCD["sources"]))
+			})
+		}
+	})
+
+	sources := listApplications(t, server.URL, "labels=suite:sources")["sources"]
+
+	t.Run("live_refs", func(t *testing.T) {
+		// A single-source app's liveRef is its targetRevision: a git branch,
+		// or a chart version for a chart from a Helm repo.
+		assert.Equal(t, "main", findApplication(t, sources, "tanka").LiveRef)
+		assert.Equal(t, "6.17.0", findApplication(t, sources, "helm-repo").LiveRef)
+	})
+
+	t.Run("tanka", func(t *testing.T) {
+		// Rendered by the Tanka config management plugin sidecar.
+		result := postDiffs(t, server.URL, "tanka", findApplication(t, sources, "tanka").LiveRef, "test_gitops")
+
+		assert.Empty(t, result.ManifestGenerationError)
+		added, removed := changedLines(result.Diffs)
+		assert.ElementsMatch(t, []string{"greeting: hello, world"}, added)
+		assert.ElementsMatch(t, []string{"greeting: hello", "removed: soon"}, removed)
+	})
+
+	t.Run("helm_repo_chart_version", func(t *testing.T) {
+		// For a chart from a Helm repo, the ref to compare to is a chart
+		// version.
+		result := postDiffs(t, server.URL, "helm-repo", findApplication(t, sources, "helm-repo").LiveRef, "6.16.0")
+
+		assert.Empty(t, result.ManifestGenerationError)
+		added, removed := changedLines(result.Diffs)
+		assert.Contains(t, added, "helm.sh/chart: podinfo-6.16.0")
+		assert.Contains(t, added, "image: ghcr.io/stefanprodan/podinfo:6.16.0")
+		assert.Contains(t, removed, "helm.sh/chart: podinfo-6.17.0")
+		assert.Contains(t, removed, "image: ghcr.io/stefanprodan/podinfo:6.17.0")
+	})
+
+	t.Run("helm_repo_git_ref", func(t *testing.T) {
+		// A git branch isn't a chart version, so the render fails, and the
+		// failure is reported rather than shown as an empty diff.
+		result := postDiffs(t, server.URL, "helm-repo", findApplication(t, sources, "helm-repo").LiveRef, "test_gitops")
+
+		assert.Contains(t, result.ManifestGenerationError, "test_gitops")
+		assert.Empty(t, result.TargetManifests)
+		assert.Empty(t, result.Diffs)
+	})
+
+	// Each multi-source fixture has a real change on test_gitops, but Tangle
+	// sends the pushed ref as Revision, which ArgoCD ignores for a
+	// multi-source app (see TestE2E_SourceFixtures), so today every one of
+	// these comes back as an empty diff. That's the gap in
+	// docs/agents/plans/integration-manifests-repo.md, not behavior to keep,
+	// so these assert the change and stay skipped until Tangle sends
+	// Revisions and SourcePositions.
+	multiSource := []struct {
+		app            string
+		added, removed []string
+	}{
+		{app: "helm-repo-git-values", added: []string{"replicas: 2"}, removed: []string{"replicas: 1"}},
+		{app: "git-chart-git-values", added: []string{"greeting: hello, world", "extra: b"}, removed: []string{"greeting: hello", "extra: a"}},
+		{app: "two-repos", added: []string{"greeting: hello, world"}, removed: []string{"greeting: hello"}},
+	}
+	for _, test := range multiSource {
+		t.Run(test.app, func(t *testing.T) {
+			t.Skip("known gap: Tangle doesn't send Revisions/SourcePositions for multi-source apps yet")
+
+			result := postDiffs(t, server.URL, test.app, findApplication(t, sources, test.app).LiveRef, "test_gitops")
+
+			// Contains rather than an exact match: rendered by hand with
+			// argocd (2026-11-26), a multi-source app's render at explicit
+			// Revisions also differs from its default render in ways the
+			// pushed change didn't cause (Helm test hooks appear, namespace
+			// is dropped, resources reorder). Whoever closes the gap should
+			// decide whether Tangle renders both sides with Revisions to
+			// avoid that, and tighten these to exact matches if so.
+			assert.Empty(t, result.ManifestGenerationError)
+			added, removed := changedLines(result.Diffs)
+			assert.Subset(t, added, test.added)
+			assert.Subset(t, removed, test.removed)
+		})
+	}
+}
+
+// listApplications returns each ArgoCD's applications for a query string.
+func listApplications(t *testing.T, serverURL string, query string) map[string][]ApplicationLinks {
+	t.Helper()
+
+	resp, err := http.Get(serverURL + "/api/applications?" + query)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result ApplicationsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+
+	byArgoCD := map[string][]ApplicationLinks{}
+	for _, argoCDResult := range result.Results {
+		byArgoCD[argoCDResult.Name] = argoCDResult.Applications
+	}
+
+	return byArgoCD
+}
+
+func applicationNames(applications []ApplicationLinks) []string {
+	names := []string{}
+	for _, application := range applications {
+		names = append(names, application.Name)
+	}
+
+	return names
+}
+
+func findApplication(t *testing.T, applications []ApplicationLinks, name string) ApplicationLinks {
+	t.Helper()
+
+	for _, application := range applications {
+		if application.Name == name {
+			return application
+		}
+	}
+	require.FailNow(t, "application not listed", "%s not in %v", name, applicationNames(applications))
+
+	return ApplicationLinks{}
+}
+
+// postDiffs asks the sources ArgoCD for an application's diff.
+func postDiffs(t *testing.T, serverURL string, app string, liveRef string, targetRef string) DiffsResponse {
+	t.Helper()
+
+	requestBody, err := json.Marshal(DiffsRequest{LiveRef: liveRef, TargetRef: targetRef})
+	require.NoError(t, err)
+
+	resp, err := http.Post(serverURL+"/api/argocd/sources/applications/"+app+"/diffs", "application/json", bytes.NewBuffer(requestBody))
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result DiffsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+
+	return result
+}
+
+// changedLines returns a unified diff's added and removed lines, without the
+// file headers and with surrounding whitespace trimmed.
+func changedLines(diff string) (added []string, removed []string) {
+	added, removed = []string{}, []string{}
+	for _, line := range strings.Split(diff, "\n") {
+		switch {
+		case strings.HasPrefix(line, "+++ "), strings.HasPrefix(line, "--- "):
+		case strings.HasPrefix(line, "+"):
+			added = append(added, strings.TrimSpace(line[1:]))
+		case strings.HasPrefix(line, "-"):
+			removed = append(removed, strings.TrimSpace(line[1:]))
+		}
+	}
+
+	return added, removed
 }

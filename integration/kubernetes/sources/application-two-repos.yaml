@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: two-repos
+  labels:
+    suite: sources
+    source: multi-source
+spec:
+  project: sources
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  sources:
+    - repoURL: https://github.com/stefanprodan/podinfo.git
+      path: kustomize
+      targetRevision: 6.17.0
+    - repoURL: https://github.com/ivanklee86/tangle-integration-manifests.git
+      path: two-repos
+      targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

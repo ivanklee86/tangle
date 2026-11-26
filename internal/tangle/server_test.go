@@ -1,11 +1,16 @@
 package tangle
 
 import (
+	"bytes"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestServer(t *testing.T) {
@@ -60,4 +65,34 @@ func TestResolveClientIP(t *testing.T) {
 			assert.Equal(t, tc.want, got)
 		})
 	}
+}
+
+// TestWarnIfStaticAssetsMissing: an operator running the binary without the
+// web build gets one WARN naming the directory, and a correctly deployed
+// server stays quiet.
+func TestWarnIfStaticAssetsMissing(t *testing.T) {
+	logged := func(dir string) string {
+		var out bytes.Buffer
+		warnIfStaticAssetsMissing(slog.New(slog.NewTextHandler(&out, nil)), dir)
+		return out.String()
+	}
+
+	t.Run("missing_directory", func(t *testing.T) {
+		dir := filepath.Join(t.TempDir(), "build")
+
+		output := logged(dir)
+		assert.Contains(t, output, "level=WARN")
+		assert.Contains(t, output, "staticDir="+dir)
+	})
+
+	t.Run("directory_without_index", func(t *testing.T) {
+		assert.Contains(t, logged(t.TempDir()), "level=WARN")
+	})
+
+	t.Run("present", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "index.html"), []byte("<html></html>"), 0o600))
+
+		assert.Empty(t, logged(dir))
+	})
 }

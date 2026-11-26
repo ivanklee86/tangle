@@ -93,8 +93,7 @@ test.describe('CI scenario (live)', () => {
 
 		await expect(page.locator('tbody tr')).toHaveCount(2, { timeout: 30_000 });
 		await expectApplicationState(page, 'test-1', 'Healthy', 'Synced');
-		// test-2 has no automated sync policy, so it stays this way.
-		await expectApplicationState(page, 'test-2', 'Missing', 'OutOfSync');
+		await expectApplicationState(page, 'test-2', 'Healthy', 'Synced');
 
 		expect(errors).toEqual([]);
 	});
@@ -131,6 +130,9 @@ test.describe('CI with failure scenario (live)', () => {
 		}
 		await expect(applicationRow(page, 'test-1')).toContainText('test');
 		await expect(applicationRow(page, 'test-3')).toContainText('prod');
+		// test-3 has no automated sync policy and its manifests at main fail to
+		// apply, so it stays this way even after a manual sync.
+		await expectApplicationState(page, 'test-3', 'Missing', 'OutOfSync');
 
 		expect(errors).toEqual([]);
 	});

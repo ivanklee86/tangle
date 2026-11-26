@@ -29,8 +29,8 @@ These are the behaviors the live suites assert, and the fixture property each on
 | App | ArgoCD (project) | Labels | Source | Sync policy | Live state | On target ref | Result |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `test-1` | `test` (`default`) | `env:test, foo:bar, bazz:buzz` | Helm chart | automated | Healthy / Synced | `ingress.enabled: true` | Diff adds one `Ingress` and removes nothing |
-| `test-2` | `test` (`default`) | `env:preprod, foo:bar, bazz:buzz` | Plain dir (ConfigMap) | none | Missing / OutOfSync | unchanged | Empty diff |
-| `test-3` | `prod` (`my-project`) | `env:prod, foo:bar` | Helm chart | none | (not asserted) | invalid `values.yaml` | `helm template` error, empty manifests |
+| `test-2` | `test` (`default`) | `env:preprod, foo:bar, bazz:buzz` | Plain dir (ConfigMap) | automated | Healthy / Synced | unchanged | Empty diff |
+| `test-3` | `prod` (`my-project`) | `env:prod, foo:bar` | Helm chart | none | Missing / OutOfSync (its manifests at `main` fail to apply, so a manual sync doesn't change this) | invalid `values.yaml` | `helm template` error, empty manifests |
 | `test-4` | `prod` (`my-project`) | `env:infra, foo:bar` | Plain dir (ConfigMap) | automated | Healthy / Synced | unchanged | Empty diff |
 
 The **Fixture dependency** column says what each use case needs from the manifests repo. "Application CRs" means it only needs the labels and projects, which stay in tangle. "Repo content" means it needs the manifests at `main` and `test_gitops`.
@@ -44,7 +44,7 @@ The **Fixture dependency** column says what each use case needs from the manifes
 | L3 | Several include labels are ANDed | `multiple_tags` (`env:test,bazz:buzz` → test-1) | Application CRs |
 | L4 | Exclude, exclude-only, several excludes, include + exclude on the same key | `exclude*`, `cross_map_different_values` | Application CRs |
 | L5 | Malformed or contradictory query → 400 with a message | `TestE2E_ServerApplicationsBadRequest` | None |
-| L6 | Health and sync status shown per app (synced vs. never-synced) | `CI scenario` Applications link (test-1 Healthy/Synced, test-2 Missing/OutOfSync), `applications.spec.ts` | Repo content at `main` must deploy and become Healthy (test-1, test-4) |
+| L6 | Health and sync status shown per app (synced vs. never-synced) | `CI scenario` Applications link (test-1 and test-2 Healthy/Synced), `CI with failure` Applications link (test-3 Missing/OutOfSync), `applications.spec.ts` | Repo content at `main` must deploy and become Healthy (test-1, test-2, test-4), and must fail to apply for test-3 |
 
 ### Diffs
 
@@ -133,3 +133,23 @@ Verify: `task e2e:live` and `task go:test:e2e` locally against a fresh `task ser
 1. **Branch name:** keep `test_gitops` for now. A rename (`pushed-change` was the candidate) can come later as its own change.
 2. **Helm charts:** copy verbatim; trim in a follow-up.
 3. **Repo contents:** `README.md` and `LICENSE` plus the manifests, nothing else.
+
+## Follow-up: source-type fixtures (2026-11-26)
+
+Test infrastructure for the ways an Application can get its manifests that Tangle doesn't handle yet. This adds the fixtures and a contract test against ArgoCD. It doesn't change Tangle's behavior.
+
+| Application | Covers | Revision ArgoCD needs for the pushed change |
+| --- | --- | --- |
+| `tanka` | A config management plugin sidecar (Tanka, as in homeops). Its diff modifies and removes lines (G1) | `Revision` |
+| `helm-repo` | A chart from a Helm repo, with no git source | None. A branch fails, because the revision is a chart version |
+| `helm-repo-git-values` | A Helm-repo chart, values from git through `ref` | `Revisions`/`SourcePositions` = position 2 |
+| `git-chart-git-values` | A git chart, plus a `ref` source with its own `path` (same repo) | Positions 1 and 2 |
+| `two-repos` | Sources from two repos, with the change in one | Position 2. Sending it to every position fails |
+
+The apps live in `integration/kubernetes/sources/`, in AppProject `sources`, behind the `sources` ArgoCD (token `ARGOCD_SOURCES_TOKEN`), so existing expectations don't change. `TestE2E_SourceFixtures` asserts each row directly against ArgoCD.
+
+Not covered yet: source hydrator (it needs a commit-server and push credentials), duplicate resources across sources, a CMP failure, and tag or SHA target refs (G3).
+
+Tangle-level tests on these fixtures are in `TestE2E_ServerSourceFixtures` and `web/e2e/live/sources.spec.ts`. Their multi-source cases are skipped until the gap below closes.
+
+Next: make Tangle send `Revisions`/`SourcePositions` for multi-source apps. That needs a way to say which repo the pushed ref belongs to. Rendered by hand (2026-11-26), a multi-source app at explicit `Revisions` also differs from its default render in ways the pushed change didn't cause: Helm test-hook Pods appear, `namespace` is dropped and resources reorder. So the fix should probably render both sides with `Revisions`, then tighten the skipped tests to exact matches and un-skip them.

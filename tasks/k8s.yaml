@@ -75,3 +75,5 @@ tasks:
     cmds:
       - kubectl apply -f integration/kubernetes/example/project.yaml
       - kubectl apply -f integration/kubernetes/example
+      - kubectl apply -f integration/kubernetes/sources/project.yaml
+      - kubectl apply -f integration/kubernetes/sources

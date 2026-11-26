@@ -3,6 +3,7 @@ argo-cd:
     cm:
       accounts.automation: apiKey
       accounts.automationProd: apiKey
+      accounts.automationSources: apiKey
 
     rbac:
       policy.csv: |
@@ -10,9 +11,39 @@ argo-cd:
         g, automation, role:automation
         p, role:automationProd, applications, get, my-project/*, allow
         g, automationProd, role:automationProd
+        p, role:automationSources, applications, get, sources/*, allow
+        g, automationSources, role:automationSources
 
     params:
       server.insecure: true
+
+  # The Tanka config management plugin (templates/plugin-tanka.yaml) as a repo-server sidecar, as in
+  # ivanklee86/homeops, so the live suites cover an app rendered by a CMP (the `tanka` fixture Application).
+  repoServer:
+    extraContainers:
+      - name: tanka
+        command:
+          - /var/run/argocd/argocd-cmp-server
+        image: grafana/tanka:0.40.2
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 999
+        volumeMounts:
+          - mountPath: /var/run/argocd
+            name: var-files
+          - mountPath: /home/argocd/cmp-server/plugins
+            name: plugins
+          - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+            subPath: plugin.yaml
+            name: plugin-tanka
+          - mountPath: /tmp
+            name: tanka-temp-dir
+    volumes:
+      - name: tanka-temp-dir
+        emptyDir: {}
+      - name: plugin-tanka
+        configMap:
+          name: plugin-tanka
 
   redis:
     image:

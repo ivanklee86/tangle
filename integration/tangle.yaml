@@ -18,7 +18,13 @@ argocds:
     address: "localhost:8080"
     plainText: true
     authTokenEnvVar: "ARGOCD_PROD_TOKEN"
+  # The source-type fixtures (integration/kubernetes/sources/), in a project only this token can see.
+  sources:
+    address: "localhost:8080"
+    plainText: true
+    authTokenEnvVar: "ARGOCD_SOURCES_TOKEN"
 
 sortOrder:
   - test
   - prod
+  - sources
