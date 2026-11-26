@@ -17,6 +17,10 @@ const (
 
 type IArgoCDWrapper interface {
 	ListApplicationsByLabels(ctx context.Context, labels map[string]string, excludeLabels map[string]string) ([]ListApplicationsResult, error)
+	// GetManifests renders both sides of an Application's diff. When it fails
+	// after planning (the hard refresh or a render), it returns the plan with
+	// the error, so a caller can say which sources got the target ref; when it
+	// fails before (reading the Application), the response is nil.
 	GetManifests(ctx context.Context, request ManifestsRequest) (*GetManifestsResponse, error)
 	GetUrl() string
 	GetScheme() string
@@ -212,7 +216,9 @@ func (a *ArgoCDWrapper) GetManifests(ctx context.Context, request ManifestsReque
 	})
 	err = refreshGroup.Wait()
 	if err != nil {
-		return nil, err
+		// Planned but not rendered: return the plan too, so the caller can say
+		// which sources got the target ref (#293).
+		return &GetManifestsResponse{Plan: plan}, err
 	}
 
 	group := a.ManifestsWorkerPool.NewGroup()
@@ -229,7 +235,9 @@ func (a *ArgoCDWrapper) GetManifests(ctx context.Context, request ManifestsReque
 
 	poolResults, err := group.Wait()
 	if err != nil {
-		return nil, err
+		// A render failing is usually the target ref missing from a repo it
+		// was sent to, and the plan says which (#293).
+		return &GetManifestsResponse{Plan: plan}, err
 	}
 
 	response := GetManifestsResponse{LiveManifests: poolResults[0], TargetManifests: poolResults[1], Plan: plan}

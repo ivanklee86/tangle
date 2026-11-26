@@ -3,6 +3,7 @@ package tangle
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -109,6 +110,7 @@ func postSourceDiffs(t *testing.T, server *httptest.Server, applicationName stri
 //     manifests (S3)
 //   - a blank target repo is rejected with 400 before ArgoCD is called
 //   - a failure reports status error
+//   - a failed render still says which sources got the target ref (#293)
 //   - the applications endpoint lists every app's sources
 func TestDiffsSources(t *testing.T) {
 	t.Run("single source without new fields behaves as before", func(t *testing.T) {
@@ -193,6 +195,23 @@ func TestDiffsSources(t *testing.T) {
 
 		assert.Equal(t, http.StatusBadRequest, status)
 		assert.Empty(t, client.RecordedGets())
+	})
+
+	t.Run("a failed render says which sources got the target ref", func(t *testing.T) {
+		server, client := newSourcesServer(t)
+		client.ManifestsFunc = func(*application.ApplicationManifestQuery) (*repoServerApiClient.ManifestResponse, error) {
+			return nil, errors.New("unable to resolve 'feature-x' to a commit SHA")
+		}
+
+		_, result := postSourceDiffs(t, server, "multi", `{"targetRef":"feature-x","targetRepos":["https://github.com/org/values"]}`)
+
+		assert.Equal(t, "error", result.Status)
+		assert.Contains(t, result.ManifestGenerationError, "unable to resolve")
+		require.Len(t, result.Sources, 2)
+		assert.False(t, result.Sources[0].Moved)
+		assert.True(t, result.Sources[1].Moved)
+		assert.Equal(t, "feature-x", result.Sources[1].TargetRevision)
+		assert.Equal(t, []string{"github.com/org/values"}, result.TargetRepos)
 	})
 
 	t.Run("a failure reports status error", func(t *testing.T) {

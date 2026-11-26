@@ -386,6 +386,13 @@ func TestE2E_ServerSourceFixtures(t *testing.T) {
 			assert.Equal(t, "error", result.Status, "target repos %v", repos)
 			assert.Contains(t, result.ManifestGenerationError, "test_gitops")
 			assert.Empty(t, result.Diffs)
+
+			// #293: the error says which sources got the ref. Source 2 is
+			// tangle, the one without the branch, and it always moved.
+			require.Len(t, result.Sources, 3, "target repos %v", repos)
+			assert.True(t, result.Sources[1].Moved, "target repos %v", repos)
+			assert.Equal(t, "test_gitops", result.Sources[1].TargetRevision)
+			assert.False(t, result.Sources[0].Moved, "podinfo is never a target repo here")
 		}
 	})
 
