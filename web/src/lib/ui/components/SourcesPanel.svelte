@@ -2,7 +2,7 @@
 	import { Badge } from 'flowbite-svelte';
 	import { ChevronDownOutline } from 'flowbite-svelte-icons';
 	import { type DiffSource } from '$lib/backend/data';
-	import { shortRepo } from '$lib/ui/repos';
+	import { shortRepo, shortRevision } from '$lib/ui/repos';
 
 	interface Props {
 		sources: DiffSource[];
@@ -77,21 +77,27 @@
 								</div>
 							{/if}
 						</td>
-						<td class="px-4 py-2 font-mono">{source.liveRevision}</td>
+						<td class="px-4 py-2 font-mono" title={source.liveRevision}>
+							{shortRevision(source.liveRevision)}
+						</td>
 						<td class="px-4 py-2">
 							{#if !rendered}
 								<span class="text-gray-500 dark:text-gray-400">Not rendered</span>
 							{:else if source.moved}
-								<span class="font-mono font-semibold text-gray-900 dark:text-white"
-									>{source.targetRevision}</span
+								<span
+									class="font-mono font-semibold text-gray-900 dark:text-white"
+									title={source.targetRevision}>{shortRevision(source.targetRevision)}</span
 								>
 								<!-- D9: where it moved from, whatever kind of revision that was. -->
 								<div class="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
-									moved from <span class="font-mono">{source.liveRevision}</span>
+									moved from <span class="font-mono" title={source.liveRevision}
+										>{shortRevision(source.liveRevision)}</span
+									>
 								</div>
 							{:else}
-								<span class="font-mono text-gray-500 dark:text-gray-400"
-									>{source.targetRevision}</span
+								<span
+									class="font-mono text-gray-500 dark:text-gray-400"
+									title={source.targetRevision}>{shortRevision(source.targetRevision)}</span
 								>
 								<span class="text-xs text-gray-500 dark:text-gray-400">· unchanged</span>
 							{/if}

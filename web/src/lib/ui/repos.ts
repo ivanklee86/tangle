@@ -28,3 +28,14 @@ function shortRepo(repo: string): string {
 }
 
 export { shortRepo };
+
+/**
+ * A revision short enough to show inline: a full 40-character commit SHA reads
+ * as its first 7 characters, the way git abbreviates it. Branches, tags and
+ * chart versions are left alone. Show the full value alongside, on hover.
+ */
+function shortRevision(revision: string): string {
+	return /^[0-9a-f]{40}$/i.test(revision) ? revision.slice(0, 7) : revision;
+}
+
+export { shortRevision };

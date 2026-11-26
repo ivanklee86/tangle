@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shortRepo } from '$lib/ui/repos';
+import { shortRepo, shortRevision } from '$lib/ui/repos';
 
 // Test cases:
 //   - an https, ssh or scp-style git URL shortens to org/repo, without .git or
@@ -35,4 +35,20 @@ describe('shortRepo', () => {
 	it('is blank for blank input', () => {
 		expect(shortRepo('  ')).toBe('');
 	});
+});
+
+// Test cases:
+//   - a full SHA reads as its first 7 characters
+//   - branches, tags, chart versions and short SHAs are left alone
+describe('shortRevision', () => {
+	it('abbreviates a full commit SHA', () => {
+		expect(shortRevision('309da004053082d138071fb5494d0b510bc23473')).toBe('309da00');
+	});
+
+	it.each(['main', 'fixture-pinned-v1', '6.17.0', '309da00', 'feature/x'])(
+		'leaves %s alone',
+		(revision) => {
+			expect(shortRevision(revision)).toBe(revision);
+		}
+	);
 });

@@ -17,7 +17,7 @@
 		ArrowUpRightFromSquareOutline,
 		ChevronRightOutline
 	} from 'flowbite-svelte-icons';
-	import { shortRepo } from '$lib/ui/repos';
+	import { shortRepo, shortRevision } from '$lib/ui/repos';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -292,7 +292,8 @@
 
 		<div class="px-6 pb-6">
 			<div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-				<div class="max-h-[60vh] overflow-y-auto">
+				<!-- A stable gutter, so the vertical scrollbar never sits over the last column. -->
+				<div class="max-h-[60vh] overflow-y-auto [scrollbar-gutter:stable]">
 					<Table hoverable>
 						<TableHead class="sticky top-0 z-10">
 							{#each [{ label: 'Application', key: 'name' as const }, { label: 'ArgoCD', key: 'instance' as const }, { label: 'Health', key: 'health' as const }, { label: 'Sync', key: 'syncStatus' as const }] as column (column.key)}
@@ -342,8 +343,16 @@
 												/>
 												{sources.length} sources
 											</button>
-											<span class="ms-1 font-mono text-gray-500 dark:text-gray-400"
-												>{sources.map((source) => source.targetRevision).join(' · ')}</span
+											<!--
+												Capped and truncated, with the full list on hover: a long
+												branch name must not widen the table past its container.
+											-->
+											<span
+												class="ms-1 inline-block max-w-56 truncate align-bottom font-mono text-gray-500 dark:text-gray-400"
+												title={sources.map((source) => source.targetRevision).join(' · ')}
+												>{sources
+													.map((source) => shortRevision(source.targetRevision))
+													.join(' · ')}</span
 											>
 										</TableBodyCell>
 									{:else}
@@ -394,8 +403,10 @@
 														{#if source.ref}
 															<Badge color="gray" class="font-mono">ref: {source.ref}</Badge>
 														{/if}
-														<span class="font-mono text-gray-500 dark:text-gray-400"
-															>{source.targetRevision}</span
+														<span
+															class="font-mono text-gray-500 dark:text-gray-400"
+															title={source.targetRevision}
+															>{shortRevision(source.targetRevision)}</span
 														>
 													</li>
 												{/each}
