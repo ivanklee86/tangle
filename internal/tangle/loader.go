@@ -68,7 +68,7 @@ func LoadConfig(config *koanf.Koanf, options LoadConfigOptions) (*TangleConfig, 
 				return "", nil
 			}
 
-			canonical, exists := resolveConfigKey(key)
+			canonical, exists := resolveConfigKey(key, config.MapKeys)
 			if !exists || kubernetesServiceLinkValue.MatchString(v) {
 				ignoredEnvVars = append(ignoredEnvVars, k)
 				return "", nil

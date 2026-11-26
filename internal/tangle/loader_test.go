@@ -251,3 +251,69 @@ func loadConfigWithDomain(t *testing.T, domain string) (*TangleConfig, error) {
 
 	return LoadConfig(koanf.New("."), LoadConfigOptions{Path: path})
 }
+
+// loadYAMLConfig writes yaml to a temp file and loads it.
+func loadYAMLConfig(t *testing.T, yaml string) (*TangleConfig, error) {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), "tangle.yaml")
+	if err := os.WriteFile(path, []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return LoadConfig(koanf.New("."), LoadConfigOptions{Path: path})
+}
+
+// Test cases (#237: env overrides of ArgoCD instances by name):
+//   - an instance spelled with upper case in the file is overridden, not
+//     duplicated as a second, lower-case instance with no token
+//   - an instance name containing `_` is reachable, and the longest name
+//     wins over a shorter one it starts with
+//   - a variable naming an instance the file doesn't have is ignored and
+//     reported, instead of creating a half-configured instance
+func TestEnvironmentVariablesArgoCDInstanceNames(t *testing.T) {
+	const yaml = `name: "tangle"
+port: 8081
+argocds:
+  Prod:
+    address: "localhost:8080"
+    authTokenEnvVar: "ARGOCD_PROD_TOKEN"
+  prod_eu:
+    address: "localhost:8081"
+    authTokenEnvVar: "ARGOCD_PROD_EU_TOKEN"
+`
+
+	t.Run("a mixed-case instance is overridden, not duplicated", func(t *testing.T) {
+		t.Setenv("TANGLE_ARGOCDS_PROD_ADDRESS", "override.example.com:443")
+
+		loadedConfig, err := loadYAMLConfig(t, yaml)
+
+		assert.Nil(t, err)
+		assert.Len(t, loadedConfig.ArgoCDs, 2)
+		assert.Equal(t, "override.example.com:443", loadedConfig.ArgoCDs["Prod"].Address)
+		assert.Equal(t, "ARGOCD_PROD_TOKEN", loadedConfig.ArgoCDs["Prod"].AuthTokenEnvVar)
+		assert.NotContains(t, loadedConfig.ArgoCDs, "prod")
+		assert.Empty(t, loadedConfig.IgnoredEnvVars)
+	})
+
+	t.Run("an instance name with an underscore is reachable", func(t *testing.T) {
+		t.Setenv("TANGLE_ARGOCDS_PROD_EU_ADDRESS", "eu.example.com:443")
+
+		loadedConfig, err := loadYAMLConfig(t, yaml)
+
+		assert.Nil(t, err)
+		assert.Len(t, loadedConfig.ArgoCDs, 2)
+		assert.Equal(t, "eu.example.com:443", loadedConfig.ArgoCDs["prod_eu"].Address)
+		assert.Equal(t, "localhost:8080", loadedConfig.ArgoCDs["Prod"].Address, "Prod is a shorter prefix and mustn't take it")
+	})
+
+	t.Run("an unknown instance is ignored and reported", func(t *testing.T) {
+		t.Setenv("TANGLE_ARGOCDS_STAGING_ADDRESS", "staging.example.com:443")
+
+		loadedConfig, err := loadYAMLConfig(t, yaml)
+
+		assert.Nil(t, err)
+		assert.Len(t, loadedConfig.ArgoCDs, 2)
+		assert.NotContains(t, loadedConfig.ArgoCDs, "staging")
+		assert.Equal(t, []string{"TANGLE_ARGOCDS_STAGING_ADDRESS"}, loadedConfig.IgnoredEnvVars)
+	})
+}
