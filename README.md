@@ -13,19 +13,19 @@ Tangle makes using with multiple ArgoCDs in a [hub and spoke](https://codefresh.
 
 For more information, check out our [documentation](https://ivanklee86.github.io/tangle/)!
 
-**Example: Building a query on the Home page: the `team:payments` label, the `feature/queue-tuning` branch, and the repo it was pushed to**
+**Example: Setting the `tier:backend` label on the Home page**
 
 ![Home](./docs/images/TangleHome.png)
 
-**Example: View all Applications with the `team:payments` label**
+**Example: View all Applications with the `tier:backend` label**
 
-Visiting `/applications?labels=team:payments`
+Visiting `/applications?labels=tier:backend`
 
 ![Applications](./docs/images/TangleApplications.png)
 
-**Example: View diffs of all Applications with the `team:payments` label against the `feature/queue-tuning` branch of `acme/platform-values`**
+**Example: View diffs of all Applications with the `tier:backend` label against the `feature/queue-tuning` branch**
 
-Visiting `/diffs?labels=team:payments&targetRef=feature/queue-tuning&targetRepo=https://github.com/acme/platform-values.git`
+Visiting `/diffs?labels=tier:backend&targetRef=feature/queue-tuning`
 
 ![Diffs](./docs/images/TangleDiffs.png)
 
