@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -173,10 +174,25 @@ func New(config *TangleConfig, version string) *Tangle {
 	))
 	router.Handle("/health", h.Handler())
 
-	fileDir := http.Dir("./build")
-	router.Handle("/*", http.FileServer(fileDir))
+	warnIfStaticAssetsMissing(logger, staticDir)
+	router.Handle("/*", http.FileServer(http.Dir(staticDir)))
 
 	return &tangle
+}
+
+// staticDir holds the pre-built SPA, relative to the working directory. The
+// Docker image puts it there; running the binary from a checkout needs
+// `task ts:build` first.
+const staticDir = "./build"
+
+// warnIfStaticAssetsMissing logs once at startup when the SPA isn't where the
+// file server looks for it. Without this, the API works and every UI page is
+// a bare 404, which looks like a routing bug rather than a missing build.
+func warnIfStaticAssetsMissing(logger *slog.Logger, dir string) {
+	if _, err := os.Stat(filepath.Join(dir, "index.html")); err != nil {
+		logger.Warn("Web UI assets not found, so UI pages will return 404. Run `task ts:build` from the repository root.",
+			slog.String("staticDir", dir), slog.String("error", err.Error()))
+	}
 }
 
 // resolveClientIP replaces the deprecated (IP-spoofable) middleware.RealIP: it

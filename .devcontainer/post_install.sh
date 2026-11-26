@@ -7,6 +7,10 @@ mkdir /home/vscode/.uv_cache | true
 uv venv --clear
 uv pip install -r requirements.txt
 
+# Install web dependencies exactly as locked, so the Playwright package matches
+# the browsers the Dockerfile installs (both pinned to the same version).
+npm ci --prefix web
+
 # Configure git
 if [ "$CODESPACES" != "true" ]; then
     echo "Running locally, configure gpg."

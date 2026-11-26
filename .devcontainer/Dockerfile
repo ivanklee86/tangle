@@ -26,8 +26,13 @@ COPY --from=quay.io/argoproj/argocd:v3.6.2 /usr/local/bin/argocd /usr/local/bin
 # base (ttf-ubuntu-font-family/ttf-unifont aren't in its apt sources). Without a
 # font package installed, Chromium renders real content but all text is
 # genuinely zero-height/invisible — looks exactly like a CSS bug.
+#
+# npx runs as root here but HOME is still /home/vscode, so its default cache
+# would leave a root-owned ~/.npm that breaks every later `npm ci` as vscode.
+# Point it at a throwaway cache instead.
 ARG PLAYWRIGHT_VERSION=1.65.1 # npm/playwright
-RUN npx --yes playwright@${PLAYWRIGHT_VERSION} install chromium chromium-headless-shell && \
+RUN npm_config_cache=/tmp/npm-cache npx --yes playwright@${PLAYWRIGHT_VERSION} install chromium chromium-headless-shell && \
+    rm -rf /tmp/npm-cache && \
     apt-get update && apt-get install -y --no-install-recommends \
         libglib2.0-0 libnss3 libnspr4 libdbus-1-3 libatk1.0-0 \
         libatk-bridge2.0-0 libatspi2.0-0 libx11-6 libxcomposite1 \

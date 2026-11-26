@@ -53,6 +53,8 @@ tasks:
     desc: Run server
     cmds:
       - task: generate
+      # The server serves the SPA from ./build, which only ts:build creates.
+      - task: :ts:build
       - go run cmd/tangle-server/main.go
 
   run:reloading:
