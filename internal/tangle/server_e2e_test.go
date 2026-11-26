@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -221,8 +222,8 @@ func TestE2E_ServerSourceFixtures(t *testing.T) {
 			query    string
 			expected []string
 		}{
-			{name: "suite", query: "labels=suite:sources", expected: []string{"git-chart-git-values", "helm-repo", "helm-repo-git-values", "tanka", "two-repos"}},
-			{name: "multi_source", query: "labels=source:multi-source", expected: []string{"git-chart-git-values", "helm-repo-git-values", "two-repos"}},
+			{name: "suite", query: "labels=suite:sources", expected: []string{"git-chart-git-values", "helm-repo", "helm-repo-git-values", "multi-source-cmp", "same-repo-pinned", "tanka", "three-repos", "two-repos"}},
+			{name: "multi_source", query: "labels=source:multi-source", expected: []string{"git-chart-git-values", "helm-repo-git-values", "multi-source-cmp", "same-repo-pinned", "three-repos", "two-repos"}},
 			{name: "single_source", query: "labels=suite:sources&excludeLabels=source:multi-source", expected: []string{"helm-repo", "tanka"}},
 		}
 
@@ -300,6 +301,11 @@ func TestE2E_ServerSourceFixtures(t *testing.T) {
 		{app: "helm-repo-git-values", added: []string{"replicas: 2"}, removed: []string{"replicas: 1"}, randomHooks: true},
 		{app: "git-chart-git-values", added: []string{"greeting: hello, world", "extra: b"}, removed: []string{"greeting: hello", "extra: a"}},
 		{app: "two-repos", added: []string{"greeting: hello, world"}, removed: []string{"greeting: hello"}},
+		// The tag-pinned source moves too, because it's in the target repo
+		// (D4). Its second source also spells the repo without .git.
+		{app: "same-repo-pinned", added: []string{"greeting: hello, world", "greeting: hello, world"}, removed: []string{"greeting: hello", "greeting: hello"}},
+		{app: "multi-source-cmp", added: []string{"greeting: hello, world"}, removed: []string{"greeting: hello"}},
+		{app: "three-repos", added: []string{"greeting: hello, world"}, removed: []string{"greeting: hello"}},
 	}
 	for _, test := range multiSource {
 		t.Run(test.app, func(t *testing.T) {
@@ -349,6 +355,152 @@ func TestE2E_ServerSourceFixtures(t *testing.T) {
 		assert.Empty(t, result.ManifestGenerationError)
 		assert.Empty(t, result.Diffs)
 	})
+
+	t.Run("extra_target_repo_changes_nothing", func(t *testing.T) {
+		// M12: a target repo two-repos doesn't use leaves the result as M3.
+		result := postDiffsRequest(t, server.URL, "two-repos", DiffsRequest{TargetRef: "test_gitops", TargetRepos: []string{fixtureManifestsRepo, tangleRepo}})
+
+		assert.Equal(t, "ok", result.Status)
+		added, removed := changedLines(result.Diffs)
+		assert.ElementsMatch(t, []string{"greeting: hello, world"}, added)
+		assert.ElementsMatch(t, []string{"greeting: hello"}, removed)
+	})
+
+	t.Run("target_repo_without_the_ref", func(t *testing.T) {
+		// M11 and M13: tangle has no test_gitops branch, so sending the ref
+		// to its source fails, whether it's the only target repo or one of
+		// two. The other sources rendering fine doesn't hide the error.
+		for _, repos := range [][]string{{tangleRepo}, {fixtureManifestsRepo, tangleRepo}} {
+			result := postDiffsRequest(t, server.URL, "three-repos", DiffsRequest{TargetRef: "test_gitops", TargetRepos: repos})
+
+			assert.Equal(t, "error", result.Status, "target repos %v", repos)
+			assert.Contains(t, result.ManifestGenerationError, "test_gitops")
+			assert.Empty(t, result.Diffs)
+		}
+	})
+
+	t.Run("missing_target_ref", func(t *testing.T) {
+		// M7: a ref the matched repo doesn't have is an error, never an
+		// empty diff.
+		result := postDiffsRequest(t, server.URL, "two-repos", DiffsRequest{TargetRef: "does-not-exist", TargetRepos: []string{fixtureManifestsRepo}})
+
+		assert.Equal(t, "error", result.Status)
+		assert.Contains(t, result.ManifestGenerationError, "does-not-exist")
+	})
+
+	t.Run("no_change_is_an_empty_diff", func(t *testing.T) {
+		// L2: diffing against main renders both sides with explicit
+		// Revisions at the same content, so nothing differs. (Not
+		// helm-repo-git-values: its random Helm test-hook names always
+		// differ, as explained above.)
+		for _, app := range []string{"git-chart-git-values", "two-repos", "multi-source-cmp"} {
+			result := postDiffsRequest(t, server.URL, app, DiffsRequest{TargetRef: "main", TargetRepos: []string{fixtureManifestsRepo}})
+
+			assert.Equal(t, "ok", result.Status, app)
+			assert.Empty(t, result.Diffs, app)
+		}
+	})
+
+	// R1 to R6: the target ref spelled as a tag or a SHA gives the same
+	// diff as the branch. The SHA is looked up at run time, because every
+	// rebase of test_gitops changes it.
+	targetSHA := fixtureTargetSHA(t)
+	branchDiff := postDiffs(t, server.URL, "tanka", "main", "test_gitops").Diffs
+	require.NotEmpty(t, branchDiff)
+
+	t.Run("tag_and_sha_single_source", func(t *testing.T) {
+		// R1 and R2.
+		for _, ref := range []string{"fixture-target", targetSHA} {
+			result := postDiffs(t, server.URL, "tanka", "main", ref)
+
+			assert.Empty(t, result.ManifestGenerationError, ref)
+			assert.Equal(t, diffBody(branchDiff), diffBody(result.Diffs), ref)
+		}
+	})
+
+	t.Run("tag_and_sha_multi_source", func(t *testing.T) {
+		// R3 and R4.
+		for _, ref := range []string{"fixture-target", targetSHA} {
+			result := postDiffsRequest(t, server.URL, "two-repos", DiffsRequest{TargetRef: ref, TargetRepos: []string{fixtureManifestsRepo}})
+
+			assert.Equal(t, "ok", result.Status, ref)
+			added, removed := changedLines(result.Diffs)
+			assert.ElementsMatch(t, []string{"greeting: hello, world"}, added, ref)
+			assert.ElementsMatch(t, []string{"greeting: hello"}, removed, ref)
+		}
+	})
+
+	t.Run("abbreviated_sha", func(t *testing.T) {
+		// R5: whatever ArgoCD makes of a short SHA, Tangle reports it, as
+		// the same diff or as an error naming the ref. Never an empty diff.
+		short := targetSHA[:7]
+		result := postDiffs(t, server.URL, "tanka", "main", short)
+
+		if result.ManifestGenerationError != "" {
+			t.Logf("ArgoCD rejects an abbreviated SHA: %s", result.ManifestGenerationError)
+			assert.Contains(t, result.ManifestGenerationError, short)
+			return
+		}
+		t.Log("ArgoCD resolves an abbreviated SHA")
+		assert.Equal(t, diffBody(branchDiff), diffBody(result.Diffs))
+	})
+
+	t.Run("sha_from_another_repo", func(t *testing.T) {
+		// R6: a commit of tangle's isn't in the manifests repo.
+		result := postDiffsRequest(t, server.URL, "two-repos", DiffsRequest{TargetRef: tangleFixtureCommit, TargetRepos: []string{fixtureManifestsRepo}})
+
+		assert.Equal(t, "error", result.Status)
+		assert.NotEmpty(t, result.ManifestGenerationError)
+	})
+}
+
+// Repos and refs the source-type fixtures use.
+const (
+	// tangleRepo is this repo, the second source of three-repos. It has no
+	// test_gitops branch.
+	tangleRepo = "https://github.com/ivanklee86/tangle.git"
+	// tangleFixtureCommit is the commit of this repo three-repos pins.
+	tangleFixtureCommit = "309da004053082d138071fb5494d0b510bc23473"
+)
+
+// fixtureTargetSHA returns the commit test_gitops points at, and fails if the
+// fixture-target tag has drifted from it, which happens when test_gitops is
+// rebased and the tag isn't moved (see the manifests repo's README).
+func fixtureTargetSHA(t *testing.T) string {
+	t.Helper()
+
+	output, err := exec.Command("git", "ls-remote", fixtureManifestsRepo, "refs/heads/test_gitops", "refs/tags/fixture-target", "refs/tags/fixture-target^{}").Output()
+	require.NoError(t, err)
+
+	refs := map[string]string{}
+	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
+		sha, ref, found := strings.Cut(line, "\t")
+		if found {
+			refs[ref] = sha
+		}
+	}
+
+	branch := refs["refs/heads/test_gitops"]
+	tag := refs["refs/tags/fixture-target^{}"]
+	if tag == "" {
+		tag = refs["refs/tags/fixture-target"]
+	}
+	require.NotEmpty(t, branch, "test_gitops not found in %s", fixtureManifestsRepo)
+	require.Equal(t, branch, tag, "fixture-target must point at test_gitops; move it after a rebase (see the manifests repo's README)")
+
+	return branch
+}
+
+// diffBody drops a unified diff's file headers, which name temp files and
+// differ between runs.
+func diffBody(diff string) string {
+	lines := []string{}
+	for line := range strings.SplitSeq(diff, "\n") {
+		if !strings.HasPrefix(line, "--- ") && !strings.HasPrefix(line, "+++ ") {
+			lines = append(lines, line)
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 // fixtureManifestsRepo is the repo the source-type fixtures' test_gitops

@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: same-repo-pinned
+  labels:
+    suite: sources
+    source: multi-source
+spec:
+  project: sources
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  # One repo at two revisions: a branch, and a tag that never moves. The
+  # second source spells the repo without .git, so a live test shows that one
+  # target repo matches both spellings.
+  sources:
+    - repoURL: https://github.com/ivanklee86/tangle-integration-manifests.git
+      path: same-repo-pinned/branch
+      targetRevision: main
+    - repoURL: https://github.com/ivanklee86/tangle-integration-manifests
+      path: same-repo-pinned/tag
+      targetRevision: fixture-pinned-v1
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

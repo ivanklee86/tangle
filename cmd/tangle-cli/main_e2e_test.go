@@ -374,3 +374,49 @@ func TestE2E_CLIEdgeCases(t *testing.T) {
 		assert.Empty(t, run.files(t))
 	})
 }
+
+// Scenario "CI" with the pushed change named by a tag or by its commit, as CI
+// usually has it (D7): the same files as the branch.
+func TestE2E_CITargetRefKinds(t *testing.T) {
+	setupE2E(t)
+
+	for _, ref := range []string{"fixture-target", fixtureTargetSHA(t)} {
+		t.Run(ref, func(t *testing.T) {
+			run := generateManifests(t, []string{"bazz=buzz"}, "--target-ref", ref)
+
+			assert.Equal(t, 0, run.ExitCode)
+			assertTableRow(t, run.Stdout, "test", "test-1", false)
+			assertDiffAddsOnlyIngress(t, run)
+			assert.Empty(t, run.readFile(t, "diff-test-test-2.yaml"))
+		})
+	}
+}
+
+// fixtureTargetSHA returns the commit test_gitops points at in the manifests
+// repo, and fails if the fixture-target tag has drifted from it. It's looked
+// up at run time because every rebase of test_gitops changes it.
+func fixtureTargetSHA(t *testing.T) string {
+	t.Helper()
+
+	const repo = "https://github.com/ivanklee86/tangle-integration-manifests"
+	output, err := exec.Command("git", "ls-remote", repo, "refs/heads/test_gitops", "refs/tags/fixture-target", "refs/tags/fixture-target^{}").Output()
+	require.NoError(t, err)
+
+	refs := map[string]string{}
+	for line := range strings.SplitSeq(strings.TrimSpace(string(output)), "\n") {
+		sha, ref, found := strings.Cut(line, "\t")
+		if found {
+			refs[ref] = sha
+		}
+	}
+
+	branch := refs["refs/heads/test_gitops"]
+	tag := refs["refs/tags/fixture-target^{}"]
+	if tag == "" {
+		tag = refs["refs/tags/fixture-target"]
+	}
+	require.NotEmpty(t, branch, "test_gitops not found in %s", repo)
+	require.Equal(t, branch, tag, "fixture-target must point at test_gitops; move it after a rebase (see the manifests repo's README)")
+
+	return branch
+}

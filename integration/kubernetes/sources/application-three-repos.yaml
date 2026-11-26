@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: three-repos
+  labels:
+    suite: sources
+    source: multi-source
+spec:
+  project: sources
+  # Its own namespace: in default, its podinfo Deployment would clash with
+  # two-repos', and its example-cm-4 with test-4's.
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: three-repos
+  # Three repos, with the pushed change only in the last. Neither of the
+  # others has a test_gitops branch. The second is this repo at the last
+  # commit before #286 moved the live manifests out.
+  sources:
+    - repoURL: https://github.com/stefanprodan/podinfo.git
+      path: kustomize
+      targetRevision: 6.17.0
+    - repoURL: https://github.com/ivanklee86/tangle.git
+      path: integration/kubernetes/example/manifests/4
+      targetRevision: 309da004053082d138071fb5494d0b510bc23473
+    - repoURL: https://github.com/ivanklee86/tangle-integration-manifests.git
+      path: three-repos
+      targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
