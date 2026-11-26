@@ -171,16 +171,16 @@ func TestE2E_SourceFixtures(t *testing.T) {
 	t.Run("two-repos", func(t *testing.T) {
 		live, err := renderFixture(t, "two-repos", nil)
 		require.NoError(t, err)
-		assert.Contains(t, live, "Deployment/guestbook-ui")
+		assert.Contains(t, live, "Deployment/podinfo")
 		assert.Equal(t, map[string]any{"greeting": "hello"}, live.configMapData(t, "two-repos-fixture"))
 
 		// Only this repo's source (position 2) has the branch.
 		target, err := renderFixture(t, "two-repos", atSourceRevisions(fixtureTargetRef, 2))
 		require.NoError(t, err)
-		assert.Equal(t, live["Deployment/guestbook-ui"], target["Deployment/guestbook-ui"])
+		assert.Equal(t, live["Deployment/podinfo"], target["Deployment/podinfo"])
 		assert.Equal(t, map[string]any{"greeting": "hello, world"}, target.configMapData(t, "two-repos-fixture"))
 
-		// Sending the pushed ref to every source fails: argocd-example-apps
+		// Sending the pushed ref to every source fails: stefanprodan/podinfo
 		// has no test_gitops branch.
 		_, err = renderFixture(t, "two-repos", atSourceRevisions(fixtureTargetRef, 1, 2))
 		assert.Error(t, err)

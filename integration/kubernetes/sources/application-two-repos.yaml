@@ -11,9 +11,9 @@ spec:
     server: https://kubernetes.default.svc
     namespace: default
   sources:
-    - repoURL: https://github.com/argoproj/argocd-example-apps.git
-      path: guestbook
-      targetRevision: 8088f4c0d970abb09e250248cc97e35623447cb5
+    - repoURL: https://github.com/stefanprodan/podinfo.git
+      path: kustomize
+      targetRevision: 6.17.0
     - repoURL: https://github.com/ivanklee86/tangle-integration-manifests.git
       path: two-repos
       targetRevision: main
