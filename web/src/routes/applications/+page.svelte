@@ -10,7 +10,8 @@
 		TableBodyRow,
 		TableHead,
 		TableHeadCell,
-		Toggle
+		Toggle,
+		Tooltip
 	} from 'flowbite-svelte';
 	import {
 		ArrowRightOutline,
@@ -215,82 +216,91 @@
 	{#if applications?.error}
 		<div class="p-6"><ErrorAlert message={applications.errorResponse?.error} /></div>
 	{:else if applications}
-		<div class="flex flex-wrap items-center gap-3 px-6 pt-4 pb-3">
-			<div
-				class="inline-flex overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600"
-			>
-				<button
-					type="button"
-					aria-pressed={facets.attentionOnly}
-					class="h-9 border-e border-gray-300 px-3 text-sm font-semibold dark:border-gray-600 {facets.attentionOnly
-						? 'bg-primary-600 text-white'
-						: 'bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300'}"
-					onclick={() => (facets.attentionOnly = true)}
+		<!--
+			Two groups that wrap as wholes: the filters on the left (wrapping
+			among themselves), and search plus auto-refresh on the right. As one
+			flat row, each control wrapped on its own, which stranded the refresh
+			period on a line by itself.
+		-->
+		<div class="flex flex-wrap items-center justify-between gap-3 px-6 pt-4 pb-3">
+			<div class="flex flex-wrap items-center gap-3">
+				<div
+					class="inline-flex overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600"
 				>
-					Needs attention {needing}
-				</button>
-				<button
-					type="button"
-					aria-pressed={!facets.attentionOnly}
-					class="h-9 px-3 text-sm font-semibold {!facets.attentionOnly
-						? 'bg-primary-600 text-white'
-						: 'bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300'}"
-					onclick={() => (facets.attentionOnly = false)}
-				>
-					All {rows.length}
-				</button>
+					<button
+						type="button"
+						aria-pressed={facets.attentionOnly}
+						class="h-9 border-e border-gray-300 px-3 text-sm font-semibold dark:border-gray-600 {facets.attentionOnly
+							? 'bg-primary-600 text-white'
+							: 'bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300'}"
+						onclick={() => (facets.attentionOnly = true)}
+					>
+						Needs attention {needing}
+					</button>
+					<button
+						type="button"
+						aria-pressed={!facets.attentionOnly}
+						class="h-9 px-3 text-sm font-semibold {!facets.attentionOnly
+							? 'bg-primary-600 text-white'
+							: 'bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300'}"
+						onclick={() => (facets.attentionOnly = false)}
+					>
+						All {rows.length}
+					</button>
+				</div>
+
+				{#each [{ label: 'Health', field: 'health' as const, set: 'health' as const }, { label: 'Sync', field: 'syncStatus' as const, set: 'sync' as const }] as facet (facet.set)}
+					{@const options = countBy(rows, facet.field)}
+					{#if options.length > 1}
+						<div class="flex items-center gap-2">
+							<span
+								class="text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400"
+								>{facet.label}</span
+							>
+							<div
+								role="group"
+								aria-label="Filter by {facet.label.toLowerCase()}"
+								class="inline-flex overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600"
+							>
+								{#each options as option (option.value)}
+									<button
+										type="button"
+										aria-pressed={facets[facet.set].has(option.value)}
+										class="h-9 border-e border-gray-300 px-3 text-sm last:border-e-0 dark:border-gray-600 {facets[
+											facet.set
+										].has(option.value)
+											? 'bg-primary-600 text-white'
+											: 'bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300'}"
+										onclick={() =>
+											(facets[facet.set] = toggleFacet(facets[facet.set], option.value))}
+									>
+										{option.value}
+										<span class="opacity-70">{option.count}</span>
+									</button>
+								{/each}
+							</div>
+						</div>
+					{/if}
+				{/each}
 			</div>
 
-			{#each [{ label: 'Health', field: 'health' as const, set: 'health' as const }, { label: 'Sync', field: 'syncStatus' as const, set: 'sync' as const }] as facet (facet.set)}
-				{@const options = countBy(rows, facet.field)}
-				{#if options.length > 1}
-					<div class="flex items-center gap-2">
-						<span
-							class="text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400"
-							>{facet.label}</span
-						>
-						<div
-							role="group"
-							aria-label="Filter by {facet.label.toLowerCase()}"
-							class="inline-flex overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600"
-						>
-							{#each options as option (option.value)}
-								<button
-									type="button"
-									aria-pressed={facets[facet.set].has(option.value)}
-									class="h-9 border-e border-gray-300 px-3 text-sm last:border-e-0 dark:border-gray-600 {facets[
-										facet.set
-									].has(option.value)
-										? 'bg-primary-600 text-white'
-										: 'bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300'}"
-									onclick={() => (facets[facet.set] = toggleFacet(facets[facet.set], option.value))}
-								>
-									{option.value}
-									<span class="opacity-70">{option.count}</span>
-								</button>
-							{/each}
-						</div>
-					</div>
-				{/if}
-			{/each}
-
-			<div class="grow"></div>
-
-			<Search
-				size="md"
-				class="w-56"
-				placeholder="Filter by name"
-				aria-label="Filter by application name"
-				bind:value={facets.name}
-			/>
-			<Toggle bind:checked={refreshEnabled}>Auto-refresh</Toggle>
-			<Select
-				class="w-24"
-				aria-label="Refresh period"
-				items={refreshPeriods}
-				bind:value={refreshPeriod}
-				disabled={!refreshEnabled}
-			/>
+			<div class="ms-auto flex items-center gap-3">
+				<Search
+					size="md"
+					class="w-56"
+					placeholder="Filter by name"
+					aria-label="Filter by application name"
+					bind:value={facets.name}
+				/>
+				<Toggle bind:checked={refreshEnabled}>Auto-refresh</Toggle>
+				<Select
+					class="w-24"
+					aria-label="Refresh period"
+					items={refreshPeriods}
+					bind:value={refreshPeriod}
+					disabled={!refreshEnabled}
+				/>
+			</div>
 		</div>
 
 		<div class="px-6 pb-6">
@@ -354,15 +364,19 @@
 										>
 									{/if}
 									<TableBodyCell class="text-right whitespace-nowrap">
+										<!-- Icon-only below xl, so the table fits a narrow window; the name stays in the label. -->
 										<Button
 											size="xs"
 											color="alternative"
 											href={application.url}
 											target="_blank"
 											rel="external"
+											aria-label="Open {application.name} in ArgoCD"
 										>
-											Open in ArgoCD<ArrowUpRightFromSquareOutline class="ms-1.5 h-3 w-3" />
+											<span class="hidden xl:inline">Open in ArgoCD</span
+											><ArrowUpRightFromSquareOutline class="h-3 w-3 xl:ms-1.5" />
 										</Button>
+										<Tooltip class="xl:hidden">Open in ArgoCD</Tooltip>
 									</TableBodyCell>
 								</TableBodyRow>
 								{#if sources.length > 1 && expanded.has(key)}
@@ -379,8 +393,8 @@
 												<colgroup>
 													<col class="w-8" />
 													<col class="w-16" />
-													<col class="w-[24rem]" />
-													<col class="w-[28rem]" />
+													<col class="w-[35%]" />
+													<col class="w-[40%]" />
 													<col />
 												</colgroup>
 												<caption class="sr-only">Sources of {application.name}</caption>
