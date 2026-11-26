@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: git-chart-git-values
+  labels:
+    suite: sources
+    source: multi-source
+spec:
+  project: sources
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  sources:
+    - repoURL: https://github.com/ivanklee86/tangle-integration-manifests.git
+      path: git-chart-git-values/chart
+      targetRevision: main
+      helm:
+        valueFiles:
+          - $values/git-chart-git-values/values.yaml
+    - repoURL: https://github.com/ivanklee86/tangle-integration-manifests.git
+      path: git-chart-git-values/extra
+      targetRevision: main
+      ref: values

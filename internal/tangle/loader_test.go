@@ -22,7 +22,7 @@ func TestConfig(t *testing.T) {
 		assert.NotNil(t, loadedConfig)
 		assert.Equal(t, "tangle", config.String("name"))
 		assert.Equal(t, "tangle", loadedConfig.Name)
-		assert.Len(t, loadedConfig.ArgoCDs, 2)
+		assert.Len(t, loadedConfig.ArgoCDs, 3)
 	})
 
 	t.Run("Environment variable overrides file config", func(t *testing.T) {
@@ -124,7 +124,7 @@ func TestEnvironmentVariables(t *testing.T) {
 		_, loadedConfig, err := loadTestConfig(t)
 
 		assert.Nil(t, err)
-		assert.Len(t, loadedConfig.ArgoCDs, 2)
+		assert.Len(t, loadedConfig.ArgoCDs, 3)
 		assert.Equal(t, "argocd.example.com:443", loadedConfig.ArgoCDs["test"].Address)
 		assert.False(t, loadedConfig.ArgoCDs["test"].PlainText)
 		assert.Equal(t, "localhost:8080", loadedConfig.ArgoCDs["prod"].Address)
@@ -138,7 +138,7 @@ func TestEnvironmentVariables(t *testing.T) {
 		config, loadedConfig, err := loadTestConfig(t)
 
 		assert.Nil(t, err)
-		assert.Len(t, loadedConfig.ArgoCDs, 2)
+		assert.Len(t, loadedConfig.ArgoCDs, 3)
 		assert.Nil(t, config.Get("not"))
 		assert.Equal(t, []string{"TANGLE_ARGOCDS", "TANGLE_NOT_A_SETTING"}, loadedConfig.IgnoredEnvVars)
 	})

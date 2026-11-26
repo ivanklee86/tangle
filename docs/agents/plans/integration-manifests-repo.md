@@ -133,3 +133,21 @@ Verify: `task e2e:live` and `task go:test:e2e` locally against a fresh `task ser
 1. **Branch name:** keep `test_gitops` for now. A rename (`pushed-change` was the candidate) can come later as its own change.
 2. **Helm charts:** copy verbatim; trim in a follow-up.
 3. **Repo contents:** `README.md` and `LICENSE` plus the manifests, nothing else.
+
+## Follow-up: source-type fixtures (2026-11-26)
+
+Test infrastructure for the ways an Application can get its manifests that Tangle doesn't handle yet. This adds the fixtures and a contract test against ArgoCD. It doesn't change Tangle's behavior.
+
+| Application | Covers | Revision ArgoCD needs for the pushed change |
+| --- | --- | --- |
+| `tanka` | A config management plugin sidecar (Tanka, as in homeops). Its diff modifies and removes lines (G1) | `Revision` |
+| `helm-repo` | A chart from a Helm repo, with no git source | None. A branch fails, because the revision is a chart version |
+| `helm-repo-git-values` | A Helm-repo chart, values from git through `ref` | `Revisions`/`SourcePositions` = position 2 |
+| `git-chart-git-values` | A git chart, plus a `ref` source with its own `path` (same repo) | Positions 1 and 2 |
+| `two-repos` | Sources from two repos, with the change in one | Position 2. Sending it to every position fails |
+
+The apps live in `integration/kubernetes/sources/`, in AppProject `sources`, behind the `sources` ArgoCD (token `ARGOCD_SOURCES_TOKEN`), so existing expectations don't change. `TestE2E_SourceFixtures` asserts each row directly against ArgoCD.
+
+Not covered yet: source hydrator (it needs a commit-server and push credentials), duplicate resources across sources, a CMP failure, and tag or SHA target refs (G3).
+
+Next: make Tangle send `Revisions`/`SourcePositions` for multi-source apps. That needs a way to say which repo the pushed ref belongs to. Then add Tangle-level tests on these fixtures.

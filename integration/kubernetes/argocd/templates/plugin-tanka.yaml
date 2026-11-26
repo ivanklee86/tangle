@@ -1,0 +1,21 @@
+# The Tanka config management plugin, run by the repo-server's tanka sidecar (values.yaml). ArgoCD picks it for any
+# app folder with a jsonnetfile.json. Mirrors ivanklee86/homeops' kubernetes/argo/argocd/templates/plugin-tanka.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: plugin-tanka
+  namespace: {{ .Release.Namespace }}
+data:
+  plugin.yaml: |
+    apiVersion: argoproj.io/v1alpha1
+    kind: ConfigManagementPlugin
+    metadata:
+      name: tanka
+    spec:
+      version: v1.0
+      init:
+        command: [sh, -c, 'jb install']
+      generate:
+        command: [sh, -c, 'tk show --dangerous-allow-redirect environments/default']
+      discover:
+        fileName: jsonnetfile.json

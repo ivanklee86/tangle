@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: helm-repo-git-values
+  labels:
+    suite: sources
+    source: multi-source
+spec:
+  project: sources
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  sources:
+    - repoURL: https://stefanprodan.github.io/podinfo
+      chart: podinfo
+      targetRevision: 6.17.0
+      helm:
+        valueFiles:
+          - $values/helm-repo-git-values/values.yaml
+    - repoURL: https://github.com/ivanklee86/tangle-integration-manifests.git
+      targetRevision: main
+      ref: values

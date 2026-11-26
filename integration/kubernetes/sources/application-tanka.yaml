@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tanka
+  labels:
+    suite: sources
+    source: cmp
+spec:
+  project: sources
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  source:
+    repoURL: https://github.com/ivanklee86/tangle-integration-manifests.git
+    path: tanka
+    targetRevision: main
