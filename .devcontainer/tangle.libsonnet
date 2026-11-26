@@ -4,7 +4,6 @@
   customizations+: {
     vscode+: {
       extensions+: [
-        "github.vscode-github-actions",
         "ritwickdey.LiveServer",
         "svelte.svelte-vscode",
         "ms-vscode.vscode-typescript-next",

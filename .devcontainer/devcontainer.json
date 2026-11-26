@@ -8,13 +8,13 @@
       "vscode": {
          "extensions": [
             "anthropic.claude-code",
+            "github.vscode-github-actions",
             "GitHub.copilot",
             "golang.go",
             "ms-azuretools.vscode-docker",
             "redhat.vscode-yaml",
             "tamasfe.even-better-toml",
             "task.vscode-task",
-            "github.vscode-github-actions",
             "ritwickdey.LiveServer",
             "svelte.svelte-vscode",
             "ms-vscode.vscode-typescript-next"
@@ -23,6 +23,7 @@
             "yaml.schemas": {
                "https://taskfile.dev/schema.json": [
                   "**/Taskfile.yml",
+                  "**/Taskfile.yaml",
                   "tasks/**"
                ]
             }
@@ -38,7 +39,10 @@
       8081
    ],
    "mounts": [
-      "source=${localEnv:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached"
+      "source=${localEnv:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached",
+      "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind,consistency=cached",
+      "source=${localEnv:HOME}/.ssh/known_hosts,target=/home/vscode/.ssh/known_hosts,type=bind,consistency=cached,readonly",
+      "source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,type=bind,consistency=cached"
    ],
    "name": "fullstack",
    "postCreateCommand": {
