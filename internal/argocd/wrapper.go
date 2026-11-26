@@ -186,8 +186,8 @@ func (a *ArgoCDWrapper) GetManifests(ctx context.Context, request ManifestsReque
 		return nil, err
 	}
 
-	plan := PlanRevisions(SourcesOf(app), request.TargetRef, request.TargetRepos, request.InferTargetRepo)
-	if !plan.MultiSource && len(plan.Sources) == 1 && plan.Status == DiffStatusOK {
+	plan := PlanApplication(app, request.TargetRef, request.TargetRepos, request.InferTargetRepo)
+	if !plan.Positional && len(plan.Sources) == 1 && plan.Status == DiffStatusOK {
 		// What a single-source Application renders on the live side has
 		// always been the caller's liveRef, so report that.
 		plan.Sources[0].LiveRevision = request.LiveRef
@@ -239,13 +239,14 @@ func (a *ArgoCDWrapper) GetManifests(ctx context.Context, request ManifestsReque
 
 // manifestQueries builds the live and target queries, in that order.
 //
-// A single-source Application sends Revision, exactly as Tangle always has. A
-// multi-source one sends Revisions with every SourcePosition on both sides:
-// ArgoCD ignores Revision for it, and an explicit render differs from a
-// default one (Helm test hooks, dropped namespaces, reordering), so both sides
-// have to be rendered the same way for those differences to cancel out.
+// An Application written with spec.source sends Revision, exactly as Tangle
+// always has. One written with spec.sources, whatever its length, sends
+// Revisions with every SourcePosition on both sides: ArgoCD ignores Revision
+// for it, and an explicit render differs from a default one (Helm test hooks,
+// dropped namespaces, reordering), so both sides have to be rendered the same
+// way for those differences to cancel out.
 func manifestQueries(applicationName string, request ManifestsRequest, plan RevisionPlan) []*application.ApplicationManifestQuery {
-	if !plan.MultiSource {
+	if !plan.Positional {
 		live, target := request.LiveRef, request.TargetRef
 		return []*application.ApplicationManifestQuery{
 			{Name: &applicationName, Revision: &live},

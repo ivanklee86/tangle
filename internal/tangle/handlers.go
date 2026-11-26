@@ -317,6 +317,7 @@ func (t *Tangle) applicationManifestsHandler(w http.ResponseWriter, req *http.Re
 		"application", applicationName,
 		"status", plan.Status,
 		"multiSource", plan.MultiSource,
+		"positional", plan.Positional,
 		"targetRepos", plan.TargetRepos,
 		"inferredTargetRepo", plan.Inferred,
 		"positions", plan.Positions(),

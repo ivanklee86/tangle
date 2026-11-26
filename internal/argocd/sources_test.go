@@ -13,6 +13,7 @@ import (
 //   - every spelling of one repo (https, ssh, scp-style, .git, trailing slash,
 //     credentials, port, upper-case host, surrounding whitespace) normalizes
 //     to the same value
+//   - a bare host:port/path is a port; scp syntax (user@host:path) never is
 //   - the path keeps its case, and different repos stay different
 //   - blank input normalizes to "", so callers can drop it
 func TestNormalizeRepoURL(t *testing.T) {
@@ -29,6 +30,7 @@ func TestNormalizeRepoURL(t *testing.T) {
 		"git@github.com:org/repo.git",
 		"git@github.com:org/repo",
 		"github.com/org/repo",
+		"github.com:443/org/repo",
 		"  https://github.com/org/repo.git  ",
 	}
 
@@ -37,6 +39,14 @@ func TestNormalizeRepoURL(t *testing.T) {
 			assert.Equal(t, "github.com/org/repo", argocd.NormalizeRepoURL(spelling))
 		})
 	}
+
+	t.Run("a bare host:port matches the https URL with that port", func(t *testing.T) {
+		assert.Equal(t, argocd.NormalizeRepoURL("https://git.example.com:8443/org/repo.git"), argocd.NormalizeRepoURL("git.example.com:8443/org/repo"))
+	})
+
+	t.Run("scp syntax with a numeric first segment keeps it as path", func(t *testing.T) {
+		assert.Equal(t, "git.example.com/2024/repo", argocd.NormalizeRepoURL("git@git.example.com:2024/repo.git"))
+	})
 
 	t.Run("path case is kept", func(t *testing.T) {
 		assert.Equal(t, "github.com/Org/Repo", argocd.NormalizeRepoURL("https://github.com/Org/Repo.git"))

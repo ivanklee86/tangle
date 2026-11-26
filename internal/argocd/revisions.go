@@ -1,6 +1,10 @@
 package argocd
 
-import "slices"
+import (
+	"slices"
+
+	"github.com/argoproj/argo-cd/v3/pkg/apis/application/v1alpha1"
+)
 
 // DiffStatus is the outcome of planning a diff, before anything is rendered.
 type DiffStatus string
@@ -28,10 +32,15 @@ type PlannedSource struct {
 // RevisionPlan says how to render both sides of a diff (ADR 0032).
 type RevisionPlan struct {
 	Status DiffStatus
-	// MultiSource plans send Revisions/SourcePositions for every position on
-	// both sides. Single-source plans send Revision, exactly as before.
+	// MultiSource is true when the Application has more than one source, so
+	// choosing which of them get the target ref needs a target repo.
 	MultiSource bool
-	Sources     []PlannedSource
+	// Positional plans send Revisions/SourcePositions for every position on
+	// both sides; the others send Revision, exactly as before. It follows how
+	// the spec is written, not how many sources it has: ArgoCD ignores
+	// Revision for any Application with spec.sources, even a one-entry list.
+	Positional bool
+	Sources    []PlannedSource
 	// TargetRepos are the normalized repos the target ref was applied to:
 	// the caller's list, or the one inferred.
 	TargetRepos []string
@@ -62,7 +71,7 @@ func PlanRevisions(sources []Source, targetRef string, targetRepos []string, inf
 		return planSingleSource(sources, targetRef, wanted)
 	}
 
-	plan := RevisionPlan{MultiSource: true}
+	plan := RevisionPlan{MultiSource: true, Positional: true}
 	if len(wanted) == 0 {
 		candidates := gitRepos(sources)
 		if !infer || len(candidates) != 1 {
@@ -93,6 +102,17 @@ func PlanRevisions(sources []Source, targetRef string, targetRepos []string, inf
 		plan.Status = DiffStatusNotAffected
 	}
 
+	return plan
+}
+
+// PlanApplication plans an Application's diff. Choosing sources goes by
+// PlanRevisions; rendering goes by the spec, so an Application written with
+// spec.sources is rendered positionally even when the list has one entry.
+func PlanApplication(app *v1alpha1.Application, targetRef string, targetRepos []string, infer bool) RevisionPlan {
+	plan := PlanRevisions(SourcesOf(app), targetRef, targetRepos, infer)
+	if app != nil && app.Spec.HasMultipleSources() {
+		plan.Positional = true
+	}
 	return plan
 }
 

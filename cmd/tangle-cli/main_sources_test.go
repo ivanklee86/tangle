@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http/httptest"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -33,10 +34,12 @@ func newSourcesTangleServer(t *testing.T) (*httptest.Server, *argocdfakes.FakeWr
 	realTangle := tangle.New(&config, "testing")
 
 	wrapper := argocdfakes.NewFakeWrapper([]argocdfakes.FakeApplication{
-		{Name: "single", Project: "default", Namespace: "argocd", LiveRevision: "main"},
-		{Name: "multi", Project: "default", Namespace: "argocd"},
+		{Name: "single", Project: "default", Namespace: "argocd", Labels: map[string]string{"team": "platform"}, LiveRevision: "main"},
+		{Name: "multi", Project: "default", Namespace: "argocd", Labels: map[string]string{"team": "platform"}},
+		{Name: "other", Project: "default", Namespace: "argocd", Labels: map[string]string{"team": "other"}, LiveRevision: "main"},
 	})
 	wrapper.ManifestsByApp["single"] = &argocd.GetManifestsResponse{Plan: argocd.RevisionPlan{Status: argocd.DiffStatusNotAffected}}
+	wrapper.ManifestsByApp["other"] = &argocd.GetManifestsResponse{Plan: argocd.RevisionPlan{Status: argocd.DiffStatusNotAffected}}
 	wrapper.ManifestsByApp["multi"] = &argocd.GetManifestsResponse{Plan: argocd.RevisionPlan{
 		Status:         argocd.DiffStatusNeedsTargetRepo,
 		MultiSource:    true,
@@ -56,6 +59,8 @@ func newSourcesTangleServer(t *testing.T) (*httptest.Server, *argocdfakes.FakeWr
 //   - the results table names each status, and "needs target repo" writes an
 //     error file (which is what --fail-on-error counts) while "not affected"
 //     doesn't
+//   - lists for target-repo and label in tangle.yaml arrive as separate
+//     items, not as one "[a b]" string
 //   - --target-ref alone sends no target repos and no inference, so
 //     single-source diffs behave as before
 //
@@ -84,7 +89,7 @@ func TestCliTargetRepos(t *testing.T) {
 		require.NoError(t, command.Execute())
 
 		requests := wrapper.Requests()
-		require.Len(t, requests, 2)
+		require.Len(t, requests, 3)
 		for _, request := range requests {
 			assert.Equal(t, "feature-x", request.TargetRef)
 			assert.Equal(t, []string{"https://github.com/org/charts.git", "git@github.com:org/values.git"}, request.TargetRepos)
@@ -98,6 +103,35 @@ func TestCliTargetRepos(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, string(out), "Not affected")
 		assert.Contains(t, string(out), "Needs target repo")
+	})
+
+	t.Run("lists in tangle.yaml reach list flags item by item", func(t *testing.T) {
+		server, wrapper := newSourcesTangleServer(t)
+		dir := t.TempDir()
+		t.Chdir(dir)
+		config := "target-repo:\n  - https://github.com/org/charts.git\n  - git@github.com:org/values.git\nlabel:\n  - team=platform\n"
+		require.NoError(t, os.WriteFile("tangle.yaml", []byte(config), 0o644))
+
+		b := bytes.NewBufferString("")
+		command := NewRootCommand()
+		command.SetOut(b)
+		command.SetErr(b)
+		command.SetArgs([]string{
+			"generate-manifests",
+			"--server-address", strings.TrimPrefix(server.URL, "http://"),
+			"--insecure",
+			"--folder", dir,
+			"--target-ref", "feature-x",
+		})
+		require.NoError(t, command.Execute())
+
+		// The label filter applied: "other" is team=other.
+		requests := wrapper.Requests()
+		require.Len(t, requests, 2)
+		for _, request := range requests {
+			assert.NotEqual(t, "other", request.ApplicationName)
+			assert.Equal(t, []string{"https://github.com/org/charts.git", "git@github.com:org/values.git"}, request.TargetRepos)
+		}
 	})
 
 	t.Run("a run with only OK and error diffs prints the table as before", func(t *testing.T) {

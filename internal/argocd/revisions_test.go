@@ -3,6 +3,7 @@ package argocd_test
 import (
 	"testing"
 
+	"github.com/argoproj/argo-cd/v3/pkg/apis/application/v1alpha1"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ivanklee86/tangle/internal/argocd"
@@ -235,5 +236,51 @@ func TestPlanRevisions(t *testing.T) {
 		assert.Equal(t, []int64{1, 2, 3}, plan.Positions())
 		assert.Equal(t, []string{"main", "main", "main"}, plan.LiveRevisions())
 		assert.Equal(t, []string{"main", targetRef, "main"}, plan.TargetRevisions())
+	})
+}
+
+// Test cases (choosing sources goes by count, rendering by how the spec is
+// written):
+//   - spec.source renders with Revision
+//   - a one-entry spec.sources is chosen like a single source (no target repo
+//     needed) but renders positionally, because ArgoCD ignores Revision for
+//     any spec.sources
+//   - a longer spec.sources renders positionally, as before
+func TestPlanApplication(t *testing.T) {
+	t.Run("spec.source", func(t *testing.T) {
+		app := &v1alpha1.Application{}
+		app.Spec.Source = &v1alpha1.ApplicationSource{RepoURL: appsRepo, Path: "deploy", TargetRevision: "main"}
+
+		plan := argocd.PlanApplication(app, targetRef, nil, false)
+
+		assert.Equal(t, argocd.DiffStatusOK, plan.Status)
+		assert.False(t, plan.Positional)
+	})
+
+	t.Run("one-entry spec.sources", func(t *testing.T) {
+		app := &v1alpha1.Application{}
+		app.Spec.Sources = v1alpha1.ApplicationSources{{RepoURL: appsRepo, Path: "deploy", TargetRevision: "main"}}
+
+		plan := argocd.PlanApplication(app, targetRef, nil, false)
+
+		assert.Equal(t, argocd.DiffStatusOK, plan.Status)
+		assert.False(t, plan.MultiSource)
+		assert.True(t, plan.Positional)
+		assert.Equal(t, []int64{1}, plan.Positions())
+		assert.Equal(t, []string{"main"}, plan.LiveRevisions())
+		assert.Equal(t, []string{targetRef}, plan.TargetRevisions())
+	})
+
+	t.Run("longer spec.sources", func(t *testing.T) {
+		app := &v1alpha1.Application{}
+		app.Spec.Sources = v1alpha1.ApplicationSources{
+			{RepoURL: appsRepo, Path: "deploy", TargetRevision: "main"},
+			{RepoURL: valuesRepo, Path: "values", TargetRevision: "main"},
+		}
+
+		plan := argocd.PlanApplication(app, targetRef, []string{valuesRepo}, false)
+
+		assert.True(t, plan.MultiSource)
+		assert.True(t, plan.Positional)
 	})
 }

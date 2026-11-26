@@ -112,9 +112,40 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 
 		if !f.Changed && v.IsSet(f.Name) {
 			val := v.Get(f.Name)
+
+			// A YAML list in the config file has to reach a list flag item by
+			// item. Formatted with %v it becomes one "[a b]" string: one
+			// bogus --target-repo that matches nothing, or a --label that
+			// labelStringsToMap silently drops.
+			if items, isList := listItems(val); isList {
+				if sliceValue, ok := f.Value.(pflag.SliceValue); ok {
+					if err := sliceValue.Replace(items); err != nil {
+						os.Exit(1)
+					}
+					return
+				}
+			}
+
 			if err := cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val)); err != nil {
 				os.Exit(1)
 			}
 		}
 	})
+}
+
+// listItems returns a config value's items as strings, and whether it was a
+// list at all.
+func listItems(val any) ([]string, bool) {
+	switch list := val.(type) {
+	case []string:
+		return list, true
+	case []any:
+		items := make([]string, 0, len(list))
+		for _, item := range list {
+			items = append(items, fmt.Sprintf("%v", item))
+		}
+		return items, true
+	default:
+		return nil, false
+	}
 }

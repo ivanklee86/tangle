@@ -60,6 +60,8 @@ func hardRefreshes(client *argocdfakes.FakeClient) int {
 // Test cases (what reaches ArgoCD for each kind of diff):
 //   - single source, no target repos: Revision on each side, exactly as
 //     before, with no Revisions or SourcePositions (S1 compatibility)
+//   - a one-entry spec.sources: Revisions at position 1, the live side from
+//     the spec rather than the (empty) liveRef
 //   - multi source, target repo given: Revisions and every SourcePosition on
 //     both sides, the live side at each source's own revision and the target
 //     side with only the matching source moved (M3)
@@ -100,6 +102,29 @@ func TestArgoCDWrapperSources(t *testing.T) {
 		for _, query := range queries {
 			assert.Nil(t, query.Revision)
 			assert.Equal(t, []int64{1, 2}, query.SourcePositions)
+		}
+	})
+
+	t.Run("one-entry spec.sources sends Revisions", func(t *testing.T) {
+		app := v1alpha1.Application{}
+		app.Name = "listed"
+		app.Spec.Sources = v1alpha1.ApplicationSources{{RepoURL: appsRepo, Path: "deploy", TargetRevision: "main"}}
+		wrapper, client := newSourcesWrapper(t, app)
+
+		// liveRef is empty, as the applications list reports it for any
+		// spec.sources: the live side comes from the spec.
+		response, err := wrapper.GetManifests(context.Background(), argocd.ManifestsRequest{ApplicationName: "listed", TargetRef: targetRef})
+		require.NoError(t, err)
+
+		assert.Equal(t, argocd.DiffStatusOK, response.Plan.Status)
+		assert.Equal(t, "main", response.Plan.Sources[0].LiveRevision)
+		queries := client.RecordedManifestQueries()
+		require.Len(t, queries, 2)
+		sent := [][]string{queries[0].Revisions, queries[1].Revisions}
+		assert.ElementsMatch(t, [][]string{{"main"}, {targetRef}}, sent)
+		for _, query := range queries {
+			assert.Nil(t, query.Revision)
+			assert.Equal(t, []int64{1}, query.SourcePositions)
 		}
 	})
 

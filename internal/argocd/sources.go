@@ -87,6 +87,9 @@ func kindOf(source v1alpha1.ApplicationSource) SourceKind {
 // scheme and so doesn't parse as a URL.
 var scpLikeURL = regexp.MustCompile(`^(?:[^@/]+@)?([^/:]+):(.+)$`)
 
+// portPrefix matches a port at the start of what follows `host:`.
+var portPrefix = regexp.MustCompile(`^[0-9]+/`)
+
 // NormalizeRepoURL reduces a git repo URL to `host/path`, so that one repo
 // compares equal however it's spelled: https, ssh or scp-style, with or without
 // a `.git` suffix, a trailing slash, credentials, a port or an upper-case host.
@@ -108,6 +111,12 @@ func NormalizeRepoURL(raw string) string {
 	} else if match := scpLikeURL.FindStringSubmatch(trimmed); match != nil {
 		host = match[1]
 		path = match[2]
+		// `host:8443/org/repo`, typed without a scheme, means a port. Git's
+		// scp syntax has no port, but it always carries `user@`, so only a
+		// bare host is read this way: `git@host:2024/repo` keeps its path.
+		if port := portPrefix.FindString(path); port != "" && !strings.Contains(trimmed, "@") {
+			path = strings.TrimPrefix(path, port)
+		}
 	} else {
 		// A bare `host/path`, as people tend to type into a form.
 		host, path, _ = strings.Cut(trimmed, "/")
