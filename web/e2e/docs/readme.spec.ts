@@ -1,6 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
-import { diffsPath, diffsSettled, openScreen, ready, selectDiff } from '../fixtures/screens';
+import {
+	diffsPath,
+	diffsSettled,
+	openScreen,
+	PLATFORM_VALUES,
+	ready,
+	selectDiff
+} from '../fixtures/screens';
 
 // Writes the screenshots README.md and docs/index.md embed, from the fixture
 // fleet instead of the live stack, so they show a realistic fleet and come
@@ -44,4 +51,22 @@ test('TangleDiffs.png: /diffs?labels=tier:backend&targetRef=feature/queue-tuning
 
 	await ready(page);
 	await page.screenshot({ path: `${imagesDir}TangleDiffs.png`, fullPage: true });
+});
+
+test('TangleMultiSource.png: /diffs?labels=team:payments&targetRef=feature/queue-tuning&targetRepo=…/platform-values', async ({
+	page
+}) => {
+	await openScreen(
+		page,
+		diffsPath({
+			labels: 'team:payments',
+			targetRef: 'feature/queue-tuning',
+			targetRepo: PLATFORM_VALUES
+		})
+	);
+	await diffsSettled(page);
+	await selectDiff(page, 'payments-worker');
+
+	await ready(page);
+	await page.screenshot({ path: `${imagesDir}TangleMultiSource.png`, fullPage: true });
 });

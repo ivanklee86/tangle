@@ -29,6 +29,12 @@ Visiting `/diffs?labels=tier:backend&targetRef=feature/queue-tuning`
 
 ![Diffs](./docs/images/TangleDiffs.png)
 
+**Example: View diffs of multi-source Applications with the `team:payments` label, sending `feature/queue-tuning` only to sources in `acme/platform-values`**
+
+Visiting `/diffs?labels=team:payments&targetRef=feature/queue-tuning&targetRepo=https://github.com/acme/platform-values.git`
+
+![Multi-source diffs](./docs/images/TangleMultiSource.png)
+
 **Example: Using `tangle-cli` from your CI/CD pipelines**
 
 ![CLI](./docs/images/TangleCLI.png)
