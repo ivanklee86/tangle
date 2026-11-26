@@ -67,7 +67,9 @@ func hardRefreshes(client *argocdfakes.FakeClient) int {
 //     side with only the matching source moved (M3)
 //   - not affected and needs target repo: answered from a plain read, with no
 //     hard refresh and no manifest requests (S3, M4)
-//   - a failed read propagates as an error
+//   - a failed read propagates as an error, with no plan
+//   - a failed render returns the plan with the error, so the caller can
+//     say which sources got the target ref (#293)
 //   - listing returns each application's sources
 func TestArgoCDWrapperSources(t *testing.T) {
 	t.Run("single source sends Revision as before", func(t *testing.T) {
@@ -157,8 +159,20 @@ func TestArgoCDWrapperSources(t *testing.T) {
 		wrapper, client := newSourcesWrapper(t, singleSourceApp())
 		client.ErrOnGet["single"] = errors.New("simulated read error")
 
-		_, err := wrapper.GetManifests(context.Background(), argocd.ManifestsRequest{ApplicationName: "single", LiveRef: "main", TargetRef: targetRef})
+		response, err := wrapper.GetManifests(context.Background(), argocd.ManifestsRequest{ApplicationName: "single", LiveRef: "main", TargetRef: targetRef})
 		assert.Error(t, err)
+		assert.Nil(t, response, "nothing was planned")
+	})
+
+	t.Run("a failed render returns the plan with the error", func(t *testing.T) {
+		wrapper, client := newSourcesWrapper(t, twoRepoApp())
+		client.ErrOnGetManifests["two-repos"] = errors.New("unable to resolve 'feature-x' to a commit SHA")
+
+		response, err := wrapper.GetManifests(context.Background(), argocd.ManifestsRequest{ApplicationName: "two-repos", TargetRef: targetRef, TargetRepos: []string{appsRepo}})
+		assert.Error(t, err)
+		require.NotNil(t, response)
+		assert.Equal(t, []bool{true, false}, moved(response.Plan))
+		assert.Empty(t, response.TargetManifests)
 	})
 
 	t.Run("listing returns sources", func(t *testing.T) {

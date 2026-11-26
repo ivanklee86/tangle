@@ -33,6 +33,11 @@ interface FleetApp {
 	syncStatus: string;
 	sources: FleetSource[];
 	rendered: Rendered;
+	/**
+	 * Repos that don't have the target ref: rendering fails, the way ArgoCD
+	 * fails, if any source in one of them is sent it.
+	 */
+	refMissingIn?: string[];
 }
 
 const GITHUB = 'https://github.com/acme';
@@ -208,7 +213,8 @@ const FLEET: { instance: string; apps: FleetApp[] }[] = [
 						targetRevision: '3f9c2a17be04d1c8e6a5f0b9d27c4e81a3b6f5d0'
 					}
 				],
-				rendered: { diff: PODINFO_DIFF }
+				rendered: { diff: PODINFO_DIFF },
+				refMissingIn: [`${GITHUB}/legacy-config.git`]
 			},
 			{
 				name: 'feature-flags',
@@ -315,6 +321,19 @@ function diffResponse(app: FleetApp, request: DiffRequest) {
 
 	if (!sources.some((source) => source.moved)) {
 		return { ...EMPTY, status: 'notAffected', sources };
+	}
+
+	// Like the server since #293: a failed render still says which sources
+	// got the target ref.
+	const missing = (app.refMissingIn ?? []).map(normalize);
+	if (sources.some((source) => source.moved && missing.includes(normalize(source.repoURL)))) {
+		return {
+			...EMPTY,
+			status: 'error',
+			manifestGenerationError: `rpc error: code = Unknown desc = unable to resolve '${request.targetRef}' to a commit SHA: revision not found`,
+			sources,
+			targetRepos: wanted
+		};
 	}
 
 	const rendered = app.rendered;

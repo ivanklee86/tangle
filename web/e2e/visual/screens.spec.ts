@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
 	CHECKOUT_API,
+	LEGACY_CONFIG,
 	diffsPath,
 	diffsSettled,
 	openScreen,
@@ -18,7 +19,8 @@ import {
 // Screens:
 //   - Diffs: a query with no target repo (every outcome, needs-repo detail),
 //     the same with a target repo (Sources panel and diff), "not affected"
-//     shown, and the manifest-generation error
+//     shown, the manifest-generation error, and a multi-source render error
+//     that names the sources the target ref went to (#293)
 //   - Applications: multi-source rows expanded
 //   - the query drawer with target repos and inference
 //   - Home
@@ -63,6 +65,16 @@ for (const theme of THEMES) {
 
 			await ready(page);
 			await expect(page).toHaveScreenshot(`diffs-error-${theme}.png`);
+		});
+
+		// #293: a failed multi-source render names the sources the ref went to.
+		test('diffs: multi-source render error', async ({ page }) => {
+			await openScreen(page, diffsPath({ ...QUERY, targetRepo: LEGACY_CONFIG }), theme);
+			await diffsSettled(page);
+			await selectDiff(page, 'podinfo-stack');
+
+			await ready(page);
+			await expect(page).toHaveScreenshot(`diffs-multi-source-error-${theme}.png`);
 		});
 
 		test('applications: multi-source rows expanded', async ({ page }) => {

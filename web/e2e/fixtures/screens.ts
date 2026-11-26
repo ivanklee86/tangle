@@ -49,9 +49,11 @@ function diffsPath(query: Record<string, string | string[]>): string {
 const THEMES: Theme[] = ['dark', 'light'];
 const PLATFORM_VALUES = 'https://github.com/acme/platform-values.git';
 const CHECKOUT_API = 'https://github.com/acme/checkout-api.git';
+const LEGACY_CONFIG = 'https://github.com/acme/legacy-config.git';
 
 export {
 	CHECKOUT_API,
+	LEGACY_CONFIG,
 	diffsPath,
 	diffsSettled,
 	openScreen,

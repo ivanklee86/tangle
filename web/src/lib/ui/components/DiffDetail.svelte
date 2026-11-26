@@ -67,6 +67,7 @@
 	let response = $derived(row.diff?.response);
 	let sources = $derived(response?.sources ?? []);
 	let candidates = $derived(response?.candidateRepos ?? []);
+	let movedSources = $derived(sources.filter((source) => source.moved));
 
 	// A one-entry spec.sources reports no liveRef, so its live side is its
 	// source's revision.
@@ -212,7 +213,28 @@
 			<Alert color="red" border class={ERROR_ALERT}>
 				<span class="font-medium">Couldn't generate manifests</span>
 				<p class="mt-2 text-sm">{row.diff.response.manifestGenerationError}</p>
+				{#if sources.length > 1 && movedSources.length > 0}
+					<!--
+						#293: ArgoCD's error rarely says which source failed. The
+						usual cause is the target ref missing from a repo it was sent
+						to, so name those.
+					-->
+					<p class="mt-2 text-sm">
+						<span class="font-mono">{targetRef}</span> was sent to
+						{movedSources.length === 1 ? 'source' : 'sources'}
+						{#each movedSources as source, index (source.position)}{index > 0
+								? index === movedSources.length - 1
+									? ' and '
+									: ', '
+								: ''}{source.position} (<span class="font-mono" title={source.repoURL}
+								>{shortRepo(source.repoURL)}</span
+							>){/each}. Check that it exists there.
+					</p>
+				{/if}
 			</Alert>
+			{#if sources.length > 1}
+				<div class="mt-4"><SourcesPanel {sources} /></div>
+			{/if}
 		{:else if row.diff}
 			{#if sources.length > 1}
 				<div class="mb-4"><SourcesPanel {sources} /></div>

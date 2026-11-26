@@ -309,10 +309,19 @@ func (t *Tangle) applicationManifestsHandler(w http.ResponseWriter, req *http.Re
 	if err != nil {
 		t.Log.Error("Failed to get manifests", "argocd", argocdName, "application", applicationName, "error", err)
 		diffsTotal.WithLabelValues(argocdName, diffStatusError).Inc()
-		t.writeDiffsResponse(w, DiffsResponse{
+		response := DiffsResponse{
 			ManifestGenerationError: err.Error(),
 			Status:                  diffStatusError,
-		})
+		}
+		// Planned before it failed: say which sources got the target ref,
+		// which is usually where the problem is (#293).
+		if generatedManifests != nil {
+			plan := generatedManifests.Plan
+			response.Sources = diffSources(plan)
+			response.TargetRepos = plan.TargetRepos
+			response.InferredTargetRepo = plan.Inferred
+		}
+		t.writeDiffsResponse(w, response)
 		return
 	}
 

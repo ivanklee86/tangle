@@ -237,4 +237,45 @@ describe('diffs +page.svelte with multi-source applications', () => {
 		await screen.getByRole('button', { name: /changed-app/ }).click();
 		await expect.element(screen.getByText('used by source 1')).toBeVisible();
 	});
+
+	// #293: a failed multi-source render names the sources the target ref was
+	// sent to, and shows the Sources panel, because ArgoCD's error doesn't.
+	test('a failed multi-source render says where the target ref went', async () => {
+		const failed = {
+			...RESPONSES['changed-app'],
+			status: 'error',
+			diffs: '',
+			manifestGenerationError: "unable to resolve 'feature-x' to a commit SHA"
+		};
+		vi.stubGlobal(
+			'fetch',
+			vi.fn((url: string) => {
+				const application = url.split('/applications/')[1].split('/')[0];
+				const body = application === 'changed-app' ? failed : RESPONSES[application];
+				return Promise.resolve({
+					status: 200,
+					text: () =>
+						Promise.resolve(
+							JSON.stringify({
+								liveManifests: '',
+								targetManifests: '',
+								diffs: '',
+								manifestGenerationError: '',
+								...body
+							})
+						)
+				});
+			})
+		);
+		const screen = await render(Page, data());
+
+		await screen.getByRole('button', { name: /changed-app/ }).click();
+		await expect.element(screen.getByText("Couldn't generate manifests")).toBeVisible();
+		await expect
+			.element(
+				screen.getByText(/was sent to\s+source 2 \(org\/values\)\. Check that it exists there\./)
+			)
+			.toBeVisible();
+		await expect.element(screen.getByText('1 of 2 moved')).toBeVisible();
+	});
 });
