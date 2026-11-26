@@ -181,6 +181,25 @@ jobs:
         name: ts-junit-report
         path: web/test-results/junit.xml
 
+  visual:
+    # Screenshot tests (#294). Same script as `task ts:test:visual`, so CI
+    # renders in the pinned Playwright image exactly as a local run does.
+    # amd64 only: a baseline is only valid in the environment that made it.
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+    - name: Run screenshot tests
+      run: web/scripts/playwright-docker.sh --project=visual
+    # Expected, actual and diff images for every failed screenshot.
+    - name: Upload screenshot diffs
+      if: failure()
+      uses: actions/upload-artifact@v7
+      with:
+        name: screenshot-diffs
+        path: web/test-results/
+        retention-days: 14
+
   docs:
     needs: [filter]
     if: needs.filter.outputs.docs == 'true'

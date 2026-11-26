@@ -13,21 +13,21 @@ Tangle makes using with multiple ArgoCDs in a [hub and spoke](https://codefresh.
 
 For more information, check out our [documentation](https://ivanklee86.github.io/tangle/)!
 
-**Example: Setting the `env:test` label on the Home page**
+**Example: Building a query on the Home page: the `team:payments` label, the `feature/queue-tuning` branch, and the repo it was pushed to**
 
 ![Home](./docs/images/TangleHome.png)
 
-**Example: View all Applications with the `env:test` label**
+**Example: View all Applications with the `team:payments` label**
 
-Visiting `/applications?labels=env:test`
+Visiting `/applications?labels=team:payments`
 
 ![Applications](./docs/images/TangleApplications.png)
 
-**Example: View diffs of all Applications with the `env:test` label from the `test_gitops` branch**
+**Example: View diffs of all Applications with the `team:payments` label against the `feature/queue-tuning` branch of `acme/platform-values`**
 
-Visiting `/diffs?labels=env:test&targetRef=test_gitops`
+Visiting `/diffs?labels=team:payments&targetRef=feature/queue-tuning&targetRepo=https://github.com/acme/platform-values.git`
 
-![Diffss](./docs/images/TangleDiffs.png)
+![Diffs](./docs/images/TangleDiffs.png)
 
 **Example: Using `tangle-cli` from your CI/CD pipelines**
 
