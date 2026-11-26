@@ -93,8 +93,8 @@ function data() {
 //   - a single-source row shows its live ref, as before
 //   - a one-entry spec.sources, which has no liveRef, shows its source's
 //     revision
-//   - a multi-source row says how many sources and their revisions, and
-//     expands to list each one with its repo, chart or ref
+//   - a multi-source row only says how many sources it has, and expands to
+//     list each one with its repo, chart or ref, and revision
 describe('applications +page.svelte with multi-source applications', () => {
 	test('shows a live ref for single-source rows', async () => {
 		const screen = await render(Page, data());
@@ -109,7 +109,7 @@ describe('applications +page.svelte with multi-source applications', () => {
 		const toggle = screen.getByRole('button', { name: '2 sources' });
 
 		await expect.element(toggle).toHaveAttribute('aria-expanded', 'false');
-		await expect.element(screen.getByText('6.17.0 · main')).toBeVisible();
+		await expect.element(screen.getByText('6.17.0')).not.toBeInTheDocument();
 		await expect.element(screen.getByText('org/values')).not.toBeInTheDocument();
 
 		await toggle.click();
@@ -117,6 +117,7 @@ describe('applications +page.svelte with multi-source applications', () => {
 		await expect.element(toggle).toHaveAttribute('aria-expanded', 'true');
 		await expect.element(screen.getByText('org/values')).toBeVisible();
 		await expect.element(screen.getByText('ref: values')).toBeVisible();
+		await expect.element(screen.getByText('6.17.0')).toBeVisible();
 		await expect.element(screen.getByText('stefanprodan.github.io/podinfo')).toBeVisible();
 	});
 });

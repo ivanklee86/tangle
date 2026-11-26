@@ -343,17 +343,6 @@
 												/>
 												{sources.length} sources
 											</button>
-											<!--
-												Capped and truncated, with the full list on hover: a long
-												branch name must not widen the table past its container.
-											-->
-											<span
-												class="ms-1 inline-block max-w-56 truncate align-bottom font-mono text-gray-500 dark:text-gray-400"
-												title={sources.map((source) => source.targetRevision).join(' · ')}
-												>{sources
-													.map((source) => shortRevision(source.targetRevision))
-													.join(' · ')}</span
-											>
 										</TableBodyCell>
 									{:else}
 										<!-- A one-entry spec.sources has no liveRef: use its source's. -->
