@@ -109,8 +109,8 @@
 		{#if hint}
 			{hint}
 		{:else}
-			Sources in these repos get the target ref, and every other source stays at its live revision.
-			Applications with no source in them are not affected.
+			Sources in these repos get the target ref and every other source stays at its live revision.
+			Applications with no source in them are skipped as not affected.
 		{/if}
 	</Helper>
 </div>
