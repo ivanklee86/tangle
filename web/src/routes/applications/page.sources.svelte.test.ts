@@ -1,9 +1,9 @@
 import { describe, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Page from './+page.svelte';
-import { type ApplicationResponseStore } from '$lib/backend/data';
-import { emptyQuery } from '$lib/ui/query';
-import { EMPTY_CONFIG } from '$lib/backend/config';
+import { type ApplicationResponseStore } from '#lib/backend/data.ts';
+import { emptyQuery } from '#lib/ui/query.ts';
+import { EMPTY_CONFIG } from '#lib/backend/config.ts';
 
 vi.mock('$app/navigation', () => ({ invalidateAll: vi.fn(), goto: vi.fn() }));
 

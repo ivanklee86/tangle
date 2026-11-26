@@ -2,9 +2,9 @@ import {
 	type ArgoCDApplicationResults,
 	type ApplicationDiff,
 	type ApplicationsDiffsData
-} from '$lib/backend/data';
-import type TangleAPIClient from '$lib/backend/client';
-import type { DiffOptions } from '$lib/backend/client';
+} from '#lib/backend/data.ts';
+import type TangleAPIClient from '#lib/backend/client.ts';
+import type { DiffOptions } from '#lib/backend/client.ts';
 
 interface DiffRequest {
 	argoCDName: string;

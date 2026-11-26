@@ -1,4 +1,4 @@
-import { statusSeverity } from '$lib/ui/status';
+import { statusSeverity } from '#lib/ui/status.ts';
 
 type SortKey = 'name' | 'health' | 'syncStatus' | 'instance';
 type SortDirection = 'asc' | 'desc';

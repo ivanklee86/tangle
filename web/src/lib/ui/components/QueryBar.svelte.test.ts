@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import QueryBar from './QueryBar.svelte';
-import { emptyQuery } from '$lib/ui/query';
-import { setConfiguredDomain } from '$lib/ui/links';
+import { emptyQuery } from '#lib/ui/query.ts';
+import { setConfiguredDomain } from '#lib/ui/links.ts';
 
 describe('QueryBar', () => {
 	afterEach(() => {

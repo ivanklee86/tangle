@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Page from './+page.svelte';
-import { type ApplicationResponseStore } from '$lib/backend/data';
-import { emptyQuery, type Query } from '$lib/ui/query';
-import { EMPTY_CONFIG } from '$lib/backend/config';
+import { type ApplicationResponseStore } from '#lib/backend/data.ts';
+import { emptyQuery, type Query } from '#lib/ui/query.ts';
+import { EMPTY_CONFIG } from '#lib/backend/config.ts';
 
 const invalidateAll = vi.fn();
 const goto = vi.fn();

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildQuery } from '$lib/backend/url';
+import { buildQuery } from '#lib/backend/url.ts';
 
 describe('buildQuery', () => {
 	it('returns an empty string when there are no usable params', () => {

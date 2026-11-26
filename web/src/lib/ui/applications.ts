@@ -1,5 +1,5 @@
-import { type ApplicationLinks, type ArgoCDApplicationResults } from '$lib/backend/data';
-import { needsAttention } from '$lib/ui/status';
+import { type ApplicationLinks, type ArgoCDApplicationResults } from '#lib/backend/data.ts';
+import { needsAttention } from '#lib/ui/status.ts';
 
 /** One application, plus which Argo CD it came from. */
 interface ApplicationRow extends ApplicationLinks {

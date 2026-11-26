@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import QueryDrawer from './QueryDrawer.svelte';
-import { applicationsHref, emptyQuery, type Query } from '$lib/ui/query';
+import { applicationsHref, emptyQuery, type Query } from '#lib/ui/query.ts';
 
 const INCLUDE = 'Include applications with all of these labels';
 

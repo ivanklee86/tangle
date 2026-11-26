@@ -69,3 +69,5 @@ CI's `ts` job (`ts:test:unit`, `ts:test:e2e`, `ts:lint`, `ts:build`), `npm run c
 ## More Information
 
 Reproduction and investigation: [docs/agents/plans/2026-10-17-fix-ts-renovate-prs-257-253.md](../agents/plans/2026-10-17-fix-ts-renovate-prs-257-253.md).
+
+The `$lib` alias was replaced by `#lib` subpath imports in [ADR 0034](0034-import-lib-through-subpath-imports-with-extensions.md).

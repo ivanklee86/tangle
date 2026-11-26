@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { duplicateLabelKeys, isValidLabelFormat, isValidLabelQuery } from '$lib/ui/validation';
+import { duplicateLabelKeys, isValidLabelFormat, isValidLabelQuery } from '#lib/ui/validation.ts';
 
 describe('isValidLabelFormat', () => {
 	it('treats an empty string as valid (nothing to check)', () => {

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { cliCommand, type Query } from '$lib/ui/query';
-	import { absoluteUrl } from '$lib/ui/links';
+	import { cliCommand, type Query } from '#lib/ui/query.ts';
+	import { absoluteUrl } from '#lib/ui/links.ts';
 	import CopyableText from './CopyableText.svelte';
 
 	interface Props {

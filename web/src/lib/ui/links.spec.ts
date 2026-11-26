@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { absoluteUrl, baseUrl, setConfiguredDomain } from '$lib/ui/links';
+import { absoluteUrl, baseUrl, setConfiguredDomain } from '#lib/ui/links.ts';
 
 afterEach(() => setConfiguredDomain(''));
 

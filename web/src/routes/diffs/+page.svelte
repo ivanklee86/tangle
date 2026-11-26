@@ -8,9 +8,9 @@
 		type ApplicationDiff,
 		type ApplicationResponseStore,
 		type ApplicationsDiffsData
-	} from '$lib/backend/data';
-	import { fetchDiffs } from '$lib/backend/diffs';
-	import TangleAPIClient from '$lib/backend/client';
+	} from '#lib/backend/data.ts';
+	import { fetchDiffs } from '#lib/backend/diffs.ts';
+	import TangleAPIClient from '#lib/backend/client.ts';
 	import {
 		buildDiffRows,
 		countOutcome,
@@ -22,10 +22,10 @@
 		rowKey,
 		type DiffFilter,
 		type DiffRow
-	} from '$lib/ui/diffs';
-	import { diffsHref, type Query } from '$lib/ui/query';
-	import { repoUsage } from '$lib/ui/repos';
-	import { DiffDetail, ErrorAlert, QueryBar, QueryDrawer } from '$lib/ui/components';
+	} from '#lib/ui/diffs.ts';
+	import { diffsHref, type Query } from '#lib/ui/query.ts';
+	import { repoUsage } from '#lib/ui/repos.ts';
+	import { DiffDetail, ErrorAlert, QueryBar, QueryDrawer } from '#lib/ui/components/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { load } from './+page';
-import { type ApplicationResponseStore } from '$lib/backend/data';
-import { type Query } from '$lib/ui/query';
+import { type ApplicationResponseStore } from '#lib/backend/data.ts';
+import { type Query } from '#lib/ui/query.ts';
 
 function mockFetch(status: number, body: unknown) {
 	return vi.fn().mockResolvedValue({

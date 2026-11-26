@@ -1,5 +1,5 @@
-import { fetchConfig } from '$lib/backend/config';
-import { setConfiguredDomain } from '$lib/ui/links';
+import { fetchConfig } from '#lib/backend/config.ts';
+import { setConfiguredDomain } from '#lib/ui/links.ts';
 
 export const prerender = true;
 export const ssr = false;

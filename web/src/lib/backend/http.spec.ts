@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { fetchEnvelope } from '$lib/backend/http';
+import { fetchEnvelope } from '#lib/backend/http.ts';
 
 interface Widget {
 	name: string;

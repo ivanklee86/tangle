@@ -3,10 +3,10 @@ import {
 	type ApplicationResponseStore,
 	type ApplicationDiff,
 	type ApplicationDiffResponse
-} from '$lib/backend/data';
+} from '#lib/backend/data.ts';
 import { PUBLIC_BASE_URL } from '$app/env/public';
-import { fetchEnvelope } from '$lib/backend/http';
-import { buildQuery } from '$lib/backend/url';
+import { fetchEnvelope } from '#lib/backend/http.ts';
+import { buildQuery } from '#lib/backend/url.ts';
 
 /** Which sources of an application get the target ref (ADR 0032). */
 interface DiffOptions {

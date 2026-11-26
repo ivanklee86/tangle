@@ -12,8 +12,8 @@
 	import { ArrowUpRightFromSquareOutline, RefreshOutline } from 'flowbite-svelte-icons';
 	import { CodeBlock } from 'svhighlight';
 	import 'highlight.js/styles/an-old-hope.css';
-	import { type DiffRow } from '$lib/ui/diffs';
-	import { normalizeRepo, shortRepo, type RepoUsage } from '$lib/ui/repos';
+	import { type DiffRow } from '#lib/ui/diffs.ts';
+	import { normalizeRepo, shortRepo, type RepoUsage } from '#lib/ui/repos.ts';
 	import ArgoCDHealthStatus from './ArgoCDHealthStatus.svelte';
 	import ArgoCDSyncStatus from './ArgoCDSyncStatus.svelte';
 	import ErrorAlert from './ErrorAlert.svelte';

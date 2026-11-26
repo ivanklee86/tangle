@@ -1,5 +1,5 @@
-import TangleAPIClient from '$lib/backend/client';
-import { hasSubmittedQuery, queryFromParams } from '$lib/ui/query';
+import TangleAPIClient from '#lib/backend/client.ts';
+import { hasSubmittedQuery, queryFromParams } from '#lib/ui/query.ts';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = ({ url, fetch }) => {

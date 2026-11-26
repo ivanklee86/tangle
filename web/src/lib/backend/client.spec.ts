@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import TangleAPIClient from '$lib/backend/client';
+import TangleAPIClient from '#lib/backend/client.ts';
 
 function mockFetch(status: number, body: unknown) {
 	const fetchMock = vi.fn().mockResolvedValue({
