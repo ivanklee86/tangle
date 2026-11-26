@@ -101,3 +101,32 @@ func TestSourcesOf(t *testing.T) {
 		assert.Nil(t, argocd.SourcesOf(nil))
 	})
 }
+
+// Test cases (which sources read files through a ref):
+//   - a Helm valueFiles entry `$values/...` uses the source whose ref is
+//     values
+//   - a Helm fileParameters path counts too
+//   - several users are listed in position order
+//   - a ref nothing reads has no users, and a source without a ref has none
+//   - a lookalike prefix (`$valuesx/`) doesn't count
+func TestSourcesOfRefUsers(t *testing.T) {
+	app := &v1alpha1.Application{}
+	app.Spec.Sources = v1alpha1.ApplicationSources{
+		{RepoURL: "https://charts.example.com", Chart: "web", TargetRevision: "1.0.0", Helm: &v1alpha1.ApplicationSourceHelm{
+			ValueFiles: []string{"values.yaml", "$values/web/values.yaml"},
+		}},
+		{RepoURL: "https://github.com/org/values.git", Ref: "values", TargetRevision: "main"},
+		{RepoURL: "https://github.com/org/chart.git", Path: "chart", TargetRevision: "main", Helm: &v1alpha1.ApplicationSourceHelm{
+			FileParameters: []v1alpha1.HelmFileParameter{{Name: "config", Path: "$values/chart/config.json"}},
+			ValueFiles:     []string{"$valuesx/other.yaml"},
+		}},
+		{RepoURL: "https://github.com/org/unused.git", Ref: "unused", TargetRevision: "main"},
+	}
+
+	sources := argocd.SourcesOf(app)
+
+	assert.Nil(t, sources[0].UsedBy, "a source without a ref")
+	assert.Equal(t, []int64{1, 3}, sources[1].UsedBy)
+	assert.Nil(t, sources[2].UsedBy)
+	assert.Nil(t, sources[3].UsedBy, "a ref nothing reads")
+}

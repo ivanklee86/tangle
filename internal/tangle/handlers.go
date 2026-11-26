@@ -46,6 +46,8 @@ type ApplicationSource struct {
 	Chart          string `json:"chart,omitempty"`
 	Ref            string `json:"ref,omitempty"`
 	TargetRevision string `json:"targetRevision"`
+	// Positions of the sources that read files through this source's ref.
+	UsedBy []int64 `json:"usedBy,omitempty"`
 }
 
 func applicationSources(sources []argocd.Source) []ApplicationSource {
@@ -59,6 +61,7 @@ func applicationSources(sources []argocd.Source) []ApplicationSource {
 			Chart:          source.Chart,
 			Ref:            source.Ref,
 			TargetRevision: source.TargetRevision,
+			UsedBy:         source.UsedBy,
 		})
 	}
 	return result
@@ -131,6 +134,8 @@ type DiffSource struct {
 	Path    string `json:"path,omitempty"`
 	Chart   string `json:"chart,omitempty"`
 	Ref     string `json:"ref,omitempty"`
+	// Positions of the sources that read files through this source's ref.
+	UsedBy []int64 `json:"usedBy,omitempty"`
 	// The revision the live side used.
 	LiveRevision string `json:"liveRevision"`
 	// The revision the target side used: the target ref when moved is true.
@@ -397,6 +402,7 @@ func diffSources(plan argocd.RevisionPlan) []DiffSource {
 			LiveRevision:   source.LiveRevision,
 			TargetRevision: source.TargetRevision,
 			Moved:          source.Moved,
+			UsedBy:         source.UsedBy,
 		})
 	}
 	return sources

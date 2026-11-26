@@ -1,18 +1,25 @@
 <script lang="ts">
 	import { Badge, Button, Helper, Input, Tooltip } from 'flowbite-svelte';
 	import { CloseOutline } from 'flowbite-svelte-icons';
-	import { shortRepo } from '$lib/ui/repos';
+	import { normalizeRepo, shortRepo, type RepoUsage } from '$lib/ui/repos';
 
 	interface Props {
 		/** The repos, in the order they were added. */
 		value?: string[];
+		/**
+		 * Repos the page's applications use, most used first. Offered as
+		 * suggestions, and used to point out a target repo none of them use.
+		 * Empty when the page hasn't loaded any applications.
+		 */
+		suggestions?: RepoUsage[];
 	}
 
-	let { value = $bindable([]) }: Props = $props();
+	let { value = $bindable([]), suggestions = [] }: Props = $props();
 
 	const uid = $props.id();
 	const inputId = `${uid}-repo`;
 	const hintId = `${uid}-hint`;
+	const listId = `${uid}-suggestions`;
 
 	let draft: string = $state('');
 	let attemptedAdd: boolean = $state(false);
@@ -20,8 +27,20 @@
 	let trimmed = $derived(draft.trim());
 	// Two spellings of one repo would match the same sources, so they count as
 	// the same entry here, as they do on the server.
-	let isDuplicate = $derived(
-		trimmed.length > 0 && value.some((repo) => shortRepo(repo) === shortRepo(trimmed))
+	let added = $derived(new Set(value.map(normalizeRepo)));
+	let isDuplicate = $derived(trimmed.length > 0 && added.has(normalizeRepo(trimmed)));
+
+	let offered = $derived(suggestions.filter((suggestion) => !added.has(suggestion.repo)));
+
+	// A target repo no listed application uses only ever makes every
+	// application "not affected", which is usually a typo or the wrong repo.
+	// Only said when there are applications to compare against.
+	let unused = $derived(
+		suggestions.length === 0
+			? []
+			: value.filter(
+					(repo) => !suggestions.some((suggestion) => suggestion.repo === normalizeRepo(repo))
+				)
 	);
 	let canAdd = $derived(trimmed.length > 0 && !isDuplicate);
 
@@ -91,8 +110,26 @@
 			bind:value={draft}
 			color={hint !== null ? 'red' : 'default'}
 			class="font-mono"
+			list={offered.length > 0 ? listId : undefined}
 			onkeydown={handleKeydown}
 		/>
+		<!--
+			A native datalist: suggestions that work with the keyboard and screen
+			readers without a hand-built combobox. The label carries the short
+			name and how many applications use the repo.
+		-->
+		{#if offered.length > 0}
+			<datalist id={listId}>
+				{#each offered as suggestion (suggestion.repo)}
+					<option
+						value={suggestion.url}
+						label="{shortRepo(suggestion.url)} · {suggestion.apps} {suggestion.apps === 1
+							? 'app'
+							: 'apps'}"
+					></option>
+				{/each}
+			</datalist>
+		{/if}
 		<Button
 			type="button"
 			color="alternative"
@@ -113,4 +150,9 @@
 			Applications with no source in them are skipped as not affected.
 		{/if}
 	</Helper>
+	{#if unused.length > 0}
+		<Helper color="gray" class="text-yellow-700 dark:text-yellow-300">
+			No application in this query uses {unused.map(shortRepo).join(', ')}.
+		</Helper>
+	{/if}
 </div>

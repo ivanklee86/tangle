@@ -24,6 +24,7 @@
 		type DiffRow
 	} from '$lib/ui/diffs';
 	import { diffsHref, type Query } from '$lib/ui/query';
+	import { repoUsage } from '$lib/ui/repos';
 	import { DiffDetail, ErrorAlert, QueryBar, QueryDrawer } from '$lib/ui/components';
 	import type { PageProps } from './$types';
 
@@ -146,6 +147,9 @@
 	let notAffectedCount = $derived(countOutcome(rows, 'notAffected'));
 	let needsRepoCount = $derived(countOutcome(rows, 'needsTargetRepo'));
 	let listable = $derived(listableRows(rows, showNotAffected));
+	// Which repos the listed applications use: suggestions for the target
+	// repos field, and how many other applications a candidate reaches.
+	let usage = $derived(repoUsage(rows.map((row) => row.sources)));
 	let visible = $derived(filterDiffRows(listable, filter, nameFilter));
 	let selected = $derived(resolveSelection(visible, selectedKey));
 
@@ -362,6 +366,7 @@
 						targetRepos={query.targetRepos}
 						onReload={reloadDiff}
 						onAddTargetRepos={addTargetRepos}
+						{usage}
 					/>
 				{/key}
 			{/if}
@@ -406,6 +411,7 @@
 	targetRefMode="required"
 	applyLabel="Apply and run diffs"
 	hrefFor={diffsHref}
+	knownRepos={usage}
 	showCli
 	onApply={applyQuery}
 />

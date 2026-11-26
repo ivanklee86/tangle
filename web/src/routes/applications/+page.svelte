@@ -19,7 +19,7 @@
 		ChevronRightOutline,
 		FolderOutline
 	} from 'flowbite-svelte-icons';
-	import { shortRepo } from '$lib/ui/repos';
+	import { shortRepo, usedByLabel } from '$lib/ui/repos';
 	import RevisionPill from '$lib/ui/components/RevisionPill.svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { goto, invalidateAll } from '$app/navigation';
@@ -415,8 +415,14 @@
 																		title={source.repoURL}>{shortRepo(source.repoURL)}</span
 																	>
 																	{#if source.ref}
-																		<Badge color="indigo" class="font-mono">ref: {source.ref}</Badge
+																		<Badge color="indigo" class="shrink-0 font-mono"
+																			>ref: {source.ref}</Badge
 																		>
+																		{#if usedByLabel(source.usedBy)}
+																			<span class="shrink-0 text-gray-500 dark:text-gray-400"
+																				>{usedByLabel(source.usedBy)}</span
+																			>
+																		{/if}
 																	{/if}
 																</span>
 															</td>

@@ -25,6 +25,9 @@
 	let excludes = $derived(parseLabels(query.excludeLabels));
 	let empty = $derived(isEmptyQuery(query));
 
+	const SHOWN_REPOS = 2;
+	let hiddenRepos = $derived(query.targetRepos.slice(SHOWN_REPOS).map(shortRepo).join(', '));
+
 	let copied: boolean = $state(false);
 	let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -88,7 +91,11 @@
 			</Badge>
 			{#if query.targetRepos.length > 0}
 				<span class="text-sm text-gray-500 dark:text-gray-400">in</span>
-				{#each query.targetRepos as repo (repo)}
+				<!--
+					Two at most, then "+N more": the bar has to stay one line on a
+					normal window, and the full list is a hover or the drawer away.
+				-->
+				{#each query.targetRepos.slice(0, SHOWN_REPOS) as repo (repo)}
 					<!-- Outlined, so it stands out from the dark header as well as the light one. -->
 					<Badge
 						color="gray"
@@ -96,6 +103,16 @@
 						title={repo}>{shortRepo(repo)}</Badge
 					>
 				{/each}
+				{#if query.targetRepos.length > SHOWN_REPOS}
+					<button
+						type="button"
+						class="text-primary-700 dark:text-primary-400 text-xs font-semibold"
+						aria-label="{query.targetRepos.length -
+							SHOWN_REPOS} more target repos: {hiddenRepos}. Edit the query to see them all."
+						onclick={onEdit}>+{query.targetRepos.length - SHOWN_REPOS} more</button
+					>
+					<Tooltip>{hiddenRepos}</Tooltip>
+				{/if}
 			{:else if query.inferTargetRepo}
 				<!--
 					Only without target repos: the server infers a repo only when none

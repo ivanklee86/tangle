@@ -2,7 +2,7 @@
 	import { Badge } from 'flowbite-svelte';
 	import { ChartPieOutline, ChevronDownOutline, FolderOutline } from 'flowbite-svelte-icons';
 	import { type DiffSource } from '$lib/backend/data';
-	import { shortRepo, shortRevision } from '$lib/ui/repos';
+	import { shortRepo, shortRevision, usedByLabel } from '$lib/ui/repos';
 	import RevisionPill from './RevisionPill.svelte';
 
 	interface Props {
@@ -66,6 +66,11 @@
 								>
 								{#if source.ref}
 									<Badge color="indigo" class="font-mono">ref: {source.ref}</Badge>
+									{#if usedByLabel(source.usedBy)}
+										<span class="text-xs text-gray-500 dark:text-gray-400"
+											>{usedByLabel(source.usedBy)}</span
+										>
+									{/if}
 								{/if}
 							</div>
 							{#if source.chart}

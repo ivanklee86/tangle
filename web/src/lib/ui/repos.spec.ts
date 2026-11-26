@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shortRepo, shortRevision } from '$lib/ui/repos';
+import { normalizeRepo, repoUsage, shortRepo, shortRevision, usedByLabel } from '$lib/ui/repos';
 
 // Test cases:
 //   - an https, ssh or scp-style git URL shortens to org/repo, without .git or
@@ -51,4 +51,80 @@ describe('shortRevision', () => {
 			expect(shortRevision(revision)).toBe(revision);
 		}
 	);
+});
+
+// Test cases (normalizeRepo mirrors the server's NormalizeRepoURL, so these
+// are the spellings internal/argocd/sources_test.go checks):
+//   - every spelling of one repo normalizes the same
+//   - a bare host:port is a port, scp syntax's numeric segment is a path
+//   - the path keeps its case, and blank is blank
+describe('normalizeRepo', () => {
+	it.each([
+		'https://github.com/org/repo',
+		'https://github.com/org/repo.git',
+		'https://github.com/org/repo/',
+		'https://github.com/org/repo.git/',
+		'https://GitHub.com/org/repo',
+		'https://user:token@github.com/org/repo.git',
+		'http://github.com/org/repo',
+		'ssh://git@github.com/org/repo.git',
+		'ssh://git@github.com:22/org/repo.git',
+		'git@github.com:org/repo.git',
+		'git@github.com:org/repo',
+		'github.com/org/repo',
+		'github.com:443/org/repo',
+		'  https://github.com/org/repo.git  '
+	])('normalizes %s', (spelling) => {
+		expect(normalizeRepo(spelling)).toBe('github.com/org/repo');
+	});
+
+	it('reads a bare host:port as a port and scp syntax as a path', () => {
+		expect(normalizeRepo('git.example.com:8443/org/repo')).toBe(
+			normalizeRepo('https://git.example.com:8443/org/repo.git')
+		);
+		expect(normalizeRepo('git@git.example.com:2024/repo.git')).toBe('git.example.com/2024/repo');
+	});
+
+	it('keeps the path case, and blank is blank', () => {
+		expect(normalizeRepo('https://github.com/Org/Repo.git')).toBe('github.com/Org/Repo');
+		expect(normalizeRepo('  ')).toBe('');
+	});
+});
+
+// Test cases:
+//   - counts applications per git repo, once per application however many
+//     of its sources are in it
+//   - Helm and OCI sources don't count
+//   - spellings of one repo count together, keeping the first URL seen
+//   - most used first, then by name
+describe('repoUsage', () => {
+	const git = (repoURL: string) => ({ kind: 'git', repoURL });
+
+	it('counts applications per repo', () => {
+		expect(
+			repoUsage([
+				[git('https://github.com/org/values.git'), git('https://github.com/org/values')],
+				[
+					git('git@github.com:org/values.git'),
+					{ kind: 'helm', repoURL: 'https://charts.example.com' }
+				],
+				[git('https://github.com/org/apps.git')]
+			])
+		).toEqual([
+			{ repo: 'github.com/org/values', url: 'https://github.com/org/values.git', apps: 2 },
+			{ repo: 'github.com/org/apps', url: 'https://github.com/org/apps.git', apps: 1 }
+		]);
+	});
+});
+
+describe('usedByLabel', () => {
+	it.each([
+		[undefined, ''],
+		[[], ''],
+		[[1], 'used by source 1'],
+		[[1, 3], 'used by sources 1 and 3'],
+		[[1, 2, 4], 'used by sources 1, 2 and 4']
+	])('labels %j as "%s"', (usedBy, label) => {
+		expect(usedByLabel(usedBy)).toBe(label);
+	});
 });

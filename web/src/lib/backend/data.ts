@@ -15,6 +15,8 @@ interface ApplicationSource {
 	chart?: string;
 	ref?: string;
 	targetRevision: string;
+	/** Positions of the sources that read files through this ref (`$values/...`). */
+	usedBy?: number[];
 }
 
 interface ApplicationLinks {
