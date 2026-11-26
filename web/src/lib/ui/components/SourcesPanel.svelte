@@ -51,7 +51,7 @@
 				{#each sources as source (source.position)}
 					<tr
 						class="border-t border-gray-200 align-top dark:border-gray-700 {source.moved
-							? 'bg-primary-50 dark:bg-primary-950/40'
+							? 'bg-primary-50 dark:bg-primary-900/30'
 							: ''}"
 					>
 						<td class="px-4 py-2 font-mono text-gray-500 dark:text-gray-400">{source.position}</td>
