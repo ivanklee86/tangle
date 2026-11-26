@@ -25,8 +25,9 @@ import (
 // the live stack `task services:cicd` brings up: tangle-server on :8081,
 // ArgoCD on :8080.
 //
-// The "change the user pushed" is the test_gitops branch on origin, compared
-// against main on GitHub (not the local checkout):
+// The "change the user pushed" is the test_gitops branch of
+// github.com/ivanklee86/tangle-integration-manifests, compared against that
+// repo's main (ArgoCD reads both from GitHub, not the local checkout):
 //
 //   - test-1 (test ArgoCD): ingress.enabled flips to true, so the diff adds
 //     one Ingress.
@@ -34,7 +35,7 @@ import (
 //   - test-3 (prod): values.yaml is deliberately invalid, so manifest
 //     generation fails in helm template.
 //
-// Rebasing or "fixing" test_gitops breaks these tests.
+// Changing either branch of that repo changes what these tests see.
 //
 // Every top-level test is prefixed TestE2E_ so tasks/go.yaml's
 // `-run '^TestE2E_'` selects it.

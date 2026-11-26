@@ -6,14 +6,15 @@ import { expect, test, type Page } from '@playwright/test';
 // it by hand from the served domain rather than borrowing the UI's own
 // helpers. That makes the URL shape itself part of what's being checked.
 //
-// The "change the user pushed" is the test_gitops branch on origin (see
-// cmd/tangle-cli/main_e2e_test.go for the CLI half):
+// The "change the user pushed" is the test_gitops branch of
+// github.com/ivanklee86/tangle-integration-manifests, compared against that
+// repo's main (see cmd/tangle-cli/main_e2e_test.go for the CLI half):
 //
 //   - test-1 (test ArgoCD): the diff adds one Ingress.
 //   - test-2 (test), test-4 (prod): unchanged.
 //   - test-3 (prod): manifest generation fails in helm template.
 //
-// Rebasing or "fixing" test_gitops breaks these tests.
+// Changing either branch of that repo changes what these tests see.
 
 const TARGET_REF = 'test_gitops';
 

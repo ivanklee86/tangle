@@ -39,7 +39,5 @@ repos:
             pass_filenames: false
 exclude: |
     (?x)(
-        ^integration/kubernetes/example/manifests/1/templates/.*|
-        ^integration/kubernetes/example/manifests/3/templates/.*|
         ^charts/tangle/templates/.*
     )
