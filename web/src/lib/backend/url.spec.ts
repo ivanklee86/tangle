@@ -22,4 +22,14 @@ describe('buildQuery', () => {
 			'?targetRef=main'
 		);
 	});
+
+	it('repeats a list parameter once per item, in order, skipping empty items', () => {
+		expect(
+			buildQuery({ targetRef: 'main', targetRepo: ['https://github.com/org/a', '', 'b'] })
+		).toBe('?targetRef=main&targetRepo=https%3A%2F%2Fgithub.com%2Forg%2Fa&targetRepo=b');
+	});
+
+	it('omits an empty list', () => {
+		expect(buildQuery({ targetRef: 'main', targetRepo: [] })).toBe('?targetRef=main');
+	});
 });

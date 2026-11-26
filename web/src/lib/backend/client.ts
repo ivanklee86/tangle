@@ -8,6 +8,12 @@ import { PUBLIC_BASE_URL } from '$app/env/public';
 import { fetchEnvelope } from '$lib/backend/http';
 import { buildQuery } from '$lib/backend/url';
 
+/** Which sources of an application get the target ref (ADR 0032). */
+interface DiffOptions {
+	targetRepos?: string[];
+	inferTargetRepo?: boolean;
+}
+
 const PATH_APPLICATIONS: string = '/api/applications';
 
 const EMPTY_APPLICATIONS_RESPONSE: ApplicationsResponse = { results: [] };
@@ -45,13 +51,16 @@ class TangleAPIClient {
 		argoCD: string,
 		applicationName: string,
 		liveRef: string,
-		targetRef: string
+		targetRef: string,
+		options: DiffOptions = {}
 	): Promise<ApplicationDiff> {
 		const url = `${this.baseUrl}/api/argocd/${argoCD}/applications/${applicationName}/diffs`;
-		const body = {
-			liveRef: liveRef,
-			targetRef: targetRef
-		};
+		// The new fields only go out when set, so the request a single-source
+		// diff sends is byte-for-byte what it always was.
+		const body: Record<string, unknown> = { liveRef, targetRef };
+		if (options.targetRepos && options.targetRepos.length > 0)
+			body.targetRepos = options.targetRepos;
+		if (options.inferTargetRepo) body.inferTargetRepo = true;
 
 		const envelope = await fetchEnvelope<ApplicationDiffResponse>(
 			url,
@@ -71,3 +80,4 @@ class TangleAPIClient {
 }
 
 export default TangleAPIClient;
+export type { DiffOptions };

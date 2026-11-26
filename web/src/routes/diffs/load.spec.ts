@@ -51,7 +51,13 @@ describe('diffs +page.ts load', () => {
 		it('still hands the page the query so it can seed its editor', () => {
 			const { query } = callLoad('http://localhost/diffs/?labels=foo:bar', mockFetch(200, {}));
 
-			expect(query).toEqual({ labels: 'foo:bar', excludeLabels: '', targetRef: '' });
+			expect(query).toEqual({
+				labels: 'foo:bar',
+				excludeLabels: '',
+				targetRef: '',
+				targetRepos: [],
+				inferTargetRepo: false
+			});
 		});
 	});
 
@@ -94,7 +100,13 @@ describe('diffs +page.ts load', () => {
 			mockFetch(200, {})
 		);
 
-		expect(query).toEqual({ labels: 'foo:bar', excludeLabels: '', targetRef: 'release-25' });
+		expect(query).toEqual({
+			labels: 'foo:bar',
+			excludeLabels: '',
+			targetRef: 'release-25',
+			targetRepos: [],
+			inferTargetRepo: false
+		});
 	});
 
 	it('resolves to the parsed applications response', async () => {

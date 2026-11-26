@@ -1,10 +1,24 @@
-import { type ApplicationDiff, type ArgoCDApplicationResults } from '$lib/backend/data';
+import {
+	type ApplicationDiff,
+	type ApplicationSource,
+	type ArgoCDApplicationResults
+} from '$lib/backend/data';
 
 /** Where one application's diff has got to, and what it found. */
-type DiffOutcome = 'pending' | 'error' | 'changed' | 'unchanged';
+type DiffOutcome =
+	| 'pending'
+	| 'error'
+	| 'changed'
+	| 'unchanged'
+	// Target repos were given and none of the app's sources use them: nothing
+	// was rendered, and it isn't a failure.
+	| 'notAffected'
+	// The app has several sources and the query didn't say which repo the ref
+	// belongs to. CI fails on it (ADR 0032, D2).
+	| 'needsTargetRepo';
 
 /** Which applications the sidebar is showing. */
-type DiffFilter = 'changed' | 'errors' | 'all';
+type DiffFilter = 'changed' | 'needsRepo' | 'errors' | 'all';
 
 interface DiffStats {
 	added: number;
@@ -18,6 +32,8 @@ interface DiffRow {
 	health: string;
 	syncStatus: string;
 	liveRef: string;
+	/** Every source, in ArgoCD's order. Empty from a server that predates them. */
+	sources: ApplicationSource[];
 	outcome: DiffOutcome;
 	stats: DiffStats;
 	diff: ApplicationDiff | undefined;
@@ -54,9 +70,15 @@ function diffStats(diffText: string): DiffStats {
  * before their diffs do. A manifest-generation error counts as an error even
  * though the request itself succeeded: the caller asked for a diff and didn't
  * get one.
+ *
+ * The server's status comes first. "Needs target repo" also sets
+ * manifestGenerationError, so CLIs that predate the status still fail on it,
+ * but this page can say what's actually wrong.
  */
 function diffOutcome(diff: ApplicationDiff | undefined): DiffOutcome {
 	if (!diff || !diff.loaded) return 'pending';
+	if (!diff.error && diff.response.status === 'needsTargetRepo') return 'needsTargetRepo';
+	if (!diff.error && diff.response.status === 'notAffected') return 'notAffected';
 	if (diff.error || diff.response.manifestGenerationError.length > 0) return 'error';
 	return diff.response.diffs.length > 0 ? 'changed' : 'unchanged';
 }
@@ -76,6 +98,7 @@ function buildDiffRows(
 				health: application.health,
 				syncStatus: application.syncStatus,
 				liveRef: application.liveRef,
+				sources: application.sources ?? [],
 				outcome: diffOutcome(diff),
 				stats: diff?.loaded ? diffStats(diff.response.diffs) : { added: 0, removed: 0 },
 				diff
@@ -93,11 +116,22 @@ function loadedCount(rows: DiffRow[]): number {
 	return rows.filter((row) => row.outcome !== 'pending').length;
 }
 
+/**
+ * The rows the list can show at all: everything, or everything but "not
+ * affected" (D10). Those are hidden by default, because with target repos set
+ * they're often most of the fleet and none of them needs a look. The outcome
+ * segments count from this, so "All" is the number of rows actually listed.
+ */
+function listableRows(rows: DiffRow[], showNotAffected: boolean): DiffRow[] {
+	return showNotAffected ? rows : rows.filter((row) => row.outcome !== 'notAffected');
+}
+
 function filterDiffRows(rows: DiffRow[], filter: DiffFilter, name: string): DiffRow[] {
 	const needle = name.trim().toLowerCase();
 
 	return rows.filter((row) => {
 		if (filter === 'changed' && row.outcome !== 'changed') return false;
+		if (filter === 'needsRepo' && row.outcome !== 'needsTargetRepo') return false;
 		if (filter === 'errors' && row.outcome !== 'error') return false;
 		if (needle.length > 0 && !row.name.toLowerCase().includes(needle)) return false;
 		return true;
@@ -138,6 +172,7 @@ export {
 	diffStats,
 	filterDiffRows,
 	groupByInstance,
+	listableRows,
 	loadedCount,
 	resolveSelection,
 	rowKey,

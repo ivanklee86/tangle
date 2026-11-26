@@ -5,10 +5,30 @@ interface Query {
 	labels: string;
 	excludeLabels: string;
 	targetRef: string;
+	/**
+	 * Repos the target ref belongs to (ADR 0032). Sources in them get the ref,
+	 * and an application with none is "not affected". Empty diffs single-source
+	 * applications as before.
+	 */
+	targetRepos: string[];
+	/** Let a multi-source app whose git sources are all in one repo use it. */
+	inferTargetRepo: boolean;
 }
 
 function emptyQuery(): Query {
-	return { labels: '', excludeLabels: '', targetRef: '' };
+	return { labels: '', excludeLabels: '', targetRef: '', targetRepos: [], inferTargetRepo: false };
+}
+
+/** True when two queries ask for the same thing. */
+function sameQuery(a: Query, b: Query): boolean {
+	return (
+		a.labels === b.labels &&
+		a.excludeLabels === b.excludeLabels &&
+		a.targetRef === b.targetRef &&
+		a.inferTargetRepo === b.inferTargetRepo &&
+		a.targetRepos.length === b.targetRepos.length &&
+		a.targetRepos.every((repo, index) => repo === b.targetRepos[index])
+	);
 }
 
 /** Reads the query a page was opened with straight back out of its URL. */
@@ -16,7 +36,12 @@ function queryFromParams(params: URLSearchParams): Query {
 	return {
 		labels: params.get('labels') ?? '',
 		excludeLabels: params.get('excludeLabels') ?? '',
-		targetRef: params.get('targetRef') ?? ''
+		targetRef: params.get('targetRef') ?? '',
+		targetRepos: params
+			.getAll('targetRepo')
+			.map((repo) => repo.trim())
+			.filter((repo) => repo.length > 0),
+		inferTargetRepo: params.get('inferTargetRepo') === 'true'
 	};
 }
 
@@ -72,7 +97,9 @@ function diffsHref(query: Query): string {
 	return `/diffs${buildQuery({
 		targetRef: query.targetRef,
 		labels: query.labels,
-		excludeLabels: query.excludeLabels
+		excludeLabels: query.excludeLabels,
+		targetRepo: query.targetRepos,
+		inferTargetRepo: query.inferTargetRepo ? 'true' : ''
 	})}`;
 }
 
@@ -114,6 +141,12 @@ function cliCommand(query: Query): string {
 	if (query.targetRef.length > 0) {
 		parts.push(`--target-ref ${shellQuote(query.targetRef)}`);
 	}
+	for (const repo of query.targetRepos) {
+		parts.push(`--target-repo ${shellQuote(repo)}`);
+	}
+	if (query.inferTargetRepo) {
+		parts.push('--infer-target-repo');
+	}
 
 	return parts.join(' ');
 }
@@ -127,6 +160,7 @@ export {
 	isEmptyQuery,
 	NO_TARGET_REF_REASON,
 	queryFromParams,
+	sameQuery,
 	SEARCHED_PARAM,
 	type Query
 };

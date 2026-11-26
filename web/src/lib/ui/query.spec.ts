@@ -3,14 +3,16 @@ import {
 	applicationsHref,
 	cliCommand,
 	diffsHref,
+	emptyQuery,
 	hasSubmittedQuery,
 	isEmptyQuery,
 	queryFromParams,
+	sameQuery,
 	type Query
 } from '$lib/ui/query';
 
 function query(overrides: Partial<Query> = {}): Query {
-	return { labels: '', excludeLabels: '', targetRef: '', ...overrides };
+	return { ...emptyQuery(), ...overrides };
 }
 
 describe('queryFromParams', () => {
@@ -20,7 +22,9 @@ describe('queryFromParams', () => {
 		expect(queryFromParams(params)).toEqual({
 			labels: 'env:test',
 			excludeLabels: 'tier:sandbox',
-			targetRef: 'main'
+			targetRef: 'main',
+			targetRepos: [],
+			inferTargetRepo: false
 		});
 	});
 
@@ -30,7 +34,9 @@ describe('queryFromParams', () => {
 		expect(queryFromParams(new URLSearchParams())).toEqual({
 			labels: '',
 			excludeLabels: '',
-			targetRef: ''
+			targetRef: '',
+			targetRepos: [],
+			inferTargetRepo: false
 		});
 	});
 });
@@ -158,5 +164,77 @@ describe('cliCommand', () => {
 
 	it('is still a runnable command for an empty query', () => {
 		expect(cliCommand(query())).toBe('tangle-cli generate-manifests');
+	});
+});
+
+// Test cases for target repos and inference (ADR 0032, D5, D6):
+//   - a repeated targetRepo is read in order, trimmed, with blanks dropped
+//   - inferTargetRepo is on only for exactly "true"
+//   - diffsHref writes both back, so a shared link reproduces the page
+//   - a query without them builds the same link as before
+//   - the CLI preview gets one --target-repo per repo, quoted when needed,
+//     plus --infer-target-repo
+//   - sameQuery compares the repos by value and in order
+describe('target repos and inference', () => {
+	const values = 'https://github.com/org/values.git';
+	const charts = 'git@github.com:org/charts.git';
+
+	it('reads repeated targetRepo in order, dropping blanks', () => {
+		const params = new URLSearchParams();
+		params.append('targetRef', 'feature-x');
+		params.append('targetRepo', values);
+		params.append('targetRepo', ' ');
+		params.append('targetRepo', ` ${charts} `);
+
+		expect(queryFromParams(params).targetRepos).toEqual([values, charts]);
+	});
+
+	it('turns inference on only for "true"', () => {
+		expect(queryFromParams(new URLSearchParams('inferTargetRepo=true')).inferTargetRepo).toBe(true);
+		expect(queryFromParams(new URLSearchParams('inferTargetRepo=yes')).inferTargetRepo).toBe(false);
+		expect(queryFromParams(new URLSearchParams()).inferTargetRepo).toBe(false);
+	});
+
+	it('round-trips through diffsHref', () => {
+		const original = query({
+			targetRef: 'feature-x',
+			targetRepos: [values, charts],
+			inferTargetRepo: true
+		});
+		const href = diffsHref(original);
+
+		expect(queryFromParams(new URL(href, 'http://tangle').searchParams)).toEqual(original);
+	});
+
+	it('leaves a link without them as it was', () => {
+		expect(diffsHref(query({ targetRef: 'main', labels: 'env:test' }))).toBe(
+			'/diffs?targetRef=main&labels=env%3Atest'
+		);
+	});
+
+	it('adds them to the CLI preview', () => {
+		expect(
+			cliCommand(
+				query({ targetRef: 'feature-x', targetRepos: [values, charts], inferTargetRepo: true })
+			)
+		).toBe(
+			`tangle-cli generate-manifests --target-ref feature-x --target-repo ${values} --target-repo ${charts} --infer-target-repo`
+		);
+	});
+
+	it('quotes a target repo that carries shell syntax', () => {
+		expect(cliCommand(query({ targetRef: 'main', targetRepos: ['repo; id'] }))).toBe(
+			"tangle-cli generate-manifests --target-ref main --target-repo 'repo; id'"
+		);
+	});
+
+	it('compares target repos by value and order', () => {
+		expect(sameQuery(query({ targetRepos: [values] }), query({ targetRepos: [values] }))).toBe(
+			true
+		);
+		expect(
+			sameQuery(query({ targetRepos: [values, charts] }), query({ targetRepos: [charts, values] }))
+		).toBe(false);
+		expect(sameQuery(query(), query({ inferTargetRepo: true }))).toBe(false);
 	});
 });

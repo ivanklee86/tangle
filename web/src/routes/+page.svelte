@@ -8,8 +8,10 @@
 	let labels: string = $state('');
 	let excludeLabels: string = $state('');
 	let targetRef: string = $state('');
+	let targetRepos: string[] = $state([]);
+	let inferTargetRepo: boolean = $state(false);
 
-	let query = $derived({ labels, excludeLabels, targetRef });
+	let query = $derived({ labels, excludeLabels, targetRef, targetRepos, inferTargetRepo });
 
 	let valid = $derived(isValidLabelQuery(labels) && isValidLabelQuery(excludeLabels));
 	// Diffs re-render every matching application against the ref, so there is
@@ -43,7 +45,14 @@
 				if (valid) go(applicationsHref(query));
 			}}
 		>
-			<QueryEditor bind:labels bind:excludeLabels bind:targetRef targetRefMode="optional" />
+			<QueryEditor
+				bind:labels
+				bind:excludeLabels
+				bind:targetRef
+				bind:targetRepos
+				bind:inferTargetRepo
+				targetRefMode="optional"
+			/>
 
 			<div class="border-t border-gray-200 pt-4 dark:border-gray-700">
 				<!--

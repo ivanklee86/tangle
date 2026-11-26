@@ -41,7 +41,13 @@ describe('applications +page.ts load', () => {
 		it('still hands the page an empty query to render its editor from', () => {
 			const { query } = callLoad('http://localhost/applications/', mockFetch(200, {}));
 
-			expect(query).toEqual({ labels: '', excludeLabels: '', targetRef: '' });
+			expect(query).toEqual({
+				labels: '',
+				excludeLabels: '',
+				targetRef: '',
+				targetRepos: [],
+				inferTargetRepo: false
+			});
 		});
 	});
 
@@ -94,7 +100,13 @@ describe('applications +page.ts load', () => {
 			mockFetch(200, {})
 		);
 
-		expect(query).toEqual({ labels: 'foo:bar', excludeLabels: 'baz:qux', targetRef: '' });
+		expect(query).toEqual({
+			labels: 'foo:bar',
+			excludeLabels: 'baz:qux',
+			targetRef: '',
+			targetRepos: [],
+			inferTargetRepo: false
+		});
 	});
 
 	it('resolves to the parsed applications response', async () => {

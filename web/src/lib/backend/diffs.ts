@@ -4,6 +4,7 @@ import {
 	type ApplicationsDiffsData
 } from '$lib/backend/data';
 import type TangleAPIClient from '$lib/backend/client';
+import type { DiffOptions } from '$lib/backend/client';
 
 interface DiffRequest {
 	argoCDName: string;
@@ -48,7 +49,8 @@ async function fetchDiffs(
 	client: TangleAPIClient,
 	results: ArgoCDApplicationResults[],
 	targetRef: string | null,
-	callbacks: FetchDiffsCallbacks = {}
+	callbacks: FetchDiffsCallbacks = {},
+	options: DiffOptions = {}
 ): Promise<ApplicationsDiffsData> {
 	const requests = buildDiffRequests(results, targetRef);
 	callbacks.onTotal?.(requests.length);
@@ -60,7 +62,8 @@ async function fetchDiffs(
 					request.argoCDName,
 					request.applicationName,
 					request.liveRef,
-					request.targetRef
+					request.targetRef,
+					options
 				)
 				.then((result) => {
 					callbacks.onProgress?.(result);

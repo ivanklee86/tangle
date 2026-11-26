@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Pane, Progressbar, Search, SplitPane } from 'flowbite-svelte';
+	import { Button, Pane, Progressbar, Search, SplitPane, Toggle } from 'flowbite-svelte';
 	import { RefreshOutline } from 'flowbite-svelte-icons';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -15,6 +15,7 @@
 		buildDiffRows,
 		countOutcome,
 		filterDiffRows,
+		listableRows,
 		groupByInstance,
 		loadedCount,
 		resolveSelection,
@@ -64,14 +65,24 @@
 	// slowest requests are still running. That also makes the map complete
 	// by the time the fan-out finishes, so there's no final wholesale
 	// assignment to overwrite a single-diff reload that landed in between.
-	function fanOut(results: ApplicationResponseStore['response']['results'], targetRef: string) {
+	function fanOut(results: ApplicationResponseStore['response']['results'], forQuery: Query) {
 		const current = ++generation;
 		diffs = {};
-		fetchDiffs(client, results, targetRef, {
-			onProgress: (diff) => {
-				if (current === generation) mergeDiff(diff);
-			}
-		});
+		fetchDiffs(
+			client,
+			results,
+			forQuery.targetRef,
+			{
+				onProgress: (diff) => {
+					if (current === generation) mergeDiff(diff);
+				}
+			},
+			diffOptions(forQuery)
+		);
+	}
+
+	function diffOptions(forQuery: Query) {
+		return { targetRepos: forQuery.targetRepos, inferTargetRepo: forQuery.inferTargetRepo };
 	}
 
 	// $effect rather than onMount: SvelteKit reuses this component across
@@ -79,18 +90,18 @@
 	// remounting, so onMount would only ever see the first query.
 	$effect(() => {
 		const pending = data.applications;
-		const targetRef = data.query.targetRef;
+		const forQuery = data.query;
 		const current = ++generation;
 
 		applications = undefined;
 		diffs = {};
 
-		if (!pending || targetRef.length === 0) return;
+		if (!pending || forQuery.targetRef.length === 0) return;
 
 		pending.then((result) => {
 			if (current !== generation) return;
 			applications = result;
-			if (!result.error) fanOut(result.response.results, targetRef);
+			if (!result.error) fanOut(result.response.results, forQuery);
 		});
 
 		return () => {
@@ -102,13 +113,22 @@
 		goto(resolve(diffsHref(next) as '/diffs'));
 	}
 
+	// D8: a target repo applies to every application, so fixing one that
+	// needs a repo changes the query, and the URL with it, rather than
+	// re-running that application alone.
+	function addTargetRepos(repos: string[]): void {
+		const added = repos.filter((repo) => !query.targetRepos.includes(repo));
+		applyQuery({ ...query, targetRepos: [...query.targetRepos, ...added] });
+	}
+
 	async function reloadDiff(row: DiffRow): Promise<void> {
 		const current = generation;
 		const result = await client.getApplicationDiff(
 			row.instance,
 			row.name,
 			row.liveRef,
-			query.targetRef
+			query.targetRef,
+			diffOptions(query)
 		);
 		if (current === generation) mergeDiff(result);
 	}
@@ -120,12 +140,28 @@
 		applications?.error ? [] : buildDiffRows(applications?.response.results ?? [], diffs)
 	);
 	let loaded = $derived(loadedCount(rows));
-	let visible = $derived(filterDiffRows(rows, filter, nameFilter));
+	// D10: "not affected" rows are hidden unless asked for, and every count in
+	// the outcome control is of the rows the list can actually show.
+	let showNotAffected: boolean = $state(false);
+	let notAffectedCount = $derived(countOutcome(rows, 'notAffected'));
+	let needsRepoCount = $derived(countOutcome(rows, 'needsTargetRepo'));
+	let listable = $derived(listableRows(rows, showNotAffected));
+	let visible = $derived(filterDiffRows(listable, filter, nameFilter));
 	let selected = $derived(resolveSelection(visible, selectedKey));
+
+	let outcomeOptions = $derived([
+		{ id: 'changed' as const, label: 'Changed', count: countOutcome(listable, 'changed') },
+		// Only when there's something to fix, so the common case stays as it was.
+		...(needsRepoCount > 0
+			? [{ id: 'needsRepo' as const, label: 'Needs repo', count: needsRepoCount }]
+			: []),
+		{ id: 'errors' as const, label: 'Errors', count: countOutcome(listable, 'error') },
+		{ id: 'all' as const, label: 'All', count: listable.length }
+	]);
 
 	function reloadAll(): void {
 		if (!applications || applications.error) return;
-		fanOut(applications.response.results, query.targetRef);
+		fanOut(applications.response.results, query);
 	}
 </script>
 
@@ -134,16 +170,28 @@
 </svelte:head>
 
 {#snippet outcomeDot(row: DiffRow)}
-	<span
-		aria-hidden="true"
-		class="h-2.5 w-2.5 shrink-0 rounded-full {row.outcome === 'error'
-			? 'bg-red-500'
-			: row.outcome === 'changed'
-				? 'bg-yellow-400'
-				: row.outcome === 'pending'
-					? 'bg-gray-400'
-					: 'bg-green-500'}"
-	></span>
+	{#if row.outcome === 'needsTargetRepo'}
+		<!-- A triangle, not a dot: it asks for something, unlike every other outcome. -->
+		<svg aria-hidden="true" viewBox="0 0 24 24" class="h-3 w-3 shrink-0 text-yellow-500">
+			<path d="M12 3 2 21h20L12 3z" fill="currentColor" />
+		</svg>
+	{:else if row.outcome === 'notAffected'}
+		<span
+			aria-hidden="true"
+			class="h-2.5 w-2.5 shrink-0 rounded-full border-[1.5px] border-dashed border-gray-400 dark:border-gray-500"
+		></span>
+	{:else}
+		<span
+			aria-hidden="true"
+			class="h-2.5 w-2.5 shrink-0 rounded-full {row.outcome === 'error'
+				? 'bg-red-500'
+				: row.outcome === 'changed'
+					? 'bg-yellow-400'
+					: row.outcome === 'pending'
+						? 'bg-gray-400'
+						: 'bg-green-500'}"
+		></span>
+	{/if}
 {/snippet}
 
 <QueryBar title="Diffs" {query} showTargetRef onEdit={() => (editing = true)}>
@@ -167,6 +215,15 @@
 					>{countOutcome(rows, 'error')}
 					{countOutcome(rows, 'error') === 1 ? 'error' : 'errors'}</span
 				>
+			{/if}
+			{#if needsRepoCount > 0}
+				· <span class="font-semibold text-yellow-700 dark:text-yellow-300"
+					>{needsRepoCount}
+					{needsRepoCount === 1 ? 'needs' : 'need'} target repo</span
+				>
+			{/if}
+			{#if notAffectedCount > 0}
+				· {notAffectedCount} not affected
 			{/if}
 			· {loaded} of {rows.length} loaded
 		{/if}
@@ -197,7 +254,7 @@
 					aria-label="Filter by diff outcome"
 					class="inline-flex overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600"
 				>
-					{#each [{ id: 'changed' as const, label: 'Changed', count: countOutcome(rows, 'changed') }, { id: 'errors' as const, label: 'Errors', count: countOutcome(rows, 'error') }, { id: 'all' as const, label: 'All', count: rows.length }] as option (option.id)}
+					{#each outcomeOptions as option (option.id)}
 						<button
 							type="button"
 							aria-pressed={filter === option.id}
@@ -212,6 +269,11 @@
 						</button>
 					{/each}
 				</div>
+				{#if notAffectedCount > 0}
+					<Toggle size="small" bind:checked={showNotAffected}>
+						Show not affected ({notAffectedCount})
+					</Toggle>
+				{/if}
 			</div>
 
 			<nav aria-label="Applications" class="min-h-0 grow overflow-y-auto p-2">
@@ -252,6 +314,12 @@
 											<span class="text-gray-400 italic dark:text-gray-500">pending</span>
 										{:else if row.outcome === 'error'}
 											<span class="font-semibold text-red-600 dark:text-red-400">Error</span>
+										{:else if row.outcome === 'needsTargetRepo'}
+											<span class="font-semibold text-yellow-700 dark:text-yellow-300"
+												>Needs repo</span
+											>
+										{:else if row.outcome === 'notAffected'}
+											<span class="text-gray-500 dark:text-gray-400">Not affected</span>
 										{:else if row.outcome === 'changed'}
 											<span class="text-green-600 dark:text-green-400">+{row.stats.added}</span>
 											<span class="text-red-600 dark:text-red-400">−{row.stats.removed}</span>
@@ -288,7 +356,13 @@
 					"Live manifests" for a diff you just opened.
 				-->
 				{#key rowKey(selected)}
-					<DiffDetail row={selected} targetRef={query.targetRef} onReload={reloadDiff} />
+					<DiffDetail
+						row={selected}
+						targetRef={query.targetRef}
+						targetRepos={query.targetRepos}
+						onReload={reloadDiff}
+						onAddTargetRepos={addTargetRepos}
+					/>
 				{/key}
 			{/if}
 		</Pane>

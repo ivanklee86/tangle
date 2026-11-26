@@ -3,6 +3,7 @@
 	import { CheckOutline, CodeBranchOutline, EditOutline, LinkOutline } from 'flowbite-svelte-icons';
 	import { parseLabels } from '$lib/ui/labels';
 	import { absoluteUrl } from '$lib/ui/links';
+	import { shortRepo } from '$lib/ui/repos';
 	import { isEmptyQuery, type Query } from '$lib/ui/query';
 	import type { Snippet } from 'svelte';
 
@@ -85,6 +86,21 @@
 				<CodeBranchOutline class="h-3 w-3" />
 				{query.targetRef}
 			</Badge>
+			{#if query.targetRepos.length > 0}
+				<span class="text-sm text-gray-500 dark:text-gray-400">in</span>
+				{#each query.targetRepos as repo (repo)}
+					<Badge color="gray" class="font-mono font-semibold" title={repo}>{shortRepo(repo)}</Badge>
+				{/each}
+			{/if}
+			{#if query.inferTargetRepo}
+				<Badge
+					color="indigo"
+					class="font-semibold"
+					title="Infer target repo is on: an application whose git sources are all in one repo uses that repo."
+				>
+					{query.targetRepos.length > 0 ? '+ inferred' : 'repo inferred'}
+				</Badge>
+			{/if}
 		{/if}
 
 		<Button type="button" size="sm" color="alternative" onclick={onEdit}>

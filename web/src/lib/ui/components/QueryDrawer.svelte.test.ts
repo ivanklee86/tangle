@@ -44,7 +44,9 @@ describe('QueryDrawer', () => {
 		expect(onApply).toHaveBeenCalledWith({
 			labels: 'env:test,tier:web',
 			excludeLabels: '',
-			targetRef: ''
+			targetRef: '',
+			targetRepos: [],
+			inferTargetRepo: false
 		});
 	});
 });

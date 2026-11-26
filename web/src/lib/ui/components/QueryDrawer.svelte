@@ -53,6 +53,8 @@
 	let labels: string = $state(untrack(() => query.labels));
 	let excludeLabels: string = $state(untrack(() => query.excludeLabels));
 	let targetRef: string = $state(untrack(() => query.targetRef));
+	let targetRepos: string[] = $state(untrack(() => [...query.targetRepos]));
+	let inferTargetRepo: boolean = $state(untrack(() => query.inferTargetRepo));
 
 	// LabelsInput parses its value into chips once, when it mounts, so
 	// reseeding the value alone would leave a discarded draft's chips on
@@ -65,18 +67,22 @@
 			labels = query.labels;
 			excludeLabels = query.excludeLabels;
 			targetRef = query.targetRef;
+			targetRepos = [...query.targetRepos];
+			inferTargetRepo = query.inferTargetRepo;
 			generation += 1;
 		}
 		wasOpen = open;
 	});
 
-	let draft = $derived({ labels, excludeLabels, targetRef });
+	let draft = $derived({ labels, excludeLabels, targetRef, targetRepos, inferTargetRepo });
 
 	let changeCount = $derived(
 		[
 			labels !== query.labels,
 			excludeLabels !== query.excludeLabels,
-			targetRef !== query.targetRef
+			targetRef !== query.targetRef,
+			targetRepos.join('\n') !== query.targetRepos.join('\n'),
+			inferTargetRepo !== query.inferTargetRepo
 		].filter(Boolean).length
 	);
 
@@ -124,7 +130,14 @@
 	<form class="flex min-h-0 grow flex-col" onsubmit={apply}>
 		<div class="grow space-y-5 overflow-y-auto px-6 py-5">
 			{#key generation}
-				<QueryEditor bind:labels bind:excludeLabels bind:targetRef {targetRefMode} />
+				<QueryEditor
+					bind:labels
+					bind:excludeLabels
+					bind:targetRef
+					bind:targetRepos
+					bind:inferTargetRepo
+					{targetRefMode}
+				/>
 			{/key}
 
 			<QueryPreview href={hrefFor(draft)} query={draft} cli={showCli} />

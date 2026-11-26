@@ -6,6 +6,7 @@ import {
 	diffStats,
 	filterDiffRows,
 	groupByInstance,
+	listableRows,
 	loadedCount,
 	resolveSelection,
 	rowKey,
@@ -236,5 +237,83 @@ describe('resolveSelection', () => {
 
 	it('is undefined when there are no rows at all', () => {
 		expect(resolveSelection([], 'test/alpha')).toBeUndefined();
+	});
+});
+
+// Test cases for the multi-source outcomes (ADR 0032):
+//   - "needs target repo" wins over the error message the server also sets
+//     for it, so older CLIs fail on it
+//   - "not affected" is its own outcome, not "unchanged"
+//   - a response with no status (an older server) classifies as before
+//   - a transport error stays an error whatever the status says
+//   - listableRows hides "not affected" unless asked, and nothing else
+//   - the "needsRepo" filter keeps only applications that need a target repo
+//   - rows carry their sources, and none from an older server
+describe('multi-source outcomes', () => {
+	it('reads "needs target repo" before its error message', () => {
+		expect(
+			diffOutcome(
+				diff({ status: 'needsTargetRepo', manifestGenerationError: 'needs target repo: …' })
+			)
+		).toBe('needsTargetRepo');
+	});
+
+	it('reads "not affected" as its own outcome', () => {
+		expect(diffOutcome(diff({ status: 'notAffected' }))).toBe('notAffected');
+	});
+
+	it('classifies a response without a status as before', () => {
+		expect(diffOutcome(diff({ diffs: '+x' }))).toBe('changed');
+		expect(diffOutcome(diff({ manifestGenerationError: 'boom' }))).toBe('error');
+		expect(diffOutcome(diff())).toBe('unchanged');
+	});
+
+	it('keeps a failed request an error', () => {
+		expect(diffOutcome({ ...diff({ status: 'notAffected' }), error: true })).toBe('error');
+	});
+
+	function mixedRows(): DiffRow[] {
+		return buildDiffRows(RESULTS, {
+			test: {
+				alpha: diff({ status: 'notAffected' }),
+				bravo: diff({ status: 'needsTargetRepo', manifestGenerationError: 'needs target repo' })
+			},
+			prod: { charlie: diff({ status: 'ok', diffs: '+x' }) }
+		});
+	}
+
+	it('hides "not affected" rows unless asked', () => {
+		expect(listableRows(mixedRows(), false).map((r) => r.name)).toEqual(['bravo', 'charlie']);
+		expect(listableRows(mixedRows(), true)).toHaveLength(3);
+	});
+
+	it('filters to applications that need a target repo', () => {
+		expect(filterDiffRows(mixedRows(), 'needsRepo', '').map((r) => r.name)).toEqual(['bravo']);
+		expect(filterDiffRows(mixedRows(), 'errors', '')).toEqual([]);
+	});
+
+	it('carries sources onto rows, and none from an older server', () => {
+		const sources = [
+			{
+				position: 1,
+				kind: 'git' as const,
+				repoURL: 'https://github.com/org/a',
+				targetRevision: 'main'
+			}
+		];
+		const results: ArgoCDApplicationResults[] = [
+			{
+				name: 'test',
+				link: '',
+				applications: [
+					{ name: 'a', url: '', health: '', syncStatus: '', liveRef: 'main', sources },
+					{ name: 'b', url: '', health: '', syncStatus: '', liveRef: 'main' }
+				]
+			}
+		];
+
+		const built = buildDiffRows(results, {});
+		expect(built[0].sources).toEqual(sources);
+		expect(built[1].sources).toEqual([]);
 	});
 });

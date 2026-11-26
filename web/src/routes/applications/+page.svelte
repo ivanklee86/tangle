@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		Badge,
 		Button,
 		Search,
 		Select,
@@ -11,7 +12,13 @@
 		TableHeadCell,
 		Toggle
 	} from 'flowbite-svelte';
-	import { ArrowRightOutline, ArrowUpRightFromSquareOutline } from 'flowbite-svelte-icons';
+	import {
+		ArrowRightOutline,
+		ArrowUpRightFromSquareOutline,
+		ChevronRightOutline
+	} from 'flowbite-svelte-icons';
+	import { shortRepo } from '$lib/ui/repos';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { onMount, untrack } from 'svelte';
@@ -91,6 +98,14 @@
 
 	let facets = $state(emptyFacets());
 	let sortState: SortState | undefined = $state({ key: 'health', direction: 'desc' });
+
+	// Multi-source rows whose sources are expanded, by instance/name.
+	const expanded = new SvelteSet<string>();
+
+	function toggleExpanded(key: string): void {
+		if (expanded.has(key)) expanded.delete(key);
+		else expanded.add(key);
+	}
 
 	let refreshEnabled: boolean = $state(false);
 	let refreshPeriod: number = $state(10);
@@ -295,6 +310,8 @@
 						</TableHead>
 						<TableBody class="divide-y">
 							{#each visible as application (`${application.instance}/${application.name}`)}
+								{@const sources = application.sources ?? []}
+								{@const key = `${application.instance}/${application.name}`}
 								<TableBodyRow>
 									<TableBodyCell class="font-semibold">{application.name}</TableBodyCell>
 									<TableBodyCell>
@@ -309,9 +326,32 @@
 									<TableBodyCell
 										><ArgoCDSyncStatus syncStatus={application.syncStatus} /></TableBodyCell
 									>
-									<TableBodyCell class="font-mono text-xs text-gray-500 dark:text-gray-400"
-										>{application.liveRef}</TableBodyCell
-									>
+									{#if sources.length > 1}
+										<TableBodyCell class="text-xs">
+											<button
+												type="button"
+												class="text-primary-700 dark:text-primary-400 inline-flex items-center gap-1 font-semibold"
+												aria-expanded={expanded.has(key)}
+												aria-controls="sources-{key}"
+												onclick={() => toggleExpanded(key)}
+											>
+												<ChevronRightOutline
+													class="h-3.5 w-3.5 transition-transform {expanded.has(key)
+														? 'rotate-90'
+														: ''}"
+												/>
+												{sources.length} sources
+											</button>
+											<span class="ms-1 font-mono text-gray-500 dark:text-gray-400"
+												>{sources.map((source) => source.targetRevision).join(' · ')}</span
+											>
+										</TableBodyCell>
+									{:else}
+										<!-- A one-entry spec.sources has no liveRef: use its source's. -->
+										<TableBodyCell class="font-mono text-xs text-gray-500 dark:text-gray-400"
+											>{application.liveRef || sources[0]?.targetRevision || ''}</TableBodyCell
+										>
+									{/if}
 									<TableBodyCell class="text-right whitespace-nowrap">
 										<Button
 											size="xs"
@@ -324,6 +364,45 @@
 										</Button>
 									</TableBodyCell>
 								</TableBodyRow>
+								{#if sources.length > 1 && expanded.has(key)}
+									<TableBodyRow id="sources-{key}" class="bg-gray-50 dark:bg-gray-800">
+										<TableBodyCell colspan={6} class="py-2 ps-10">
+											<ul class="list-none space-y-1.5 p-0 text-xs">
+												{#each sources as source (source.position)}
+													<li class="flex flex-wrap items-center gap-2">
+														<span class="w-4 font-mono text-gray-500 dark:text-gray-400"
+															>{source.position}</span
+														>
+														<Badge color="gray"
+															>{source.kind === 'helm'
+																? 'Helm'
+																: source.kind === 'oci'
+																	? 'OCI'
+																	: 'Git'}</Badge
+														>
+														<span
+															class="font-mono text-gray-900 dark:text-white"
+															title={source.repoURL}>{shortRepo(source.repoURL)}</span
+														>
+														{#if source.chart}
+															<span class="text-gray-500 dark:text-gray-400">chart</span>
+															<span class="font-mono">{source.chart}</span>
+														{:else if source.path}
+															<span class="text-gray-500 dark:text-gray-400">path</span>
+															<span class="font-mono">{source.path}</span>
+														{/if}
+														{#if source.ref}
+															<Badge color="gray" class="font-mono">ref: {source.ref}</Badge>
+														{/if}
+														<span class="font-mono text-gray-500 dark:text-gray-400"
+															>{source.targetRevision}</span
+														>
+													</li>
+												{/each}
+											</ul>
+										</TableBodyCell>
+									</TableBodyRow>
+								{/if}
 							{/each}
 						</TableBody>
 					</Table>
