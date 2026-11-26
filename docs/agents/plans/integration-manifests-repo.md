@@ -69,7 +69,7 @@ The **Fixture dependency** column says what each use case needs from the manifes
 
 - **G1 Modify or remove in a diff.** Only a pure addition is tested. One extra changed line (for example a ConfigMap value in a fifth app, so test-2 and test-4 stay unchanged) would cover `-` lines. That needs a new Application CR and changes the expected counts in L1–L4.
 - **G2 Target ref that doesn't exist.** Test-only change, no repo content needed.
-- **G3 Target ref as a tag or commit SHA.** Cheap once the new repo exists: tag `test_gitops`'s commit.
+- **G3 Target ref as a tag or commit SHA.** Cheap once the new repo exists: tag `test_gitops`'s commit. Now planned as use cases R1 to R6 in the [multi-source plan](multi-source-applications.md) (D7).
 - **G4 Kustomize source**, **G5 Degraded health.** Mention only if Tangle should promise these.
 
 I'd do the move first with no new use cases, so the PR is a pure change of source and every expected value stays the same. Then take G2, G3 and the Helm trim as follow-ups, since they need no new fixture apps.
@@ -148,7 +148,7 @@ Test infrastructure for the ways an Application can get its manifests that Tangl
 
 The apps live in `integration/kubernetes/sources/`, in AppProject `sources`, behind the `sources` ArgoCD (token `ARGOCD_SOURCES_TOKEN`), so existing expectations don't change. `TestE2E_SourceFixtures` asserts each row directly against ArgoCD.
 
-Not covered yet: source hydrator (it needs a commit-server and push credentials), duplicate resources across sources, a CMP failure, and tag or SHA target refs (G3).
+Not covered yet: source hydrator (it needs a commit-server and push credentials), duplicate resources across sources, a CMP failure, and tag or SHA target refs (G3, now planned in the [multi-source plan](multi-source-applications.md)).
 
 Tangle-level tests on these fixtures are in `TestE2E_ServerSourceFixtures` and `web/e2e/live/sources.spec.ts`. Their multi-source cases are skipped until the gap below closes.
 
