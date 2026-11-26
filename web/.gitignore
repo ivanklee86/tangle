@@ -7,6 +7,8 @@ node_modules
 .netlify
 .wrangler
 /.svelte-kit
+# Vitest's own SvelteKit output (vite.config.ts), kept apart from vite dev's.
+/.svelte-kit-vitest
 /build
 
 # Vitest browser mode (failure screenshots, etc.)
