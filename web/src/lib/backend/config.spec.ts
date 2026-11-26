@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fetchConfig } from '$lib/backend/config';
+import { fetchConfig } from '#lib/backend/config.ts';
 
 function mockFetch(status: number, body: unknown) {
 	return vi.fn().mockResolvedValue({

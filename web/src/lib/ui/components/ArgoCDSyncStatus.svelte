@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Badge } from 'flowbite-svelte';
-	import { statusAppearance } from '$lib/ui/status';
+	import { statusAppearance } from '#lib/ui/status.ts';
 
 	interface Props {
 		syncStatus: string;

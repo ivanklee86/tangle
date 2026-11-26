@@ -7,11 +7,10 @@ function loadFixture<T>(name: string): T {
 	return JSON.parse(readFileSync(path, 'utf-8')) as T;
 }
 
-// Deliberately not typed against $lib/backend/data: these specs treat the
+// Deliberately not typed against #lib/backend/data.ts: these specs treat the
 // built app as a black box over HTTP, the same way a real tangle-server
-// would be — importing $lib's types here would need Playwright's own
-// TypeScript transform to resolve SvelteKit's $lib alias, which it isn't
-// configured to do.
+// would be, so the fixtures describe the API's JSON rather than the
+// frontend's own types.
 interface ApplicationLink {
 	name: string;
 	url: string;

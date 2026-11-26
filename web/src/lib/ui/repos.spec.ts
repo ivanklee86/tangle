@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeRepo, repoUsage, shortRepo, shortRevision, usedByLabel } from '$lib/ui/repos';
+import { normalizeRepo, repoUsage, shortRepo, shortRevision, usedByLabel } from '#lib/ui/repos.ts';
 
 // Test cases:
 //   - an https, ssh or scp-style git URL shortens to org/repo, without .git or

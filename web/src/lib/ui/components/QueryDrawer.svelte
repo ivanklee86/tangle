@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Badge, Button, Drawer, Heading } from 'flowbite-svelte';
 	import { ArrowRightOutline, CloseOutline } from 'flowbite-svelte-icons';
-	import { isValidLabelQuery } from '$lib/ui/validation';
-	import { NO_TARGET_REF_REASON, type Query } from '$lib/ui/query';
-	import { type RepoUsage } from '$lib/ui/repos';
+	import { isValidLabelQuery } from '#lib/ui/validation.ts';
+	import { NO_TARGET_REF_REASON, type Query } from '#lib/ui/query.ts';
+	import { type RepoUsage } from '#lib/ui/repos.ts';
 	import QueryEditor from './QueryEditor.svelte';
 	import QueryPreview from './QueryPreview.svelte';
 	import DisabledReason from './DisabledReason.svelte';

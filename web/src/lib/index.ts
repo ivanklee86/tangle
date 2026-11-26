@@ -1,1 +1,1 @@
-// place files you want to import through the `$lib` alias in this folder.
+// Files in src/lib are importable as `#lib/...` (the `imports` field in package.json).

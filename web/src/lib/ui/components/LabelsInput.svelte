@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Badge, Button, Helper, Input, Tooltip } from 'flowbite-svelte';
 	import { CloseOutline } from 'flowbite-svelte-icons';
-	import { isValidLabelFormat } from '$lib/ui/validation';
-	import { parseLabelsStrict, serializeLabels, type LabelPair } from '$lib/ui/labels';
+	import { isValidLabelFormat } from '#lib/ui/validation.ts';
+	import { parseLabelsStrict, serializeLabels, type LabelPair } from '#lib/ui/labels.ts';
 	import { untrack } from 'svelte';
 
 	interface Props {

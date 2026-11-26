@@ -5,8 +5,8 @@ import {
 	ariaSort,
 	sortApplications,
 	type SortState
-} from '$lib/ui/sort';
-import { type ApplicationLinks } from '$lib/backend/data';
+} from '#lib/ui/sort.ts';
+import { type ApplicationLinks } from '#lib/backend/data.ts';
 
 function makeApps(): ApplicationLinks[] {
 	return [

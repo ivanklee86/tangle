@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseLabels, parseLabelsStrict, serializeLabels } from '$lib/ui/labels';
+import { parseLabels, parseLabelsStrict, serializeLabels } from '#lib/ui/labels.ts';
 
 describe('parseLabels', () => {
 	it('returns an empty array for an empty string', () => {

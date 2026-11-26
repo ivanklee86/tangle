@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { filterOutZeroResults } from '$lib/ui/utils';
-import { type ArgoCDApplicationResults } from '$lib/backend/data';
+import { filterOutZeroResults } from '#lib/ui/utils.ts';
+import { type ArgoCDApplicationResults } from '#lib/backend/data.ts';
 
 describe('filterOutZeroResults', () => {
 	it('drops ArgoCD entries with no applications', () => {

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Badge, Button, Helper, Input, Tooltip } from 'flowbite-svelte';
 	import { CloseOutline } from 'flowbite-svelte-icons';
-	import { normalizeRepo, shortRepo, type RepoUsage } from '$lib/ui/repos';
+	import { normalizeRepo, shortRepo, type RepoUsage } from '#lib/ui/repos.ts';
 
 	interface Props {
 		/** The repos, in the order they were added. */

@@ -19,8 +19,8 @@
 		"src/**/*.svelte"
 	],
 	"exclude": ["node_modules/**", "build/**"]
-	// Path aliases (including $lib) come from the `alias` option passed to
-	// sveltekit() in vite.config.ts, via the generated $app/tsconfig.
+	// #lib imports resolve through the `imports` field in package.json, which
+	// TypeScript reads itself. Imports name the file's extension (#lib/ui/query.ts).
 	//
 	// SvelteKit 3's generated tsconfig no longer sets include/exclude, so they
 	// live here. Without them svelte-check typechecks the minified build/ output.

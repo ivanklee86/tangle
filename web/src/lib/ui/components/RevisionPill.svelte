@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { CodeBranchOutline, TagOutline } from 'flowbite-svelte-icons';
-	import { type SourceKind } from '$lib/backend/data';
-	import { shortRevision } from '$lib/ui/repos';
+	import { type SourceKind } from '#lib/backend/data.ts';
+	import { shortRevision } from '#lib/ui/repos.ts';
 
 	interface Props {
 		revision: string;

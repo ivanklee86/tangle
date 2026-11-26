@@ -11,8 +11,8 @@ import {
 	resolveSelection,
 	rowKey,
 	type DiffRow
-} from '$lib/ui/diffs';
-import { type ApplicationDiff, type ArgoCDApplicationResults } from '$lib/backend/data';
+} from '#lib/ui/diffs.ts';
+import { type ApplicationDiff, type ArgoCDApplicationResults } from '#lib/backend/data.ts';
 
 function diff(
 	overrides: Partial<ApplicationDiff['response']> = {},

@@ -16,10 +16,6 @@ export default defineConfig(({ mode }) => ({
 			// meant a test run pointed the dev server's API calls at itself, so
 			// tests get their own.
 			outDir: mode === 'test' ? '.svelte-kit-vitest' : '.svelte-kit',
-			// SvelteKit 3 replaced $lib with #lib subpath imports; this keeps
-			// $lib working until that migration lands (deprecated, warns on build).
-			// https://github.com/ivanklee86/tangle/issues/258
-			alias: { $lib: 'src/lib' },
 			adapter: adapter({
 				pages: 'build',
 				assets: 'build',

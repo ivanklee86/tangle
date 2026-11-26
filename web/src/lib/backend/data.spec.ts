@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { emptyApplicationResponseStore } from '$lib/backend/data';
+import { emptyApplicationResponseStore } from '#lib/backend/data.ts';
 
 describe('emptyApplicationResponseStore', () => {
 	it('returns the expected default shape', () => {

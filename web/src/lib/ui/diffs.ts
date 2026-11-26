@@ -2,7 +2,7 @@ import {
 	type ApplicationDiff,
 	type ApplicationSource,
 	type ArgoCDApplicationResults
-} from '$lib/backend/data';
+} from '#lib/backend/data.ts';
 
 /** Where one application's diff has got to, and what it found. */
 type DiffOutcome =

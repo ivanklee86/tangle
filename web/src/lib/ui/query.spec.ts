@@ -9,7 +9,7 @@ import {
 	queryFromParams,
 	sameQuery,
 	type Query
-} from '$lib/ui/query';
+} from '#lib/ui/query.ts';
 
 function query(overrides: Partial<Query> = {}): Query {
 	return { ...emptyQuery(), ...overrides };

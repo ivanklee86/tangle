@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { buildDiffRequests, buildDiffMap, fetchDiffs } from '$lib/backend/diffs';
-import { type ArgoCDApplicationResults, type ApplicationDiff } from '$lib/backend/data';
+import { buildDiffRequests, buildDiffMap, fetchDiffs } from '#lib/backend/diffs.ts';
+import { type ArgoCDApplicationResults, type ApplicationDiff } from '#lib/backend/data.ts';
 
 function makeResults(): ArgoCDApplicationResults[] {
 	return [
@@ -100,7 +100,7 @@ describe('fetchDiffs', () => {
 			.mockImplementation((argoCD: string, applicationName: string) =>
 				Promise.resolve(makeDiff(argoCD, applicationName))
 			);
-		const client = { getApplicationDiff } as unknown as import('$lib/backend/client').default;
+		const client = { getApplicationDiff } as unknown as import('#lib/backend/client.ts').default;
 
 		const onTotal = vi.fn();
 		const onProgress = vi.fn();
@@ -129,7 +129,7 @@ describe('fetchDiffs', () => {
 			.mockImplementation((argoCD: string, applicationName: string) =>
 				Promise.resolve(makeDiff(argoCD, applicationName))
 			);
-		const client = { getApplicationDiff } as unknown as import('$lib/backend/client').default;
+		const client = { getApplicationDiff } as unknown as import('#lib/backend/client.ts').default;
 		const onProgress = vi.fn();
 
 		await fetchDiffs(client, makeResults(), 'feature-branch', { onProgress });

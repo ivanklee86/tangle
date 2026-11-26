@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Badge } from 'flowbite-svelte';
 	import { ChartPieOutline, ChevronDownOutline, FolderOutline } from 'flowbite-svelte-icons';
-	import { type DiffSource } from '$lib/backend/data';
-	import { shortRepo, shortRevision, usedByLabel } from '$lib/ui/repos';
+	import { type DiffSource } from '#lib/backend/data.ts';
+	import { shortRepo, shortRevision, usedByLabel } from '#lib/ui/repos.ts';
 	import RevisionPill from './RevisionPill.svelte';
 
 	interface Props {

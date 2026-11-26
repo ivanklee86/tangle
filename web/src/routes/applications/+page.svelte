@@ -20,8 +20,8 @@
 		ChevronRightOutline,
 		FolderOutline
 	} from 'flowbite-svelte-icons';
-	import { shortRepo, usedByLabel } from '$lib/ui/repos';
-	import RevisionPill from '$lib/ui/components/RevisionPill.svelte';
+	import { shortRepo, usedByLabel } from '#lib/ui/repos.ts';
+	import RevisionPill from '#lib/ui/components/RevisionPill.svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -34,8 +34,8 @@
 		flattenApplications,
 		hasActiveFacets,
 		toggleFacet
-	} from '$lib/ui/applications';
-	import { applicationsHref, diffsHref, type Query } from '$lib/ui/query';
+	} from '#lib/ui/applications.ts';
+	import { applicationsHref, diffsHref, type Query } from '#lib/ui/query.ts';
 	import {
 		ariaSort as ariaSortFor,
 		nextSortState,
@@ -43,15 +43,15 @@
 		sortIndicator as sortIndicatorFor,
 		type SortKey,
 		type SortState
-	} from '$lib/ui/sort';
+	} from '#lib/ui/sort.ts';
 	import {
 		ArgoCDHealthStatus,
 		ArgoCDSyncStatus,
 		ErrorAlert,
 		QueryBar,
 		QueryDrawer
-	} from '$lib/ui/components';
-	import type { ApplicationResponseStore } from '$lib/backend/data';
+	} from '#lib/ui/components/index.ts';
+	import type { ApplicationResponseStore } from '#lib/backend/data.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

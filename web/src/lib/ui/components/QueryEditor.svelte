@@ -3,7 +3,7 @@
 	import { CodeBranchOutline } from 'flowbite-svelte-icons';
 	import LabelsInput from './LabelsInput.svelte';
 	import TargetReposInput from './TargetReposInput.svelte';
-	import { type RepoUsage } from '$lib/ui/repos';
+	import { type RepoUsage } from '#lib/ui/repos.ts';
 
 	interface Props {
 		labels?: string;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { statusAppearance, statusSeverity, needsAttention } from '$lib/ui/status';
+import { statusAppearance, statusSeverity, needsAttention } from '#lib/ui/status.ts';
 
 describe('statusAppearance', () => {
 	// The promise here is Argo CD's own vocabulary: a status means the same

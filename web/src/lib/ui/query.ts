@@ -1,5 +1,5 @@
-import { buildQuery } from '$lib/backend/url';
-import { parseLabels } from '$lib/ui/labels';
+import { buildQuery } from '#lib/backend/url.ts';
+import { parseLabels } from '#lib/ui/labels.ts';
 
 interface Query {
 	labels: string;

@@ -1,4 +1,4 @@
-import { parseLabelsStrict } from '$lib/ui/labels';
+import { parseLabelsStrict } from '#lib/ui/labels.ts';
 
 const LABEL_FORMAT: RegExp = /^[^:,]+:[^:,]+(,[^:,]+:[^:,]+)*$/;
 

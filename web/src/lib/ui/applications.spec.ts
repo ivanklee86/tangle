@@ -8,8 +8,8 @@ import {
 	hasActiveFacets,
 	toggleFacet,
 	type ApplicationRow
-} from '$lib/ui/applications';
-import { type ArgoCDApplicationResults } from '$lib/backend/data';
+} from '#lib/ui/applications.ts';
+import { type ArgoCDApplicationResults } from '#lib/backend/data.ts';
 
 function row(name: string, instance: string, health: string, syncStatus: string): ApplicationRow {
 	return { name, instance, health, syncStatus, url: '', liveRef: 'main' };

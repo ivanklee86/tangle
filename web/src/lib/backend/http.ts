@@ -1,4 +1,4 @@
-import { type TangleError } from '$lib/backend/data';
+import { type TangleError } from '#lib/backend/data.ts';
 
 interface Envelope<T> {
 	response: T;

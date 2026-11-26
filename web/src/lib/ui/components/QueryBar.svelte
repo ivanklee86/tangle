@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Badge, Button, Heading, Tooltip } from 'flowbite-svelte';
 	import { CheckOutline, CodeBranchOutline, EditOutline, LinkOutline } from 'flowbite-svelte-icons';
-	import { parseLabels } from '$lib/ui/labels';
-	import { absoluteUrl } from '$lib/ui/links';
-	import { shortRepo } from '$lib/ui/repos';
-	import { isEmptyQuery, type Query } from '$lib/ui/query';
+	import { parseLabels } from '#lib/ui/labels.ts';
+	import { absoluteUrl } from '#lib/ui/links.ts';
+	import { shortRepo } from '#lib/ui/repos.ts';
+	import { isEmptyQuery, type Query } from '#lib/ui/query.ts';
 	import type { Snippet } from 'svelte';
 
 	interface Props {

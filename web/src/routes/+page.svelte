@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Button, Card, Heading } from 'flowbite-svelte';
 	import { ArrowRightOutline } from 'flowbite-svelte-icons';
-	import { isValidLabelQuery } from '$lib/ui/validation';
-	import { applicationsHref, diffsHref, NO_TARGET_REF_REASON } from '$lib/ui/query';
-	import { DisabledReason, QueryEditor, QueryPreview } from '$lib/ui/components';
+	import { isValidLabelQuery } from '#lib/ui/validation.ts';
+	import { applicationsHref, diffsHref, NO_TARGET_REF_REASON } from '#lib/ui/query.ts';
+	import { DisabledReason, QueryEditor, QueryPreview } from '#lib/ui/components/index.ts';
 
 	let labels: string = $state('');
 	let excludeLabels: string = $state('');
