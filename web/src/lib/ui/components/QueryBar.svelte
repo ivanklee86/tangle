@@ -3,6 +3,7 @@
 	import { CheckOutline, CodeBranchOutline, EditOutline, LinkOutline } from 'flowbite-svelte-icons';
 	import { parseLabels } from '$lib/ui/labels';
 	import { absoluteUrl } from '$lib/ui/links';
+	import { shortRepo } from '$lib/ui/repos';
 	import { isEmptyQuery, type Query } from '$lib/ui/query';
 	import type { Snippet } from 'svelte';
 
@@ -85,6 +86,30 @@
 				<CodeBranchOutline class="h-3 w-3" />
 				{query.targetRef}
 			</Badge>
+			{#if query.targetRepos.length > 0}
+				<span class="text-sm text-gray-500 dark:text-gray-400">in</span>
+				{#each query.targetRepos as repo (repo)}
+					<!-- Outlined, so it stands out from the dark header as well as the light one. -->
+					<Badge
+						color="gray"
+						class="border border-gray-300 font-mono font-semibold dark:border-gray-500 dark:bg-gray-700 dark:text-gray-100"
+						title={repo}>{shortRepo(repo)}</Badge
+					>
+				{/each}
+			{:else if query.inferTargetRepo}
+				<!--
+					Only without target repos: the server infers a repo only when none
+					is given, so with repos set the switch changes nothing and a badge
+					would say otherwise.
+				-->
+				<Badge
+					color="indigo"
+					class="font-semibold"
+					title="Infer target repo is on: an application whose git sources are all in one repo uses that repo."
+				>
+					repo inferred
+				</Badge>
+			{/if}
 		{/if}
 
 		<Button type="button" size="sm" color="alternative" onclick={onEdit}>

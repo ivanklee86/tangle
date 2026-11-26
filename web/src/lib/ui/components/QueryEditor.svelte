@@ -1,12 +1,17 @@
 <script lang="ts">
-	import { Helper, Input, Label } from 'flowbite-svelte';
+	import { Helper, Input, Label, Toggle } from 'flowbite-svelte';
 	import { CodeBranchOutline } from 'flowbite-svelte-icons';
 	import LabelsInput from './LabelsInput.svelte';
+	import TargetReposInput from './TargetReposInput.svelte';
 
 	interface Props {
 		labels?: string;
 		excludeLabels?: string;
 		targetRef?: string;
+		/** Repos the target ref belongs to (ADR 0032). */
+		targetRepos?: string[];
+		/** Let a multi-source app whose git sources are all in one repo use it. */
+		inferTargetRepo?: boolean;
 		/** Diffs can't run without a ref; Applications ignores it entirely. */
 		targetRefMode?: 'hidden' | 'optional' | 'required';
 	}
@@ -15,11 +20,14 @@
 		labels = $bindable(''),
 		excludeLabels = $bindable(''),
 		targetRef = $bindable(''),
+		targetRepos = $bindable([]),
+		inferTargetRepo = $bindable(false),
 		targetRefMode = 'optional'
 	}: Props = $props();
 
 	const uid = $props.id();
 	const targetHelpId = `${uid}-target-help`;
+	const inferHelpId = `${uid}-infer-help`;
 </script>
 
 <div class="space-y-5">
@@ -73,6 +81,29 @@
 			<Helper id={targetHelpId}>
 				Manifests are rendered from this ref and compared with live manifests.
 			</Helper>
+
+			<!--
+				Only meaningful with a ref, so they live in its box. Both are
+				optional: without them, single-source applications diff as they
+				always have, and multi-source ones say they need a target repo.
+			-->
+			<div class="space-y-4 border-t border-gray-200 pt-4 dark:border-gray-700">
+				<TargetReposInput bind:value={targetRepos} />
+				<div>
+					<Toggle bind:checked={inferTargetRepo} aria-describedby={inferHelpId}>
+						Infer target repo
+					</Toggle>
+					<Helper id={inferHelpId} class="mt-1">
+						{#if targetRepos.length > 0 && inferTargetRepo}
+							<!-- The server only infers without target repos, so say so rather than imply it adds to them. -->
+							Ignored while target repos are set: they decide which sources get the target ref.
+						{:else}
+							With no target repo, an application whose git sources are all in one repo uses that
+							repo.
+						{/if}
+					</Helper>
+				</div>
+			</div>
 		</div>
 	{/if}
 </div>

@@ -113,7 +113,7 @@ const ERRORED: ApplicationResponseStore = {
 	loaded: true
 };
 
-const QUERY: Query = { labels: 'foo:bar', excludeLabels: '', targetRef: 'release-25' };
+const QUERY: Query = { ...emptyQuery(), labels: 'foo:bar', targetRef: 'release-25' };
 
 function data(overrides: { query?: Query; applications?: Promise<ApplicationResponseStore> } = {}) {
 	return {
@@ -146,7 +146,7 @@ describe('diffs +page.svelte', () => {
 			const screen = await render(
 				Page,
 				data({
-					query: { labels: 'foo:bar', excludeLabels: '', targetRef: '' },
+					query: { ...emptyQuery(), labels: 'foo:bar' },
 					applications: undefined
 				})
 			);
@@ -169,7 +169,7 @@ describe('diffs +page.svelte', () => {
 			mockDiffFetch();
 			const screen = await render(
 				Page,
-				data({ query: { labels: '', excludeLabels: '', targetRef: 'release-25' } })
+				data({ query: { ...emptyQuery(), targetRef: 'release-25' } })
 			);
 
 			await expect.element(screen.getByRole('heading', { name: 'alpha', level: 2 })).toBeVisible();
@@ -192,7 +192,7 @@ describe('diffs +page.svelte', () => {
 		const screen = await render(
 			Page,
 			data({
-				query: { labels: 'foo:bar', excludeLabels: '', targetRef: '' },
+				query: { ...emptyQuery(), labels: 'foo:bar' },
 				applications: undefined
 			})
 		);

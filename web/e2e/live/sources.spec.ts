@@ -24,6 +24,9 @@ const MULTI_SOURCE = [
 ];
 const SOURCES = [...MULTI_SOURCE, 'helm-repo', 'tanka'].sort();
 
+// Where every source-type fixture's test_gitops change is.
+const MANIFESTS_REPO = 'https://github.com/ivanklee86/tangle-integration-manifests.git';
+
 // A real ArgoCD manifest render per application.
 const DIFFS_TIMEOUT = 60_000;
 
@@ -45,8 +48,16 @@ function diffsEntry(page: Page, name: string) {
 	return diffsSidebar(page).getByRole('button', { name: new RegExp(`^${name}(\\s|$)`) });
 }
 
-async function openDiffs(page: Page, labels: string, targetRef: string, count: number) {
-	await page.goto(`/diffs?${new URLSearchParams({ labels, targetRef })}`);
+async function openDiffs(
+	page: Page,
+	labels: string,
+	targetRef: string,
+	count: number,
+	targetRepos: string[] = []
+) {
+	const params = new URLSearchParams({ labels, targetRef });
+	for (const repo of targetRepos) params.append('targetRepo', repo);
+	await page.goto(`/diffs?${params}`);
 	await expect(page.getByText(`${count} of ${count} loaded`)).toBeVisible({
 		timeout: DIFFS_TIMEOUT
 	});
@@ -92,16 +103,20 @@ test.describe('source-type fixtures (live)', () => {
 
 		await openDiffs(page, 'suite:sources', 'test_gitops', SOURCES.length);
 
-		// The page sends no target repo yet, so each multi-source app reports
-		// "needs target repo", which reaches this page as an error (ADR 0032,
-		// D2) instead of the false "No changes" it used to show. Their changes
-		// are covered by the fixme below.
+		// No target repo, so each multi-source app needs one (ADR 0032, D2):
+		// called out as such, not as an error, and not as the false "No
+		// changes" it showed before multi-source support. Their changes are
+		// covered by the test that passes the target repo.
 		await expect(page.getByText('1 changed', { exact: true })).toBeVisible();
+		await expect(page.getByText('1 error', { exact: true })).toBeVisible();
 		await expect(
-			page.getByText(`${1 + MULTI_SOURCE.length} errors`, { exact: true })
+			page.getByText(`${MULTI_SOURCE.length} need target repo`, { exact: true })
+		).toBeVisible();
+		await expect(
+			page.getByRole('button', { name: `Needs repo ${MULTI_SOURCE.length}` })
 		).toBeVisible();
 		for (const name of MULTI_SOURCE) {
-			await expect(diffsEntry(page, name)).toContainText('Error');
+			await expect(diffsEntry(page, name)).toContainText('Needs repo');
 		}
 
 		// tanka: one line modified, one removed.
@@ -133,11 +148,14 @@ test.describe('source-type fixtures (live)', () => {
 		expect(errors).toEqual([]);
 	});
 
-	// The server diffs multi-source apps once it's told the target repo, but
-	// the page can't pass one yet. Remove the fixme, and add targetRepo to
-	// openDiffs, in the UI phase of docs/agents/plans/multi-source-applications.md.
-	test.fixme('the Diffs page shows each multi-source app’s change', async ({ page }) => {
-		await openDiffs(page, 'source:multi-source', 'test_gitops', MULTI_SOURCE.length);
+	// With the manifests repo as the target repo, every multi-source fixture
+	// shows its pushed change, and the page says which sources moved.
+	test('the Diffs page shows each multi-source app’s change', async ({ page }) => {
+		const errors = collectPageErrors(page);
+
+		await openDiffs(page, 'source:multi-source', 'test_gitops', MULTI_SOURCE.length, [
+			MANIFESTS_REPO
+		]);
 
 		await expect(page.getByText(`${MULTI_SOURCE.length} changed`, { exact: true })).toBeVisible();
 
@@ -150,5 +168,38 @@ test.describe('source-type fixtures (live)', () => {
 
 		await selectApplication(page, 'two-repos');
 		await expect(diffLine(page, /greeting: hello, world/)).toBeVisible();
+
+		// One repo at a branch and at a tag: both sources move (D4), and the
+		// tag-pinned one says where it moved from (D9).
+		await selectApplication(page, 'same-repo-pinned');
+		await expect(page.getByText('2 of 2 moved')).toBeVisible();
+		await expect(page.getByText('moved from fixture-pinned-v1')).toBeVisible();
+
+		await selectApplication(page, 'three-repos');
+		await expect(page.getByText('1 of 3 moved')).toBeVisible();
+		await expect(diffLine(page, /greeting: hello, world/)).toBeVisible();
+
+		await selectApplication(page, 'multi-source-cmp');
+		await expect(diffLine(page, /greeting: hello, world/)).toBeVisible();
+
+		expect(errors).toEqual([]);
+	});
+
+	// Picking the candidate repo on an app that needs one updates the link
+	// and re-runs every diff with it (D8).
+	test('a multi-source app that needs a target repo can be given one', async ({ page }) => {
+		await openDiffs(page, 'source:multi-source', 'test_gitops', MULTI_SOURCE.length);
+
+		await selectApplication(page, 'helm-repo-git-values');
+		await expect(page.getByText('Which repo is', { exact: false })).toBeVisible();
+		await page.getByRole('button', { name: /^Add .* to target repos$/ }).click();
+
+		await expect(page).toHaveURL(
+			/targetRepo=github\.com%2Fivanklee86%2Ftangle-integration-manifests/
+		);
+		await expect(
+			page.getByText(`${MULTI_SOURCE.length} of ${MULTI_SOURCE.length} loaded`)
+		).toBeVisible({ timeout: DIFFS_TIMEOUT });
+		await expect(diffsEntry(page, 'helm-repo-git-values')).toContainText('+');
 	});
 });

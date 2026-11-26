@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		Badge,
 		Button,
 		Search,
 		Select,
@@ -11,7 +12,16 @@
 		TableHeadCell,
 		Toggle
 	} from 'flowbite-svelte';
-	import { ArrowRightOutline, ArrowUpRightFromSquareOutline } from 'flowbite-svelte-icons';
+	import {
+		ArrowRightOutline,
+		ArrowUpRightFromSquareOutline,
+		ChartPieOutline,
+		ChevronRightOutline,
+		FolderOutline
+	} from 'flowbite-svelte-icons';
+	import { shortRepo } from '$lib/ui/repos';
+	import RevisionPill from '$lib/ui/components/RevisionPill.svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { onMount, untrack } from 'svelte';
@@ -91,6 +101,14 @@
 
 	let facets = $state(emptyFacets());
 	let sortState: SortState | undefined = $state({ key: 'health', direction: 'desc' });
+
+	// Multi-source rows whose sources are expanded, by instance/name.
+	const expanded = new SvelteSet<string>();
+
+	function toggleExpanded(key: string): void {
+		if (expanded.has(key)) expanded.delete(key);
+		else expanded.add(key);
+	}
 
 	let refreshEnabled: boolean = $state(false);
 	let refreshPeriod: number = $state(10);
@@ -277,7 +295,8 @@
 
 		<div class="px-6 pb-6">
 			<div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-				<div class="max-h-[60vh] overflow-y-auto">
+				<!-- A stable gutter, so the vertical scrollbar never sits over the last column. -->
+				<div class="max-h-[60vh] overflow-y-auto [scrollbar-gutter:stable]">
 					<Table hoverable>
 						<TableHead class="sticky top-0 z-10">
 							{#each [{ label: 'Application', key: 'name' as const }, { label: 'ArgoCD', key: 'instance' as const }, { label: 'Health', key: 'health' as const }, { label: 'Sync', key: 'syncStatus' as const }] as column (column.key)}
@@ -295,6 +314,8 @@
 						</TableHead>
 						<TableBody class="divide-y">
 							{#each visible as application (`${application.instance}/${application.name}`)}
+								{@const sources = application.sources ?? []}
+								{@const key = `${application.instance}/${application.name}`}
 								<TableBodyRow>
 									<TableBodyCell class="font-semibold">{application.name}</TableBodyCell>
 									<TableBodyCell>
@@ -309,9 +330,29 @@
 									<TableBodyCell
 										><ArgoCDSyncStatus syncStatus={application.syncStatus} /></TableBodyCell
 									>
-									<TableBodyCell class="font-mono text-xs text-gray-500 dark:text-gray-400"
-										>{application.liveRef}</TableBodyCell
-									>
+									{#if sources.length > 1}
+										<TableBodyCell class="text-xs">
+											<button
+												type="button"
+												class="text-primary-700 dark:text-primary-400 inline-flex items-center gap-1 font-semibold"
+												aria-expanded={expanded.has(key)}
+												aria-controls="sources-{key}"
+												onclick={() => toggleExpanded(key)}
+											>
+												<ChevronRightOutline
+													class="h-3.5 w-3.5 transition-transform {expanded.has(key)
+														? 'rotate-90'
+														: ''}"
+												/>
+												{sources.length} sources
+											</button>
+										</TableBodyCell>
+									{:else}
+										<!-- A one-entry spec.sources has no liveRef: use its source's. -->
+										<TableBodyCell class="font-mono text-xs text-gray-500 dark:text-gray-400"
+											>{application.liveRef || sources[0]?.targetRevision || ''}</TableBodyCell
+										>
+									{/if}
 									<TableBodyCell class="text-right whitespace-nowrap">
 										<Button
 											size="xs"
@@ -324,6 +365,94 @@
 										</Button>
 									</TableBodyCell>
 								</TableBodyRow>
+								{#if sources.length > 1 && expanded.has(key)}
+									<TableBodyRow id="sources-{key}" class="bg-gray-50 dark:bg-gray-800">
+										<TableBodyCell colspan={6} class="py-2 ps-10">
+											<!--
+												A table, so repo, location and revision line up across
+												sources, and each has its own look: the repo bright, the
+												path or chart muted behind a folder or chart glyph, and
+												the revision in a pill.
+											-->
+											<!-- Fixed widths, so these line up between applications. -->
+											<table class="w-full table-fixed text-xs">
+												<colgroup>
+													<col class="w-8" />
+													<col class="w-16" />
+													<col class="w-[24rem]" />
+													<col class="w-[28rem]" />
+													<col />
+												</colgroup>
+												<caption class="sr-only">Sources of {application.name}</caption>
+												<thead class="sr-only">
+													<tr>
+														<th scope="col">Position</th>
+														<th scope="col">Kind</th>
+														<th scope="col">Repo</th>
+														<th scope="col">Path or chart</th>
+														<th scope="col">Revision</th>
+													</tr>
+												</thead>
+												<tbody>
+													{#each sources as source (source.position)}
+														<tr>
+															<td class="py-1 pe-3 font-mono text-gray-500 dark:text-gray-400"
+																>{source.position}</td
+															>
+															<td class="py-1 pe-3">
+																<Badge color="gray"
+																	>{source.kind === 'helm'
+																		? 'Helm'
+																		: source.kind === 'oci'
+																			? 'OCI'
+																			: 'Git'}</Badge
+																>
+															</td>
+															<td class="py-1 pe-4">
+																<span class="flex min-w-0 items-center gap-2">
+																	<span
+																		class="truncate font-mono font-semibold text-gray-900 dark:text-white"
+																		title={source.repoURL}>{shortRepo(source.repoURL)}</span
+																	>
+																	{#if source.ref}
+																		<Badge color="indigo" class="font-mono">ref: {source.ref}</Badge
+																		>
+																	{/if}
+																</span>
+															</td>
+															<td class="py-1 pe-4">
+																{#if source.chart}
+																	<span
+																		class="flex min-w-0 items-center gap-1 font-mono text-gray-600 dark:text-gray-400"
+																		title="Chart"
+																	>
+																		<ChartPieOutline class="h-3.5 w-3.5 shrink-0" /><span
+																			class="truncate"
+																			title={source.chart}>{source.chart}</span
+																		>
+																	</span>
+																{:else if source.path}
+																	<span
+																		class="flex min-w-0 items-center gap-1 font-mono text-gray-600 dark:text-gray-400"
+																		title="Path"
+																	>
+																		<FolderOutline class="h-3.5 w-3.5 shrink-0" /><span
+																			class="truncate"
+																			title={source.path}>{source.path}</span
+																		>
+																	</span>
+																{/if}
+															</td>
+															<td class="py-1">
+																<RevisionPill revision={source.targetRevision} kind={source.kind} />
+															</td>
+														</tr>
+													{/each}
+												</tbody>
+											</table>
+										</TableBodyCell>
+									</TableBodyRow>
+								{/if}
 							{/each}
 						</TableBody>
 					</Table>

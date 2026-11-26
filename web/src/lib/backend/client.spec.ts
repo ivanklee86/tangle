@@ -110,4 +110,47 @@ describe('TangleAPIClient', () => {
 			expect(result.errorResponse).toEqual({ error: 'boom' });
 		});
 	});
+
+	// Test cases (the diff request body):
+	//   - without options, the body is exactly { liveRef, targetRef }, as before
+	//   - empty options send nothing extra
+	//   - target repos and inference go out when set
+	describe('getApplicationDiff body', () => {
+		function sentBody(fetchMock: ReturnType<typeof mockFetch>): unknown {
+			const [, init] = fetchMock.mock.calls[0];
+			return JSON.parse(init.body);
+		}
+
+		it('sends only the refs when no options are given', async () => {
+			const fetchMock = mockFetch(200, {});
+			await new TangleAPIClient().getApplicationDiff('test', 'app', 'main', 'feature-x');
+
+			expect(sentBody(fetchMock)).toEqual({ liveRef: 'main', targetRef: 'feature-x' });
+		});
+
+		it('sends nothing extra for empty options', async () => {
+			const fetchMock = mockFetch(200, {});
+			await new TangleAPIClient().getApplicationDiff('test', 'app', 'main', 'feature-x', {
+				targetRepos: [],
+				inferTargetRepo: false
+			});
+
+			expect(sentBody(fetchMock)).toEqual({ liveRef: 'main', targetRef: 'feature-x' });
+		});
+
+		it('sends target repos and inference when set', async () => {
+			const fetchMock = mockFetch(200, {});
+			await new TangleAPIClient().getApplicationDiff('test', 'app', '', 'feature-x', {
+				targetRepos: ['https://github.com/org/values.git'],
+				inferTargetRepo: true
+			});
+
+			expect(sentBody(fetchMock)).toEqual({
+				liveRef: '',
+				targetRef: 'feature-x',
+				targetRepos: ['https://github.com/org/values.git'],
+				inferTargetRepo: true
+			});
+		});
+	});
 });

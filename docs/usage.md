@@ -27,6 +27,10 @@ match). A key in both with *different* values is allowed.
 | ------- | -------- | --------- | ------------- |
 | labels | key1:value1,key2:value2 | /applications?labels=foo:bar | Labels on `Applications` to use for searching |
 | excludeLabels | key1:value1,key2:value2 | /applications?excludeLabels=foo:bar | Labels on `Applications` to exclude |
-| targetRef | git ref | /diffs?targetRef=your_branch | Git reference to diff against |
+| targetRef | branch, tag or commit SHA | /diffs?targetRef=your_branch | Git reference to diff against |
+| targetRepo | repo URL, repeatable | `/diffs?targetRef=your_branch&targetRepo=https://github.com/org/values` | Repo the target ref belongs to. Sources in it get the ref, every other source stays at its live revision, and applications with no source in it are *not affected* (hidden unless "Show not affected" is on) |
+| inferTargetRepo | `true` | /diffs?targetRef=your_branch&inferTargetRepo=true | With no `targetRepo`, let a multi-source application whose git sources are all in one repo use that repo |
 
 `labels` and `excludeLabels` follow the same rules and the same `400` responses as on `/applications`.
+
+An application with several sources (`spec.sources`) needs to know which repo the target ref was pushed to. Without `targetRepo` (or `inferTargetRepo`), the Diffs page marks it *Needs repo*, and its detail pane lists the candidate repos with a button that adds them to the link and re-runs every diff. The detail pane of a multi-source diff shows each source with the revision each side used, and whether it moved. On the Applications page, a multi-source row's Live ref column says how many sources it has and expands to list them. See [ADR 0032](adrs/0032-choose-multi-source-revisions-by-target-repo.md).

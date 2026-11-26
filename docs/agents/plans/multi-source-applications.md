@@ -213,7 +213,7 @@ Beyond the per-source detail already listed under [Compatibility requirements](#
 - **Detail header:** for multi-source apps, "N sources → `<ref>`" replaces `liveRef → targetRef` (`DiffDetail.svelte:42`).
 - **Sources panel:** a new collapsible component above the tabs, rendered only for apps with more than one source.
 - **Needs-repo panel:** an Alert with a fieldset of candidate repos as checkboxes, and the single action from D8.
-- **Applications table:** an expandable sub-row inside the existing `Table`, with a summary of the revisions (`6.17.0 · main · v1.2`) when collapsed. The mockup also shortens SHAs, including for single-source rows (`3f9c2a1` with a copy button). That's a small change to today's output, so call it out in the PR.
+- **Applications table:** an expandable sub-row inside the existing `Table`. Collapsed, the Live ref cell only says "N sources": a bare list of revisions reads as nothing without their sources (decided while reviewing PR 3). The mockup also shortens SHAs, including for single-source rows (`3f9c2a1` with a copy button). That's a small change to today's output, so call it out in the PR.
 
 Ignore what the mockup tool brought in. The design uses Flowbite's blue (`#1A56DB`) as its accent, but the app's `primary` is indigo (`web/src/app.css`), so use the `primary-*` classes, never the hex values. It uses Inter and JetBrains Mono, but the app keeps its current fonts. It adds a "Tangle" wordmark in the query bar, a white left pane and a blue selected row, none of which the brief asked for. Today's styling stays.
 

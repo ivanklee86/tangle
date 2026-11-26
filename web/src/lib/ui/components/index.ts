@@ -10,3 +10,6 @@ export { default as QueryBar } from './QueryBar.svelte';
 export { default as QueryDrawer } from './QueryDrawer.svelte';
 export { default as QueryEditor } from './QueryEditor.svelte';
 export { default as QueryPreview } from './QueryPreview.svelte';
+export { default as RevisionPill } from './RevisionPill.svelte';
+export { default as SourcesPanel } from './SourcesPanel.svelte';
+export { default as TargetReposInput } from './TargetReposInput.svelte';
