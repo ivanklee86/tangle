@@ -99,7 +99,7 @@ func TestArgoCDWrapper(t *testing.T) {
 		})
 		assert.Nil(t, err)
 
-		results, err := wrapper.GetManifests(context.Background(), "test-1", "main", "test_gitops")
+		results, err := wrapper.GetManifests(context.Background(), argocd.ManifestsRequest{ApplicationName: "test-1", LiveRef: "main", TargetRef: "test_gitops"})
 		assert.Nil(t, err)
 		assert.NotNil(t, results)
 	})
@@ -112,7 +112,7 @@ func TestArgoCDWrapper(t *testing.T) {
 		})
 		assert.Nil(t, err)
 
-		_, err = wrapper.GetManifests(context.Background(), "test-5", "main", "test_gitops")
+		_, err = wrapper.GetManifests(context.Background(), argocd.ManifestsRequest{ApplicationName: "test-5", LiveRef: "main", TargetRef: "test_gitops"})
 		assert.NotNil(t, err)
 	})
 }

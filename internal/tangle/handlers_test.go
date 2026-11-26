@@ -538,6 +538,13 @@ func TestApplicationsResponseJSONShape(t *testing.T) {
 				Health:     "Healthy",
 				SyncStatus: "Synced",
 				LiveRef:    "main",
+				Sources: []ApplicationSource{{
+					Position:       1,
+					Kind:           "git",
+					RepoURL:        "https://github.com/org/app.git",
+					Path:           "deploy",
+					TargetRevision: "main",
+				}},
 			}},
 		}},
 	}
@@ -569,6 +576,13 @@ func TestApplicationsResponseJSONShape(t *testing.T) {
 		"health":     "Healthy",
 		"syncStatus": "Synced",
 		"liveRef":    "main",
+		"sources": []any{map[string]any{
+			"position":       float64(1),
+			"kind":           "git",
+			"repoURL":        "https://github.com/org/app.git",
+			"path":           "deploy",
+			"targetRevision": "main",
+		}},
 	}, application)
 }
 

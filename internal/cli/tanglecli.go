@@ -21,6 +21,8 @@ type Config struct {
 	ExcludeLabels          map[string]string
 	Folder                 string
 	TargetRef              string
+	TargetRepos            []string
+	InferTargetRepo        bool
 	FailOnErrors           bool
 	Retries                int
 }
@@ -71,16 +73,52 @@ func (t *TangleCLI) renderApplicationsTable(applications []*ApplicationDiffDetai
 	applicationsTable := table.NewWriter()
 	applicationsTable.SetOutputMirror(t.Out)
 	applicationsTable.SetStyle(table.StyleColoredBright)
-	applicationsTable.AppendHeader(table.Row{"ArgoCD", "Application", "Error"})
+	// The Status column only appears when a diff is one the Error column can't
+	// describe, so a run without target repos prints the same table as
+	// before, which CI scripts may parse.
+	showStatus := false
+	for _, application := range applications {
+		if status := application.Response.Status; status == "notAffected" || status == "needsTargetRepo" {
+			showStatus = true
+		}
+	}
+
+	header := table.Row{"ArgoCD", "Application", "Error"}
+	if showStatus {
+		header = append(header, "Status")
+	}
+	applicationsTable.AppendHeader(header)
+
 	for _, application := range applications {
 		manifestGenError := "False ✅"
 		if application.Response.ManifestGenerationError != "" {
 			manifestGenError = "True 🔥"
 		}
 
-		applicationsTable.AppendRow(table.Row{application.ArgoCD, application.Application, manifestGenError})
+		row := table.Row{application.ArgoCD, application.Application, manifestGenError}
+		if showStatus {
+			row = append(row, statusLabel(application.Response.Status))
+		}
+		applicationsTable.AppendRow(row)
 	}
 	applicationsTable.Render()
+}
+
+// statusLabel spells a diff status for the results table. An older server
+// sends no status, which shows as blank.
+func statusLabel(status string) string {
+	switch status {
+	case "ok":
+		return "OK"
+	case "notAffected":
+		return "Not affected"
+	case "needsTargetRepo":
+		return "Needs target repo"
+	case "error":
+		return "Error"
+	default:
+		return status
+	}
 }
 
 func (t *TangleCLI) WriteFiles(applicationDiffsDetail *ApplicationDiffDetail) error {
@@ -223,18 +261,25 @@ func (t *TangleCLI) GenerateManifests() {
 		group.SubmitErr(func() (*ApplicationDiffDetail, error) {
 			diffUrl := client.GenerateDiffUrl(t.ServerAddr, t.Insecure, diff.ArgoCD, diff.Application)
 
+			request := tangle.DiffsRequest{
+				LiveRef:         diff.LiveRef,
+				TargetRef:       t.TargetRef,
+				TargetRepos:     t.TargetRepos,
+				InferTargetRepo: t.InferTargetRepo,
+			}
+
 			var response *tangle.DiffsResponse
 			var err error
 			if t.Retries > 0 {
 				options := client.ClientOptions{
 					Retries: t.Retries,
 				}
-				response, err = client.GetDiffsWithRetries(diffUrl, diff.LiveRef, t.TargetRef, &options)
+				response, err = client.GetDiffsForRequestWithRetries(diffUrl, request, &options)
 				if err != nil {
 					return nil, err
 				}
 			} else {
-				response, err = client.GetDiffs(diffUrl, diff.LiveRef, t.TargetRef)
+				response, err = client.GetDiffsForRequest(diffUrl, request)
 				if err != nil {
 					return nil, err
 				}
