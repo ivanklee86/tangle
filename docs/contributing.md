@@ -38,8 +38,16 @@ Where possible, rules are enforced with [pre-commit](https://pre-commit.com/) ho
 Note: Both test suites will (eventually) include unit/integration tests.  You need to run the server locally for tests to pass!
 
 - Go tests can be run with `task go:tests`
-- Frontend tests are WIP. 😭
+- Frontend unit and component tests run with `task ts:test:unit`, and the mocked Playwright suite with `task ts:test:e2e`.
+
+### Screenshot tests
+
+`task ts:test:visual` compares the main screens, in light and dark, against the baselines in `web/e2e/visual/__screenshots__/`. It runs in the pinned Playwright Docker image (see [ADR 0033](adrs/0033-playwright-screenshot-tests-in-a-pinned-image.md)), so you need Docker but no backend: the screens are rendered on a fixture fleet (`web/e2e/fixtures/fleet.ts`).
+
+When you change the UI on purpose, or a dependency update moves pixels, run `task ts:test:visual:update` and look at the changed PNGs before committing them. When CI's `visual` job fails, its `screenshot-diffs` artifact has the expected, actual and diff image for each failed screenshot.
 
 ## Documentation
 
 Run `task python:serve` to run local document server.  Edit to your heart's content!
+
+The web-UI screenshots in the README and `docs/index.md` are generated: `task ts:screenshots` renders them from the fixture fleet in the same Docker image and writes `docs/images/Tangle{Home,Applications,Diffs}.png`. The queries they show are set in `web/e2e/docs/readme.spec.ts`, so change the captions with them. `TangleCLI.png` is a terminal screenshot and is updated by hand.

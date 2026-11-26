@@ -78,8 +78,20 @@ tasks:
     cmds:
       - npm run dev
 
-  screenshots:
-    desc: Regenerate the README's web-UI screenshots from the running app (needs `task services` + tangle-server up)
+  test:visual:
+    desc: Compare the UI against the screenshot baselines, in the pinned Playwright Docker image (see docs/agents/plans/visual-regression-tests.md).
     dir: web
     cmds:
-      - npm run screenshots
+      - scripts/playwright-docker.sh --project=visual {{.CLI_ARGS}}
+
+  test:visual:update:
+    desc: Regenerate the screenshot baselines after an intended UI change, in the pinned Playwright Docker image.
+    dir: web
+    cmds:
+      - scripts/playwright-docker.sh --project=visual --update-snapshots {{.CLI_ARGS}}
+
+  screenshots:
+    desc: Regenerate the README and docs web-UI screenshots from the fixture fleet, in the pinned Playwright Docker image (no backend needed).
+    dir: web
+    cmds:
+      - scripts/playwright-docker.sh --project=docs

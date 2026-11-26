@@ -18,7 +18,8 @@
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run && npm run test:e2e",
 		"test:e2e": "playwright test",
-		"screenshots": "node scripts/capture-readme-screenshots.mjs"
+		"screenshots": "scripts/playwright-docker.sh --project=docs",
+		"test:visual": "scripts/playwright-docker.sh --project=visual"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^2.0.0",

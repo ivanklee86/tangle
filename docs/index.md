@@ -11,21 +11,21 @@ Tangle makes using with multiple ArgoCDs in a [hub and spoke](https://codefresh.
 - Working equally well for your CI/CD tooling (i.e. available as JSON APIs to consume from your tools) and for your humans (via a website that's easy to embed into existing tools).
 - Does all those things with mechanisms (i.e. worker pools) to limit load on ArgoCD components
 
-**Example: Setting the `env:test` label on the Home page**
+**Example: Building a query on the Home page: the `team:payments` label, the `feature/queue-tuning` branch, and the repo it was pushed to**
 
 ![Home](./images/TangleHome.png)
 
-**Example: View all Applications with the `env:test` label**
+**Example: View all Applications with the `team:payments` label**
 
-Visiting `/applications?labels=env:test`
+Visiting `/applications?labels=team:payments`
 
 ![Applications](./images/TangleApplications.png)
 
-**Example: View diffs of all Applications with the `env:test` label from the `test_gitops` branch**
+**Example: View diffs of all Applications with the `team:payments` label against the `feature/queue-tuning` branch of `acme/platform-values`**
 
-Visiting `/diffs?labels=env:test&targetRef=test_gitops`
+Visiting `/diffs?labels=team:payments&targetRef=feature/queue-tuning&targetRepo=https://github.com/acme/platform-values.git`
 
-![Diffss](./images/TangleDiffs.png)
+![Diffs](./images/TangleDiffs.png)
 
 **Example: Using `tangle-cli` from your CI/CD pipelines**
 
