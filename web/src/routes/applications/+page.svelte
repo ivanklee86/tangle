@@ -15,9 +15,12 @@
 	import {
 		ArrowRightOutline,
 		ArrowUpRightFromSquareOutline,
-		ChevronRightOutline
+		ChartPieOutline,
+		ChevronRightOutline,
+		FolderOutline
 	} from 'flowbite-svelte-icons';
-	import { shortRepo, shortRevision } from '$lib/ui/repos';
+	import { shortRepo } from '$lib/ui/repos';
+	import RevisionPill from '$lib/ui/components/RevisionPill.svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -365,41 +368,74 @@
 								{#if sources.length > 1 && expanded.has(key)}
 									<TableBodyRow id="sources-{key}" class="bg-gray-50 dark:bg-gray-800">
 										<TableBodyCell colspan={6} class="py-2 ps-10">
-											<ul class="list-none space-y-1.5 p-0 text-xs">
-												{#each sources as source (source.position)}
-													<li class="flex flex-wrap items-center gap-2">
-														<span class="w-4 font-mono text-gray-500 dark:text-gray-400"
-															>{source.position}</span
-														>
-														<Badge color="gray"
-															>{source.kind === 'helm'
-																? 'Helm'
-																: source.kind === 'oci'
-																	? 'OCI'
-																	: 'Git'}</Badge
-														>
-														<span
-															class="font-mono text-gray-900 dark:text-white"
-															title={source.repoURL}>{shortRepo(source.repoURL)}</span
-														>
-														{#if source.chart}
-															<span class="text-gray-500 dark:text-gray-400">chart</span>
-															<span class="font-mono">{source.chart}</span>
-														{:else if source.path}
-															<span class="text-gray-500 dark:text-gray-400">path</span>
-															<span class="font-mono">{source.path}</span>
-														{/if}
-														{#if source.ref}
-															<Badge color="gray" class="font-mono">ref: {source.ref}</Badge>
-														{/if}
-														<span
-															class="font-mono text-gray-500 dark:text-gray-400"
-															title={source.targetRevision}
-															>{shortRevision(source.targetRevision)}</span
-														>
-													</li>
-												{/each}
-											</ul>
+											<!--
+												A table, so repo, location and revision line up across
+												sources, and each has its own look: the repo bright, the
+												path or chart muted behind a folder or chart glyph, and
+												the revision in a pill.
+											-->
+											<table class="text-xs">
+												<caption class="sr-only">Sources of {application.name}</caption>
+												<thead class="sr-only">
+													<tr>
+														<th scope="col">Position</th>
+														<th scope="col">Kind</th>
+														<th scope="col">Repo</th>
+														<th scope="col">Path or chart</th>
+														<th scope="col">Revision</th>
+													</tr>
+												</thead>
+												<tbody>
+													{#each sources as source (source.position)}
+														<tr>
+															<td class="py-1 pe-3 font-mono text-gray-500 dark:text-gray-400"
+																>{source.position}</td
+															>
+															<td class="py-1 pe-3">
+																<Badge color="gray"
+																	>{source.kind === 'helm'
+																		? 'Helm'
+																		: source.kind === 'oci'
+																			? 'OCI'
+																			: 'Git'}</Badge
+																>
+															</td>
+															<td class="py-1 pe-4">
+																<span class="inline-flex items-center gap-2">
+																	<span
+																		class="font-mono font-semibold text-gray-900 dark:text-white"
+																		title={source.repoURL}>{shortRepo(source.repoURL)}</span
+																	>
+																	{#if source.ref}
+																		<Badge color="indigo" class="font-mono">ref: {source.ref}</Badge
+																		>
+																	{/if}
+																</span>
+															</td>
+															<td class="py-1 pe-4">
+																{#if source.chart}
+																	<span
+																		class="inline-flex items-center gap-1 font-mono text-gray-600 dark:text-gray-400"
+																		title="Chart"
+																	>
+																		<ChartPieOutline class="h-3.5 w-3.5 shrink-0" />{source.chart}
+																	</span>
+																{:else if source.path}
+																	<span
+																		class="inline-flex items-center gap-1 font-mono text-gray-600 dark:text-gray-400"
+																		title="Path"
+																	>
+																		<FolderOutline class="h-3.5 w-3.5 shrink-0" />{source.path}
+																	</span>
+																{/if}
+															</td>
+															<td class="py-1">
+																<RevisionPill revision={source.targetRevision} kind={source.kind} />
+															</td>
+														</tr>
+													{/each}
+												</tbody>
+											</table>
 										</TableBodyCell>
 									</TableBodyRow>
 								{/if}
