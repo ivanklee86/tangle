@@ -10,11 +10,19 @@ import { expect, test, type Page } from '@playwright/test';
 //     ConfigMap line and removes another.
 //   - helm-repo: a chart from a Helm repo; its refs are chart versions, so a
 //     git branch fails to render.
-//   - helm-repo-git-values, git-chart-git-values, two-repos: multi-source
-//     apps, each with a real change on test_gitops.
+//   - helm-repo-git-values, git-chart-git-values, two-repos, same-repo-pinned,
+//     multi-source-cmp, three-repos: multi-source apps, each with a real
+//     change on test_gitops.
 
-const SOURCES = ['git-chart-git-values', 'helm-repo', 'helm-repo-git-values', 'tanka', 'two-repos'];
-const MULTI_SOURCE = ['git-chart-git-values', 'helm-repo-git-values', 'two-repos'];
+const MULTI_SOURCE = [
+	'git-chart-git-values',
+	'helm-repo-git-values',
+	'multi-source-cmp',
+	'same-repo-pinned',
+	'three-repos',
+	'two-repos'
+];
+const SOURCES = [...MULTI_SOURCE, 'helm-repo', 'tanka'].sort();
 
 // A real ArgoCD manifest render per application.
 const DIFFS_TIMEOUT = 60_000;

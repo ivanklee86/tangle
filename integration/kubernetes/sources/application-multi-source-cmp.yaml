@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: multi-source-cmp
+  labels:
+    suite: sources
+    source: multi-source
+spec:
+  project: sources
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  # A config management plugin source (Tanka) inside a multi-source app.
+  sources:
+    - repoURL: https://github.com/ivanklee86/tangle-integration-manifests.git
+      path: multi-source-cmp/tanka
+      targetRevision: main
+    - repoURL: https://github.com/ivanklee86/tangle-integration-manifests.git
+      path: multi-source-cmp/extra
+      targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

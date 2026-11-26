@@ -185,4 +185,49 @@ func TestE2E_SourceFixtures(t *testing.T) {
 		_, err = renderFixture(t, "two-repos", atSourceRevisions(fixtureTargetRef, 1, 2))
 		assert.Error(t, err)
 	})
+
+	// One repo at two revisions: main, and the tag fixture-pinned-v1. The
+	// pushed change touches both directories.
+	t.Run("same-repo-pinned", func(t *testing.T) {
+		live, err := renderFixture(t, "same-repo-pinned", nil)
+		require.NoError(t, err)
+		assert.Equal(t, map[string]any{"greeting": "hello"}, live.configMapData(t, "same-repo-pinned-branch"))
+		assert.Equal(t, map[string]any{"greeting": "hello"}, live.configMapData(t, "same-repo-pinned-tag"))
+
+		target, err := renderFixture(t, "same-repo-pinned", atSourceRevisions(fixtureTargetRef, 1, 2))
+		require.NoError(t, err)
+		assert.Equal(t, map[string]any{"greeting": "hello, world"}, target.configMapData(t, "same-repo-pinned-branch"))
+		assert.Equal(t, map[string]any{"greeting": "hello, world"}, target.configMapData(t, "same-repo-pinned-tag"))
+	})
+
+	// A config management plugin source inside a multi-source app takes its
+	// position's revision like any git source.
+	t.Run("multi-source-cmp", func(t *testing.T) {
+		live, err := renderFixture(t, "multi-source-cmp", nil)
+		require.NoError(t, err)
+		assert.Equal(t, map[string]any{"greeting": "hello"}, live.configMapData(t, "multi-source-cmp-fixture"))
+		assert.Equal(t, map[string]any{"extra": "a"}, live.configMapData(t, "multi-source-cmp-extra"))
+
+		target, err := renderFixture(t, "multi-source-cmp", atSourceRevisions(fixtureTargetRef, 1, 2))
+		require.NoError(t, err)
+		assert.Equal(t, map[string]any{"greeting": "hello, world"}, target.configMapData(t, "multi-source-cmp-fixture"))
+		assert.Equal(t, map[string]any{"extra": "a"}, target.configMapData(t, "multi-source-cmp-extra"))
+	})
+
+	// Three repos, with the change only in the last; neither of the others
+	// has the branch.
+	t.Run("three-repos", func(t *testing.T) {
+		live, err := renderFixture(t, "three-repos", nil)
+		require.NoError(t, err)
+		assert.Contains(t, live, "Deployment/podinfo")
+		assert.Contains(t, live, "ConfigMap/example-cm-4")
+		assert.Equal(t, map[string]any{"greeting": "hello"}, live.configMapData(t, "three-repos-fixture"))
+
+		target, err := renderFixture(t, "three-repos", atSourceRevisions(fixtureTargetRef, 3))
+		require.NoError(t, err)
+		assert.Equal(t, map[string]any{"greeting": "hello, world"}, target.configMapData(t, "three-repos-fixture"))
+
+		_, err = renderFixture(t, "three-repos", atSourceRevisions(fixtureTargetRef, 2, 3))
+		assert.Error(t, err, "ivanklee86/tangle has no test_gitops branch")
+	})
 }
