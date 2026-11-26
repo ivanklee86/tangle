@@ -82,6 +82,8 @@ type applicationsResponse struct {
 // - application/json
 // Responses:
 //   200: diffsResponse
+//   400: errorResponse
+//   404: errorResponse
 //   500: errorResponse
 
 // swagger:parameters diffsRequestParams

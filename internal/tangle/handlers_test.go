@@ -628,3 +628,38 @@ func TestConfigHandler(t *testing.T) {
 		assert.JSONEq(t, `{"domain": ""}`, string(body))
 	})
 }
+
+// Test cases (the diffs endpoint's errors, as JSON ErrorResponses):
+//   - an ArgoCD name that isn't configured is a 404 naming it, not a panic
+//     that chi's Recoverer turns into a bodiless 500
+//   - a malformed request body is a 400 with a JSON body like every other
+//     error, not plain text
+func TestDiffsRequestErrors(t *testing.T) {
+	post := func(t *testing.T, url string, body string) (int, ErrorResponse) {
+		t.Helper()
+		server := httptest.NewServer(newTestTangle().Server.Handler)
+		defer server.Close()
+
+		resp, err := http.Post(server.URL+url, "application/json", bytes.NewBufferString(body))
+		assert.NoError(t, err)
+		defer func() { _ = resp.Body.Close() }()
+
+		var result ErrorResponse
+		assert.NoError(t, json.NewDecoder(resp.Body).Decode(&result), "the body is a JSON ErrorResponse")
+		return resp.StatusCode, result
+	}
+
+	t.Run("unknown ArgoCD instance", func(t *testing.T) {
+		status, result := post(t, "/api/argocd/nope/applications/test-1/diffs", `{"liveRef":"main","targetRef":"main"}`)
+
+		assert.Equal(t, http.StatusNotFound, status)
+		assert.Contains(t, result.Error, `"nope"`)
+	})
+
+	t.Run("malformed body", func(t *testing.T) {
+		status, result := post(t, "/api/argocd/test/applications/test-1/diffs", `{"liveRef":`)
+
+		assert.Equal(t, http.StatusBadRequest, status)
+		assert.Contains(t, result.Error, "invalid request body")
+	})
+}

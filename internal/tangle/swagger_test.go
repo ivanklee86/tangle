@@ -48,3 +48,21 @@ func TestSwaggerSpecDocumentsApplicationsResponses(t *testing.T) {
 		assert.Contains(t, descriptions[name], "key:value", "%s should document its format", name)
 	}
 }
+
+// The diffs endpoint documents the errors it can return besides 200.
+func TestSwaggerSpecDocumentsDiffsResponses(t *testing.T) {
+	var parsed struct {
+		Paths map[string]struct {
+			Post struct {
+				Responses map[string]any `json:"responses"`
+			} `json:"post"`
+		} `json:"paths"`
+	}
+	assert.NoError(t, json.Unmarshal(spec, &parsed))
+
+	diffs, ok := parsed.Paths["/api/argocd/{ArgoCD}/applications/{Name}/diffs"]
+	assert.True(t, ok, "spec should document the diffs endpoint")
+	for _, status := range []string{"200", "400", "404", "500"} {
+		assert.Contains(t, diffs.Post.Responses, status)
+	}
+}
