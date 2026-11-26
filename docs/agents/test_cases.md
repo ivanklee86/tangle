@@ -2,7 +2,7 @@
 
 This contains a list of important use cases.
 
-Each scenario runs as an e2e test against the live stack (`task services:cicd`). The CLI steps are in [`cmd/tangle-cli/main_e2e_test.go`](../../cmd/tangle-cli/main_e2e_test.go) and the "User clicks on it" steps are in [`web/e2e/live/ci-scenarios.spec.ts`](../../web/e2e/live/ci-scenarios.spec.ts). "The change the user pushed" is the `test_gitops` branch, which is a test fixture: see [Live test fixtures](internals.md#live-test-fixtures).
+Each scenario runs as an e2e test against the live stack (`task services:cicd`). The CLI steps are in [`cmd/tangle-cli/main_e2e_test.go`](../../cmd/tangle-cli/main_e2e_test.go) and the "User clicks on it" steps are in [`web/e2e/live/ci-scenarios.spec.ts`](../../web/e2e/live/ci-scenarios.spec.ts). "The change the user pushed" is the `test_gitops` branch of [`tangle-integration-manifests`](https://github.com/ivanklee86/tangle-integration-manifests), a test fixture: see [Live test fixtures](internals.md#live-test-fixtures).
 
 ## CI
 
