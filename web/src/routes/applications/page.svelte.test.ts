@@ -216,10 +216,9 @@ describe('applications +page.svelte', () => {
 		test('links each row out to Argo CD', async () => {
 			const screen = await render(Page, data());
 
-			// bravo sorts first by default (worst health), so it owns the first
-			// link in the table.
+			// Each row's link is named for its application.
 			await expect
-				.element(screen.getByRole('link', { name: 'Open in ArgoCD' }).first())
+				.element(screen.getByRole('link', { name: 'Open bravo in ArgoCD' }))
 				.toHaveAttribute('href', 'https://argocd.test/applications/bravo');
 		});
 
