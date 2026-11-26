@@ -284,12 +284,20 @@ func TestE2E_ServerSourceFixtures(t *testing.T) {
 	// Each multi-source fixture has a real change on test_gitops, in
 	// tangle-integration-manifests. With that repo as the target repo, only
 	// its sources move (ADR 0032), and both sides are rendered with explicit
-	// Revisions, so the diff is exactly the pushed change.
+	// Revisions, so render artifacts cancel out and the diff is exactly the
+	// pushed change.
+	//
+	// Except for one artifact: an explicit render includes the podinfo
+	// chart's Helm test-hook Pods, and the chart names them with
+	// randAlphaNum, so every render names them differently and they show up
+	// as changed on each side. helm-repo-git-values therefore checks that the
+	// diff contains the change, not that it's only the change.
 	multiSource := []struct {
 		app            string
 		added, removed []string
+		randomHooks    bool
 	}{
-		{app: "helm-repo-git-values", added: []string{"replicas: 2"}, removed: []string{"replicas: 1"}},
+		{app: "helm-repo-git-values", added: []string{"replicas: 2"}, removed: []string{"replicas: 1"}, randomHooks: true},
 		{app: "git-chart-git-values", added: []string{"greeting: hello, world", "extra: b"}, removed: []string{"greeting: hello", "extra: a"}},
 		{app: "two-repos", added: []string{"greeting: hello, world"}, removed: []string{"greeting: hello"}},
 	}
@@ -300,6 +308,11 @@ func TestE2E_ServerSourceFixtures(t *testing.T) {
 			assert.Equal(t, "ok", result.Status)
 			assert.Empty(t, result.ManifestGenerationError)
 			added, removed := changedLines(result.Diffs)
+			if test.randomHooks {
+				assert.Subset(t, added, test.added)
+				assert.Subset(t, removed, test.removed)
+				return
+			}
 			assert.ElementsMatch(t, test.added, added)
 			assert.ElementsMatch(t, test.removed, removed)
 		})
@@ -322,9 +335,10 @@ func TestE2E_ServerSourceFixtures(t *testing.T) {
 
 		assert.Equal(t, "ok", result.Status)
 		assert.True(t, result.InferredTargetRepo)
+		// Contains, for the random test-hook names explained above.
 		added, removed := changedLines(result.Diffs)
-		assert.ElementsMatch(t, []string{"replicas: 2"}, added)
-		assert.ElementsMatch(t, []string{"replicas: 1"}, removed)
+		assert.Contains(t, added, "replicas: 2")
+		assert.Contains(t, removed, "replicas: 1")
 	})
 
 	t.Run("not_affected", func(t *testing.T) {

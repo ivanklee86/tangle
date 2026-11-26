@@ -72,7 +72,7 @@ Env var names are resolved against `TangleConfig`'s `koanf` tags, reflected into
 
 The CLI uses [`cobra`](https://github.com/spf13/cobra)/[`viper`](https://github.com/spf13/viper) with the same `TANGLE_` prefix.
 
-`tangle-cli generate-manifests` is the CLI's only subcommand, and one run produces both manifests and diffs. For each matched application it writes `manifests-<argocd>-<app>.yaml` and `diff-<argocd>-<app>.yaml`, plus `error-<argocd>-<app>.txt` when manifest generation fails or the application needs a target repo. `--target-repo` (repeatable) and `--infer-target-repo` choose which sources of each application get `--target-ref`, and the results table shows each diff's status. Files go to `--folder`, or to the working directory when that flag is left out. A generation error only makes the CLI exit non-zero with `--fail-on-error`; a failure to reach the server always exits 1.
+`tangle-cli generate-manifests` is the CLI's only subcommand, and one run produces both manifests and diffs. For each matched application it writes `manifests-<argocd>-<app>.yaml` and `diff-<argocd>-<app>.yaml`, plus `error-<argocd>-<app>.txt` when manifest generation fails or the application needs a target repo. `--target-repo` (repeatable) and `--infer-target-repo` choose which sources of each application get `--target-ref`. The results table gains a Status column only when some diff is not affected or needs a target repo, so an ordinary run prints the same table as before. Files go to `--folder`, or to the working directory when that flag is left out. A generation error only makes the CLI exit non-zero with `--fail-on-error`; a failure to reach the server always exits 1.
 
 ## Live test fixtures
 

@@ -73,14 +73,33 @@ func (t *TangleCLI) renderApplicationsTable(applications []*ApplicationDiffDetai
 	applicationsTable := table.NewWriter()
 	applicationsTable.SetOutputMirror(t.Out)
 	applicationsTable.SetStyle(table.StyleColoredBright)
-	applicationsTable.AppendHeader(table.Row{"ArgoCD", "Application", "Status", "Error"})
+	// The Status column only appears when a diff is one the Error column can't
+	// describe, so a run without target repos prints the same table as
+	// before, which CI scripts may parse.
+	showStatus := false
+	for _, application := range applications {
+		if status := application.Response.Status; status == "notAffected" || status == "needsTargetRepo" {
+			showStatus = true
+		}
+	}
+
+	header := table.Row{"ArgoCD", "Application", "Error"}
+	if showStatus {
+		header = append(header, "Status")
+	}
+	applicationsTable.AppendHeader(header)
+
 	for _, application := range applications {
 		manifestGenError := "False ✅"
 		if application.Response.ManifestGenerationError != "" {
 			manifestGenError = "True 🔥"
 		}
 
-		applicationsTable.AppendRow(table.Row{application.ArgoCD, application.Application, statusLabel(application.Response.Status), manifestGenError})
+		row := table.Row{application.ArgoCD, application.Application, manifestGenError}
+		if showStatus {
+			row = append(row, statusLabel(application.Response.Status))
+		}
+		applicationsTable.AppendRow(row)
 	}
 	applicationsTable.Render()
 }

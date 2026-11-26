@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -97,6 +98,32 @@ func TestCliTargetRepos(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, string(out), "Not affected")
 		assert.Contains(t, string(out), "Needs target repo")
+	})
+
+	t.Run("a run with only OK and error diffs prints the table as before", func(t *testing.T) {
+		// CI scripts may parse this table, so the Status column only appears
+		// when a diff is one the Error column can't describe.
+		server := newFakeTangleServer(t)
+
+		b := bytes.NewBufferString("")
+		command := NewRootCommand()
+		command.SetOut(b)
+		command.SetErr(b)
+		command.SetArgs([]string{
+			"generate-manifests",
+			"--server-address", strings.TrimPrefix(server.URL, "http://"),
+			"--insecure",
+			"--folder", t.TempDir(),
+			"--target-ref", "test_gitops",
+		})
+		require.NoError(t, command.Execute())
+
+		raw, err := io.ReadAll(b)
+		require.NoError(t, err)
+		out := regexp.MustCompile(`\x1b\[[0-9;]*m`).ReplaceAllString(string(raw), "")
+		assert.NotContains(t, out, "STATUS")
+		assert.Regexp(t, `(?m)^\s*test\s+test-1\s+False ✅\s*$`, out)
+		assert.Regexp(t, `(?m)^\s*prod\s+test-3\s+True 🔥\s*$`, out)
 	})
 
 	t.Run("target ref alone sends no target repos", func(t *testing.T) {
