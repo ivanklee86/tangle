@@ -17,3 +17,7 @@ spec:
     - repoURL: https://github.com/ivanklee86/tangle-integration-manifests.git
       path: two-repos
       targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

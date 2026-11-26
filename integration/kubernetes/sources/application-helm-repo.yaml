@@ -14,3 +14,7 @@ spec:
     repoURL: https://stefanprodan.github.io/podinfo
     chart: podinfo
     targetRevision: 6.17.0
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

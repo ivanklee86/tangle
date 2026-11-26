@@ -21,3 +21,7 @@ spec:
       path: git-chart-git-values/extra
       targetRevision: main
       ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

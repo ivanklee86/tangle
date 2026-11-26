@@ -29,8 +29,8 @@ These are the behaviors the live suites assert, and the fixture property each on
 | App | ArgoCD (project) | Labels | Source | Sync policy | Live state | On target ref | Result |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `test-1` | `test` (`default`) | `env:test, foo:bar, bazz:buzz` | Helm chart | automated | Healthy / Synced | `ingress.enabled: true` | Diff adds one `Ingress` and removes nothing |
-| `test-2` | `test` (`default`) | `env:preprod, foo:bar, bazz:buzz` | Plain dir (ConfigMap) | none | Missing / OutOfSync | unchanged | Empty diff |
-| `test-3` | `prod` (`my-project`) | `env:prod, foo:bar` | Helm chart | none | (not asserted) | invalid `values.yaml` | `helm template` error, empty manifests |
+| `test-2` | `test` (`default`) | `env:preprod, foo:bar, bazz:buzz` | Plain dir (ConfigMap) | automated | Healthy / Synced | unchanged | Empty diff |
+| `test-3` | `prod` (`my-project`) | `env:prod, foo:bar` | Helm chart | none | Missing / OutOfSync (its manifests at `main` fail to apply, so a manual sync doesn't change this) | invalid `values.yaml` | `helm template` error, empty manifests |
 | `test-4` | `prod` (`my-project`) | `env:infra, foo:bar` | Plain dir (ConfigMap) | automated | Healthy / Synced | unchanged | Empty diff |
 
 The **Fixture dependency** column says what each use case needs from the manifests repo. "Application CRs" means it only needs the labels and projects, which stay in tangle. "Repo content" means it needs the manifests at `main` and `test_gitops`.
@@ -44,7 +44,7 @@ The **Fixture dependency** column says what each use case needs from the manifes
 | L3 | Several include labels are ANDed | `multiple_tags` (`env:test,bazz:buzz` → test-1) | Application CRs |
 | L4 | Exclude, exclude-only, several excludes, include + exclude on the same key | `exclude*`, `cross_map_different_values` | Application CRs |
 | L5 | Malformed or contradictory query → 400 with a message | `TestE2E_ServerApplicationsBadRequest` | None |
-| L6 | Health and sync status shown per app (synced vs. never-synced) | `CI scenario` Applications link (test-1 Healthy/Synced, test-2 Missing/OutOfSync), `applications.spec.ts` | Repo content at `main` must deploy and become Healthy (test-1, test-4) |
+| L6 | Health and sync status shown per app (synced vs. never-synced) | `CI scenario` Applications link (test-1 and test-2 Healthy/Synced), `CI with failure` Applications link (test-3 Missing/OutOfSync), `applications.spec.ts` | Repo content at `main` must deploy and become Healthy (test-1, test-2, test-4), and must fail to apply for test-3 |
 
 ### Diffs
 
@@ -150,4 +150,6 @@ The apps live in `integration/kubernetes/sources/`, in AppProject `sources`, beh
 
 Not covered yet: source hydrator (it needs a commit-server and push credentials), duplicate resources across sources, a CMP failure, and tag or SHA target refs (G3).
 
-Next: make Tangle send `Revisions`/`SourcePositions` for multi-source apps. That needs a way to say which repo the pushed ref belongs to. Then add Tangle-level tests on these fixtures.
+Tangle-level tests on these fixtures are in `TestE2E_ServerSourceFixtures` and `web/e2e/live/sources.spec.ts`. Their multi-source cases are skipped until the gap below closes.
+
+Next: make Tangle send `Revisions`/`SourcePositions` for multi-source apps. That needs a way to say which repo the pushed ref belongs to. Rendered by hand (2026-11-26), a multi-source app at explicit `Revisions` also differs from its default render in ways the pushed change didn't cause: Helm test-hook Pods appear, `namespace` is dropped and resources reorder. So the fix should probably render both sides with `Revisions`, then tighten the skipped tests to exact matches and un-skip them.

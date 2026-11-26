@@ -20,3 +20,7 @@ spec:
     - repoURL: https://github.com/ivanklee86/tangle-integration-manifests.git
       targetRevision: main
       ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

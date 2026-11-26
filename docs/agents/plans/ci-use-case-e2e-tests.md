@@ -65,11 +65,11 @@ Edge and error cases that are cheap to add at this layer: an unreachable `--serv
 
 A small helper reads `domain` from `/api/config`, the same way `home.spec.ts` does, and builds `${domain}/applications?labels=…` and `${domain}/diffs?labels=…&targetRef=test_gitops`. Every test collects `pageerror` and asserts none. Diff-generation waits use `timeout: 60_000`, since each app is a real ArgoCD manifest render. Health waits use `expect(...).toPass()`, because `test-1` may briefly be `Progressing` right after bring-up.
 
-`CI → Applications URL shows high-level state` (`bazz:buzz`): exactly two rows. `test-1` shows `Healthy`/`Synced` and `test-2` shows `Missing`/`OutOfSync` (it has no automated sync policy, so this is stable by design).
+`CI → Applications URL shows high-level state` (`bazz:buzz`): exactly two rows. `test-1` and `test-2` both show `Healthy`/`Synced`. (Until 2026-11-26 `test-2` had no automated sync policy and was asserted `Missing`/`OutOfSync`, but a manual sync in ArgoCD broke that. It now auto-syncs, and `test-3` carries the never-synced case.)
 
 `CI → Diffs URL shows high-level state` (`bazz:buzz`): the header count reads `1 changed` with no error badge; the `Applications` nav lists `test-1` as `Changed` and `test-2` as `No changes`. Selecting `test-1` shows a diff containing `kind: Ingress`.
 
-`CI with failure → Applications URL` (`foo:bar`): four rows, both ArgoCDs represented.
+`CI with failure → Applications URL` (`foo:bar`): four rows, both ArgoCDs represented. `test-3` shows `Missing`/`OutOfSync`: it has no automated sync policy and its manifests at `main` fail to apply, so a manual sync doesn't change this.
 
 `CI with failure → Diffs URL` (`foo:bar`): header shows `1 changed` and `1 error`. The `test-3` row reads `Error`, and its detail pane shows the manifest generation error mentioning `helm template`. The `Errors` outcome filter narrows the list to `test-3` alone. `test-1` still shows its Ingress diff, so a failure in one app doesn't blank the others.
 
