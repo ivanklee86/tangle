@@ -32,6 +32,8 @@ interface FleetApp {
 	health: string;
 	syncStatus: string;
 	sources: FleetSource[];
+	/** Labels on top of `team: payments`, which every application has. */
+	labels?: Record<string, string>;
 	rendered: Rendered;
 	/**
 	 * Repos that don't have the target ref: rendering fails, the way ArgoCD
@@ -97,6 +99,7 @@ const FLEET: { instance: string; apps: FleetApp[] }[] = [
 		apps: [
 			{
 				name: 'checkout-api',
+				labels: { tier: 'backend' },
 				health: 'Healthy',
 				syncStatus: 'Synced',
 				sources: [
@@ -132,6 +135,7 @@ const FLEET: { instance: string; apps: FleetApp[] }[] = [
 			},
 			{
 				name: 'ledger',
+				labels: { tier: 'backend' },
 				health: 'Degraded',
 				syncStatus: 'OutOfSync',
 				sources: [
@@ -144,6 +148,7 @@ const FLEET: { instance: string; apps: FleetApp[] }[] = [
 			},
 			{
 				name: 'search-indexer',
+				labels: { tier: 'backend' },
 				health: 'Progressing',
 				syncStatus: 'Synced',
 				sources: [
@@ -158,6 +163,7 @@ const FLEET: { instance: string; apps: FleetApp[] }[] = [
 			},
 			{
 				name: 'notifications',
+				labels: { tier: 'backend' },
 				health: 'Healthy',
 				syncStatus: 'Synced',
 				sources: [
@@ -177,6 +183,7 @@ const FLEET: { instance: string; apps: FleetApp[] }[] = [
 		apps: [
 			{
 				name: 'checkout-api',
+				labels: { tier: 'backend' },
 				health: 'Healthy',
 				syncStatus: 'Synced',
 				sources: [
@@ -218,6 +225,7 @@ const FLEET: { instance: string; apps: FleetApp[] }[] = [
 			},
 			{
 				name: 'feature-flags',
+				labels: { tier: 'backend' },
 				health: 'Healthy',
 				syncStatus: 'Synced',
 				sources: [
@@ -232,6 +240,7 @@ const FLEET: { instance: string; apps: FleetApp[] }[] = [
 			},
 			{
 				name: 'billing-cron',
+				labels: { tier: 'backend' },
 				health: 'Missing',
 				syncStatus: 'OutOfSync',
 				sources: [
@@ -255,12 +264,31 @@ function normalize(repo: string): string {
 		.replace(/^([^/]+)/, (host) => host.toLowerCase().replace(/:\d+$/, ''));
 }
 
-function applicationsResponse() {
+/** `key:value` pairs from a `labels` or `excludeLabels` query parameter. */
+function labelPairs(url: URL, param: string): [string, string][] {
+	return url.searchParams
+		.getAll(param)
+		.flatMap((value) => value.split(','))
+		.filter(Boolean)
+		.map((pair) => pair.split(':') as [string, string]);
+}
+
+/** The applications a label query selects, the way ArgoCD's selector does. */
+function applicationsResponse(url: URL) {
+	const include = labelPairs(url, 'labels');
+	const exclude = labelPairs(url, 'excludeLabels');
+	const selected = (app: FleetApp) => {
+		const labels: Record<string, string> = { team: 'payments', ...app.labels };
+		return (
+			include.every(([key, value]) => labels[key] === value) &&
+			!exclude.some(([key, value]) => labels[key] === value)
+		);
+	};
 	return {
 		results: FLEET.map(({ instance, apps }) => ({
 			name: instance,
 			link: `https://argocd-${instance}.acme.dev/applications`,
-			applications: apps.map((app) => ({
+			applications: apps.filter(selected).map((app) => ({
 				name: app.name,
 				url: `https://argocd-${instance}.acme.dev/applications/argocd/${app.name}`,
 				health: app.health,
@@ -359,7 +387,7 @@ async function mockFleetAPI(page: Page): Promise<void> {
 		route.fulfill({ json: { domain: 'https://tangle.acme.dev' } })
 	);
 	await page.route('**/api/applications*', (route) =>
-		route.fulfill({ json: applicationsResponse() })
+		route.fulfill({ json: applicationsResponse(new URL(route.request().url())) })
 	);
 	await page.route('**/api/argocd/*/applications/*/diffs', (route: Route) => {
 		const [, instance, name] =

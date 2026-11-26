@@ -11,21 +11,27 @@ Tangle makes using with multiple ArgoCDs in a [hub and spoke](https://codefresh.
 - Working equally well for your CI/CD tooling (i.e. available as JSON APIs to consume from your tools) and for your humans (via a website that's easy to embed into existing tools).
 - Does all those things with mechanisms (i.e. worker pools) to limit load on ArgoCD components
 
-**Example: Building a query on the Home page: the `team:payments` label, the `feature/queue-tuning` branch, and the repo it was pushed to**
+**Example: Setting the `tier:backend` label on the Home page**
 
 ![Home](./images/TangleHome.png)
 
-**Example: View all Applications with the `team:payments` label**
+**Example: View all Applications with the `tier:backend` label**
 
-Visiting `/applications?labels=team:payments`
+Visiting `/applications?labels=tier:backend`
 
 ![Applications](./images/TangleApplications.png)
 
-**Example: View diffs of all Applications with the `team:payments` label against the `feature/queue-tuning` branch of `acme/platform-values`**
+**Example: View diffs of all Applications with the `tier:backend` label against the `feature/queue-tuning` branch**
+
+Visiting `/diffs?labels=tier:backend&targetRef=feature/queue-tuning`
+
+![Diffs](./images/TangleDiffs.png)
+
+**Example: View diffs of multi-source Applications with the `team:payments` label, sending `feature/queue-tuning` only to sources in `acme/platform-values`**
 
 Visiting `/diffs?labels=team:payments&targetRef=feature/queue-tuning&targetRepo=https://github.com/acme/platform-values.git`
 
-![Diffs](./images/TangleDiffs.png)
+![Multi-source diffs](./images/TangleMultiSource.png)
 
 **Example: Using `tangle-cli` from your CI/CD pipelines**
 
