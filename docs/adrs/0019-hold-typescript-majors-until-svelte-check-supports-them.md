@@ -98,7 +98,7 @@ equivalent CI installs already avoid this class of problem by having a separate 
 Verified end-to-end in a scratch worktree with every #221 bump *except* `typescript`, plus
 `@eslint/js@10.0.1`: clean `npm install`, `svelte-check` (1638 files, 0 errors), `eslint`/`prettier`
 lint, all 93 vitest unit tests, all 16 mocked Playwright e2e tests, and the production build all
-pass. See [the implementation plan](../agents/plans/unblock-ts-major-updates.md) for the exact diff.
+pass. See [the implementation plan](../agents/plans/2026-09-20-unblock-ts-major-updates.md) for the exact diff.
 
 ### Consequences
 
@@ -145,7 +145,7 @@ See Decision Outcome.
 ## More Information
 
 - Blocked PR: [#221](https://github.com/ivanklee86/tangle/pull/221)
-- Implementation plan: [Unblock ts major updates](../agents/plans/unblock-ts-major-updates.md)
+- Implementation plan: [Unblock ts major updates](../agents/plans/2026-09-20-unblock-ts-major-updates.md)
 - [ADR 0013](0013-renovate-weekly-grouped-updates.md) (establishes the `ts` group and the
   major-updates-stay-manual rule this decision works within, not against)
 - [ADR 0015](0015-restrict-argo-cd-go-module-updates-to-major-only.md) (the targeted-hold

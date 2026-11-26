@@ -20,7 +20,7 @@ inline markup on the home page (`routes/+page.svelte`):
   requirement is enforced by the disabled button, not a toast or explanatory paragraph.
 
 Both components carry the gradient/`leading-none` button treatment described in the
-[design consistency plan](flowbite-design-consistency.md).
+[design consistency plan](2026-09-20-flowbite-design-consistency.md).
 
 ## Diffs page
 

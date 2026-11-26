@@ -10,7 +10,7 @@ informed: []
 
 ## Context and Problem Statement
 
-`.github/workflows/ci.yaml`'s `go` job converts Go's native coverage profile (`coverage.out`, produced by `task go:test-ci`) to lcov via `jandelgado/gcov2lcov-action@v1.1.1`, then uploads it to Codecov via `codecov/codecov-action@v5`, authenticated with a `CODECOV_TOKEN` repository secret. This is an external SaaS dependency with a secret to provision and rotate, plus a format-conversion step that exists only because Codecov's action doesn't consume Go's native coverage format directly. [ADR 0009](0009-ci-pipeline-test-taxonomy-and-conditional-jobs.md)/[the CI pipeline restructure plan](../agents/plans/ci-pipeline-restructure.md) already touches this exact job's later steps (JUnit publishing, artifact upload) while restructuring `ci.yaml`, making this a natural point to also drop the external dependency in favor of [octocov](https://github.com/k1LoW/octocov), a self-contained Go coverage/test-reporting tool that reads Go's coverage profile format directly, posts PR comments using the workflow's own `GITHUB_TOKEN`, and — the question this ADR resolves — can persist reports across runs so that PR comments show a coverage *diff* against the base branch, not just the current run's total.
+`.github/workflows/ci.yaml`'s `go` job converts Go's native coverage profile (`coverage.out`, produced by `task go:test-ci`) to lcov via `jandelgado/gcov2lcov-action@v1.1.1`, then uploads it to Codecov via `codecov/codecov-action@v5`, authenticated with a `CODECOV_TOKEN` repository secret. This is an external SaaS dependency with a secret to provision and rotate, plus a format-conversion step that exists only because Codecov's action doesn't consume Go's native coverage format directly. [ADR 0009](0009-ci-pipeline-test-taxonomy-and-conditional-jobs.md)/[the CI pipeline restructure plan](../agents/plans/2026-09-20-ci-pipeline-restructure.md) already touches this exact job's later steps (JUnit publishing, artifact upload) while restructuring `ci.yaml`, making this a natural point to also drop the external dependency in favor of [octocov](https://github.com/k1LoW/octocov), a self-contained Go coverage/test-reporting tool that reads Go's coverage profile format directly, posts PR comments using the workflow's own `GITHUB_TOKEN`, and — the question this ADR resolves — can persist reports across runs so that PR comments show a coverage *diff* against the base branch, not just the current run's total.
 
 ## Decision Drivers
 
@@ -67,7 +67,7 @@ See Decision Outcome.
 
 - [octocov](https://github.com/k1LoW/octocov) and [`k1LoW/octocov-action`](https://github.com/k1LoW/octocov-action)
 - [octocov's GitHub Actions Artifacts datastore (`artifact://` scheme)](https://github.com/k1LoW/octocov#artifact)
-- Implementation plan: [CI pipeline restructure, workstream 10](../agents/plans/ci-pipeline-restructure.md)
+- Implementation plan: [CI pipeline restructure, workstream 10](../agents/plans/2026-09-20-ci-pipeline-restructure.md)
 - Related: [ADR 0009](0009-ci-pipeline-test-taxonomy-and-conditional-jobs.md) (the broader `go` job restructure this coverage-tooling swap rides along with)
 - Related: [ADR 0011](0011-octocov-central-reporting-and-badges-repository.md) (the dedicated central-mode repository that turns this ADR's artifact datastore into durable, publicly-browsable history and badges)
 - Current-state reference: [docs/agents/ci.md](../agents/ci.md)

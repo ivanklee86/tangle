@@ -27,7 +27,7 @@ informed: []
 
 ## Decision Outcome
 
-Chosen option: "Always run `go` and `ts`, leave `docs` conditional." Drop `needs: [filter]` and `if: needs.filter.outputs.go == 'true'` / `if: needs.filter.outputs.ts == 'true'` from the `go` and `ts` jobs in `ci.yaml`, so both run unconditionally on every push and PR, the same way `e2e` already does. Trim `filter`'s `dorny/paths-filter` configuration and job outputs down to `docs` only, since nothing reads the `go`/`ts` filter outputs anymore. `docs` keeps its existing `needs: [filter]` / `if: needs.filter.outputs.docs == 'true'` gating, unchanged. See [the implementation plan](../agents/plans/always-run-go-ts-ci-jobs.md) for the exact diff.
+Chosen option: "Always run `go` and `ts`, leave `docs` conditional." Drop `needs: [filter]` and `if: needs.filter.outputs.go == 'true'` / `if: needs.filter.outputs.ts == 'true'` from the `go` and `ts` jobs in `ci.yaml`, so both run unconditionally on every push and PR, the same way `e2e` already does. Trim `filter`'s `dorny/paths-filter` configuration and job outputs down to `docs` only, since nothing reads the `go`/`ts` filter outputs anymore. `docs` keeps its existing `needs: [filter]` / `if: needs.filter.outputs.docs == 'true'` gating, unchanged. See [the implementation plan](../agents/plans/2026-09-20-always-run-go-ts-ci-jobs.md) for the exact diff.
 
 This **partially supersedes [ADR 0009](0009-ci-pipeline-test-taxonomy-and-conditional-jobs.md)**: the test-taxonomy decision (mock-backed Go unit/integration tests, the always-run `e2e` job, folding `format` into `go`) is unchanged and still the reason those jobs are shaped the way they are. What changes is only the path-conditional-gating half of that ADR, and only for `go`/`ts` — `docs` keeps the `filter`-driven gating ADR 0009 established.
 
@@ -57,7 +57,7 @@ See Decision Outcome.
 
 ## More Information
 
-- Implementation plan: [Always run go/ts CI jobs](../agents/plans/always-run-go-ts-ci-jobs.md)
+- Implementation plan: [Always run go/ts CI jobs](../agents/plans/2026-09-20-always-run-go-ts-ci-jobs.md)
 - Related: [ADR 0009](0009-ci-pipeline-test-taxonomy-and-conditional-jobs.md) (partially superseded — see Decision Outcome; its test-taxonomy and always-run-`e2e` decisions are unchanged)
 - Related: [ADR 0003](0003-svelte-e2e-testing-strategy.md) (its "keep the required path fast" rationale, already partially superseded by ADR 0009's `e2e` cadence change, is the same rationale this decision finds no longer load-bearing for `go`/`ts`)
 - Current-state reference: [docs/agents/ci.md](../agents/ci.md)

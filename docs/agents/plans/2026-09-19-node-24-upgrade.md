@@ -22,7 +22,7 @@ These are the only three Node version references in the repo — confirmed by se
 1. Bump the three references in the table above.
 2. Add the `engines` field to `web/package.json` — this makes the already-present `engine-strict=true` in `web/.npmrc` actually do something (fail `npm install`/`npm ci` fast on the wrong Node major), which is worth doing now that there's a version worth enforcing rather than leaving it a silent no-op.
 3. `task devcontainer` (builds `.devcontainer/Dockerfile`) to confirm the devcontainer image still builds with Node 24.
-4. Inside a container built from the new image (or any Node 24 environment): `cd web && npm ci` (confirms the new `engines` pin doesn't reject the environment it's meant to run in) then the full existing verification pass — `npm run check && npm run lint && npm run test:unit -- --run && npm run build` — plus, if [the e2e plan](svelte-e2e-testing.md) has landed by the time this is implemented, `task ts:test:e2e` too.
+4. Inside a container built from the new image (or any Node 24 environment): `cd web && npm ci` (confirms the new `engines` pin doesn't reject the environment it's meant to run in) then the full existing verification pass — `npm run check && npm run lint && npm run test:unit -- --run && npm run build` — plus, if [the e2e plan](2026-09-19-svelte-e2e-testing.md) has landed by the time this is implemented, `task ts:test:e2e` too.
 5. `docker build -f Dockerfile .` (or `task docker:build`) from the repo root to confirm the production image's web-asset stage still builds cleanly under `node:24-alpine`.
 6. Confirm CI's `ts` job (`task ts:install`, `task ts:lint`, `task ts:build`) passes on `actions/setup-node@v4` with `node-version: '24'`.
 

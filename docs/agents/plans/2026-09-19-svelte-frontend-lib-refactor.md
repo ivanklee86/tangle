@@ -4,7 +4,7 @@ Status: proposed · 2026-09-19
 
 Extract duplicated/untestable logic out of `web/`'s Svelte views and `TangleAPIClient` into plain `.ts` modules under `web/src/lib`, with a vitest unit test landing alongside each extraction. See [ADR 0004](../../adrs/0004-extract-shared-frontend-logic-into-lib.md) for why this is one PR of incremental extractions rather than a bigger rewrite, and why it doesn't touch SvelteKit `load()` functions (that's a follow-on).
 
-Land the six workstreams below in order, one commit per workstream within a single PR, matching this repo's existing convention ([svelte-e2e-testing.md](svelte-e2e-testing.md)).
+Land the six workstreams below in order, one commit per workstream within a single PR, matching this repo's existing convention ([2026-09-19-svelte-e2e-testing.md](2026-09-19-svelte-e2e-testing.md)).
 
 **Layout note**: the workstreams below describe each new module as `web/src/lib/<name>.ts` for readability. In the landed implementation these ended up sorted into `web/src/lib/backend/` (`client.ts`, `http.ts`, `data.ts`, `diffs.ts`, `url.ts`) and `web/src/lib/ui/` (`components/`, `sort.ts`, `validation.ts`, `utils.ts`), per [ADR 0004](../../adrs/0004-extract-shared-frontend-logic-into-lib.md)'s consequences section — read `$lib/http` below as `$lib/backend/http`, `$lib/sort` as `$lib/ui/sort`, and so on.
 

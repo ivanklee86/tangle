@@ -79,7 +79,7 @@ tasks:
       - npm run dev
 
   test:visual:
-    desc: Compare the UI against the screenshot baselines, in the pinned Playwright Docker image (see docs/agents/plans/visual-regression-tests.md).
+    desc: Compare the UI against the screenshot baselines, in the pinned Playwright Docker image (see docs/agents/plans/2026-11-26-visual-regression-tests.md).
     dir: web
     cmds:
       - scripts/playwright-docker.sh --project=visual {{.CLI_ARGS}}

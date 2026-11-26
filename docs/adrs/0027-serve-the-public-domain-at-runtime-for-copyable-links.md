@@ -82,4 +82,4 @@ Three sub-decisions come with it:
 
 ## More Information
 
-Implemented in `internal/tangle/loader.go` (`normalizeDomain`), `internal/tangle/handlers.go` (`configHandler`), `web/src/lib/backend/config.ts` and `web/src/lib/ui/links.ts`. The plan, including the staging and the `integration/tangle.yaml` hazard it had to clear, is in [docs/agents/plans](../agents/plans/absolute-links-and-configured-domain.md).
+Implemented in `internal/tangle/loader.go` (`normalizeDomain`), `internal/tangle/handlers.go` (`configHandler`), `web/src/lib/backend/config.ts` and `web/src/lib/ui/links.ts`. The plan, including the staging and the `integration/tangle.yaml` hazard it had to clear, is in [docs/agents/plans](../agents/plans/2026-09-23-absolute-links-and-configured-domain.md).

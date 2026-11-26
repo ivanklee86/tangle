@@ -162,7 +162,7 @@ asserts the new structure against fixtures, `web/e2e/live` stays structural.
 - `j` / `k` / `/` keyboard shortcuts, the one non-Flowbite interaction the canvas notes; they belong after the
   pages exist.
 - The four backend follow-ups left open by the label-query work
-  ([that plan](label-query-validation-and-exclude-only-selector.md)), one of which — `baseLink` ignoring
+  ([that plan](2026-09-23-label-query-validation-and-exclude-only-selector.md)), one of which — `baseLink` ignoring
   `excludeLabels` — is visible in this design as the per-instance Argo CD deep link.
 
 ## Progress

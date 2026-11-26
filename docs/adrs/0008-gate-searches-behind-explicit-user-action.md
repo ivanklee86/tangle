@@ -99,6 +99,6 @@ See Decision Outcome.
 
 ## More Information
 
-- Implementation plan: [Gate Applications/Diffs behind explicit search](../agents/plans/gate-applications-and-diffs-searches.md)
+- Implementation plan: [Gate Applications/Diffs behind explicit search](../agents/plans/2026-09-20-gate-applications-and-diffs-searches.md)
 - Related: [ADR 0007](0007-flowbite-design-system-consistency.md) (the visual-consistency pass from the same
   review; this ADR covers a distinct, functional decision about request timing rather than appearance)

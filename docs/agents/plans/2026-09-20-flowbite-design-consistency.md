@@ -40,7 +40,7 @@ runs both, `npm run test:unit -- --run` then `npm run test:e2e`).
 color="primary">`, which consumes the `--color-primary-*` tokens in `app.css` directly (`bg-primary-700
 hover:bg-primary-800 dark:bg-primary-600 ...`). A later round of feedback asked for more visual richness back,
 so the primary CTA buttons (in `ApplicationsForm.svelte`/`DiffsForm.svelte`, the two shared form components —
-see [the gating plan](gate-applications-and-diffs-searches.md)) additionally carry a
+see [the gating plan](2026-09-20-gate-applications-and-diffs-searches.md)) additionally carry a
 `bg-gradient-to-br from-primary-400 to-primary-700 hover:from-primary-500 hover:to-primary-800` overlay — a
 gradient, but built from the theme's own ramp instead of the off-palette `pinkToOrange` preset. These same
 buttons also needed `leading-none` added: `Button`'s markup places the button text and the trailing arrow icon

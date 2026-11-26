@@ -26,7 +26,7 @@ informed: []
 
 ## Decision Outcome
 
-Add one `packageRule` to `renovate.json`, scoped to `github.com/argoproj/argo-cd/v3` via `matchPackageNames`, disabling minor and patch updates (`matchUpdateTypes: ["minor", "patch"]` → `enabled: false`) while leaving major updates flowing through the existing `go` group and its `automerge: false` major rule from ADR 0013. See [the implementation plan](../agents/plans/restrict-argocd-go-updates-to-major.md) for the exact diff.
+Add one `packageRule` to `renovate.json`, scoped to `github.com/argoproj/argo-cd/v3` via `matchPackageNames`, disabling minor and patch updates (`matchUpdateTypes: ["minor", "patch"]` → `enabled: false`) while leaving major updates flowing through the existing `go` group and its `automerge: false` major rule from ADR 0013. See [the implementation plan](../agents/plans/2026-09-20-restrict-argocd-go-updates-to-major.md) for the exact diff.
 
 ### Consequences
 
@@ -49,7 +49,7 @@ Add one `packageRule` to `renovate.json`, scoped to `github.com/argoproj/argo-cd
 
 ## More Information
 
-- Plan: [Restrict argo-cd's Go module updates to major-only](../agents/plans/restrict-argocd-go-updates-to-major.md)
+- Plan: [Restrict argo-cd's Go module updates to major-only](../agents/plans/2026-09-20-restrict-argocd-go-updates-to-major.md)
 - [ADR 0013](0013-renovate-weekly-grouped-updates.md) (the `go` group and major-automerge-off precedent this decision extends)
 - [Renovate: `matchDepTypes`](https://docs.renovatebot.com/configuration-options/#matchdeptypes) (gomod's `indirect` depType, excluded from independent updates by default)
 - [Renovate: `matchPackageNames`](https://docs.renovatebot.com/configuration-options/#matchpackagenames)

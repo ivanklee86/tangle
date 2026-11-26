@@ -59,6 +59,6 @@ See Decision Outcome.
 
 ## More Information
 
-- Implementation plan: [Svelte component unit tests](../agents/plans/svelte-component-unit-tests.md)
+- Implementation plan: [Svelte component unit tests](../agents/plans/2026-09-19-svelte-component-unit-tests.md)
 - Related: [ADR 0003](0003-svelte-e2e-testing-strategy.md), [ADR 0004](0004-extract-shared-frontend-logic-into-lib.md)
 - Verified against source at implementation-planning time (2026-09-19): `vitest-browser-svelte`'s README (setup snippet), `vitest.dev`'s Browser Mode guide (multi-project `node`/`browser` split), and this repo's installed `vite`/`vitest` versions via `npm ls` / `npm view`.

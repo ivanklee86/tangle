@@ -57,7 +57,7 @@ Two Renovate PRs for the `ts` group are red. They fail for unrelated reasons: #2
 2. ~~Apply a–f on top of the Renovate branch~~ Superseded: applied in the combined PR, which carries #253's version bumps itself.
 3. Run `task ts:install-ci`, `task ts:test:unit`, `task ts:test:e2e`, `task ts:lint`, `task ts:build`, `npm run check`, then `task docker:build` to cover the `image`/`e2e` jobs locally.
 4. Record an ADR (MADR 4.0.0, next number in `docs/adrs`) for adopting SvelteKit 3: the config moving into `vite.config.ts`, explicit env declaration, and the `$lib`-alias stopgap with its removal trigger.
-5. Update `docs/agents/internals.md` wherever it describes `web/` config (`svelte.config.js`, `$env/static/public`), and `docs/agents/plans/svelte-frontend-upgrade.md`'s pointer to `svelte.config.js`.
+5. Update `docs/agents/internals.md` wherever it describes `web/` config (`svelte.config.js`, `$env/static/public`), and `docs/agents/plans/2026-09-19-svelte-frontend-upgrade.md`'s pointer to `svelte.config.js`.
 
 **Tests to add or adjust** (behavior from a caller's perspective)
 

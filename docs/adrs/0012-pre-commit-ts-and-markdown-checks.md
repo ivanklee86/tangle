@@ -73,7 +73,7 @@ Everything else runs at markdownlint's defaults; genuine violations found on the
 
 ## More Information
 
-- Plan: [Pre-commit checks for TypeScript and Markdown](../agents/plans/pre-commit-ts-markdown-checks.md)
+- Plan: [Pre-commit checks for TypeScript and Markdown](../agents/plans/2026-09-20-pre-commit-ts-markdown-checks.md)
 - [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2)
 - [pre-commit/mirrors-eslint](https://github.com/pre-commit/mirrors-eslint) (considered and rejected)
 - [pre-commit.ci](https://pre-commit.ci)

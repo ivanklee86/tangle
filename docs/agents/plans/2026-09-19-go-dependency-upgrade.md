@@ -2,13 +2,13 @@
 
 Status: proposed · 2026-09-19
 
-Bump the Go toolchain and Tangle's direct Go dependencies to their latest versions. This is separate from [Kubernetes stack upgrade](kubernetes-stack-upgrade.md), which already moved `go.mod`'s `go` directive to `1.26.3` as a side effect of the ArgoCD SDK bump (argo-cd v3.5.3's own dependency graph requires Go 1.26.1+) — this plan finishes that line of work.
+Bump the Go toolchain and Tangle's direct Go dependencies to their latest versions. This is separate from [Kubernetes stack upgrade](2026-09-19-kubernetes-stack-upgrade.md), which already moved `go.mod`'s `go` directive to `1.26.3` as a side effect of the ArgoCD SDK bump (argo-cd v3.5.3's own dependency graph requires Go 1.26.1+) — this plan finishes that line of work.
 
 ## Scope
 
 **In scope**: the Go toolchain, and the ~24 packages in `go.mod`'s first (non-`// indirect`) `require` block — these are the modules Tangle actually imports and is responsible for keeping current.
 
-**Out of scope**: the ~600 `// indirect` entries in the second `require` block. Almost all of them are transitively pulled in by `github.com/argoproj/argo-cd/v3`, which dominates the module graph (its own dependency tree includes hundreds of `cloud.google.com/go/*` and `k8s.io/*` packages pinned to versions argo-cd itself is built and tested against). Running `go get -u ./...` or `go get -u all` would bump those independently of what argo-cd actually declares, which risks producing a combination argo-cd was never built against — and would fight the `replace` directives [Kubernetes stack upgrade](kubernetes-stack-upgrade.md) just added for `github.com/argoproj/argo-cd/gitops-engine` and the `k8s.io/*` staging modules. Leave indirect versions to whatever `go mod tidy` naturally resolves from the direct requires below; only touch one by hand if it's carrying a known CVE.
+**Out of scope**: the ~600 `// indirect` entries in the second `require` block. Almost all of them are transitively pulled in by `github.com/argoproj/argo-cd/v3`, which dominates the module graph (its own dependency tree includes hundreds of `cloud.google.com/go/*` and `k8s.io/*` packages pinned to versions argo-cd itself is built and tested against). Running `go get -u ./...` or `go get -u all` would bump those independently of what argo-cd actually declares, which risks producing a combination argo-cd was never built against — and would fight the `replace` directives [Kubernetes stack upgrade](2026-09-19-kubernetes-stack-upgrade.md) just added for `github.com/argoproj/argo-cd/gitops-engine` and the `k8s.io/*` staging modules. Leave indirect versions to whatever `go mod tidy` naturally resolves from the direct requires below; only touch one by hand if it's carrying a known CVE.
 
 ## Current → target
 
@@ -35,7 +35,7 @@ The rest of the direct requires (`argo-cd/v3`, `acarl005/stripansi`, `flowcharts
 2. Bump the Go toolchain: update `go.mod`'s `go` directive, `Dockerfile`'s `FROM golang:1.26-alpine` → `1.27-alpine`, and both `go-version` entries in `.github/workflows/ci.yaml` (currently `1.26` / `1.26.x`) to `1.27` / `1.27.x`. The devcontainer's base image (`ghcr.io/ivanklee86/devcontainer/go:1.27`) is already ahead of this, so no devcontainer change needed.
 3. Bump each direct dependency in the table individually with `go get <module>@<version>` rather than a blanket `-u`, so a bad bump is easy to bisect; run `go mod tidy` after each and skim the resulting `go.sum`/indirect-require diff for anything unexpected pulled in.
 4. `go build ./...`, `go vet ./...`, `gofmt -l .`, `golangci-lint run` — same bar as any dependency bump.
-5. `go test ./...` for the packages that don't need a live cluster (`internal/argocd`, `internal/tangle`, `pkg/client`, `internal/cli`, `cmd/tangle-cli` need `task services` up first per [Kubernetes stack upgrade](kubernetes-stack-upgrade.md)'s validation steps) — run the full live-cluster suite too, since `gofiber/fiber`, `go-chi/chi`, and `koanf` bumps could plausibly change HTTP routing or config-parsing behavior even across minor versions.
+5. `go test ./...` for the packages that don't need a live cluster (`internal/argocd`, `internal/tangle`, `pkg/client`, `internal/cli`, `cmd/tangle-cli` need `task services` up first per [Kubernetes stack upgrade](2026-09-19-kubernetes-stack-upgrade.md)'s validation steps) — run the full live-cluster suite too, since `gofiber/fiber`, `go-chi/chi`, and `koanf` bumps could plausibly change HTTP routing or config-parsing behavior even across minor versions.
 6. `task docker:build` to confirm the production image still builds against the bumped toolchain and deps.
 7. Skim each bumped package's changelog between old and new version for breaking changes before merging — these are all minor/patch bumps per semver, but `fiber/v2`, `chi/v5`, and `koanf/v2` are exactly the packages Tangle's HTTP/config surface depends on most directly.
 

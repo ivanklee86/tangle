@@ -119,7 +119,7 @@ Two codes count, not one. `codes.Unavailable` is the idle-timeout case: gRPC tri
 
 ## More Information
 
-- [Implementation plan](../agents/plans/argocd-client-reconnect.md) — workstreams, code sketches, the test-case list, and the open questions.
+- [Implementation plan](../agents/plans/2026-09-22-argocd-client-reconnect.md) — workstreams, code sketches, the test-case list, and the open questions.
 - Evidence, all at the pinned versions in `go.mod` (`github.com/argoproj/argo-cd/v3 v3.5.3`, `google.golang.org/grpc v1.82.2`): the socket name at `pkg/apiclient/grpcproxy.go:113-119`, the dialer reuse in `util/grpc/grpc.go`'s `BlockingNewClient`, the preface write at `internal/transport/http2_client.go:433`, the 30-minute idle default at `dialoptions.go:729`, and the closer chain at `pkg/apiclient/grpcproxy.go:198-223` and `pkg/apiclient/apiclient.go:550-559`.
 - Upstream: [`util/grpc/grpc.go` on master](https://github.com/argoproj/argo-cd/blob/master/util/grpc/grpc.go) still reuses `rawConn`; the gRPC-Web proxy design dates to [PR #1077](https://github.com/argoproj/argo-cd/pull/1077).
 - Related: [ADR 0015](0015-restrict-argo-cd-go-module-updates-to-major-only.md) (why an upstream fix would not reach us), [ADR 0023](0023-resolve-env-var-overrides-against-the-config-schema.md) (the same "a variable nobody set became config with no trace" lesson about failures that must be visible).

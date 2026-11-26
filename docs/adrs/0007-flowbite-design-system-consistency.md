@@ -103,7 +103,7 @@ See Decision Outcome.
 
 ## More Information
 
-- Implementation plan: [Flowbite design consistency pass](../agents/plans/flowbite-design-consistency.md)
+- Implementation plan: [Flowbite design consistency pass](../agents/plans/2026-09-20-flowbite-design-consistency.md)
 - Related: [ADR 0002](0002-upgrade-svelte-frontend-to-tailwind-v4-and-flowbite-svelte-v1.md) (the upgrade this
   pass follows), [ADR 0008](0008-gate-searches-behind-explicit-user-action.md) (a related but distinct
   decision from the same review, about *when* the UI performs network actions rather than *how* it looks)
