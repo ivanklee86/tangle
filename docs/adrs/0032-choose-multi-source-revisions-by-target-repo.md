@@ -14,7 +14,7 @@ Tangle diffs an Application by asking ArgoCD for its manifests twice, at the liv
 
 To render a change, ArgoCD needs `Revisions[i]` with `SourcePositions[i]` for each source to override (`TestE2E_SourceFixtures`). A git ref only means something in one repo, and Tangle takes one `targetRef` with nothing saying which repo it came from. So Tangle can't tell which positions to override. The `two-repos` fixture shows that sending the ref to every source fails, because the other repo has no such branch. Helm repo sources take chart versions, not git refs.
 
-The requirements and use cases are in [the multi-source plan](../agents/plans/multi-source-applications.md).
+The requirements and use cases are in [the multi-source plan](../agents/plans/2026-11-26-multi-source-applications.md).
 
 ## Decision Drivers
 

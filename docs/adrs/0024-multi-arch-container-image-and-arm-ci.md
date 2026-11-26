@@ -127,7 +127,7 @@ The division of labor is the point, and each piece covers something the others c
 
 ## More Information
 
-- Implementation plan: [Multi-arch container image and ARM CI coverage](../agents/plans/multi-arch-image-and-arm-ci.md)
+- Implementation plan: [Multi-arch container image and ARM CI coverage](../agents/plans/2026-09-21-multi-arch-image-and-arm-ci.md)
 - Current-state reference: [docs/agents/ci.md](../agents/ci.md) — the pipeline diagram and per-job walkthroughs this changes
 - Related: [ADR 0009](0009-ci-pipeline-test-taxonomy-and-conditional-jobs.md) — the test pyramid this now replicates on a second architecture, and the ADR that accepts `e2e`'s cost
 - Related: [ADR 0017](0017-always-run-go-and-ts-ci-jobs.md) — `go` and `e2e` run on every push and PR, so their matrices double on every run rather than occasionally

@@ -59,6 +59,6 @@ See Decision Outcome.
 
 - [octocov central mode](https://github.com/k1LoW/octocov#central)
 - [octocov.dev](https://octocov.dev) (the hosted viewer octocov links to for artifact-stored reports — considered and rejected in favor of a fully self-hosted badge/dashboard, since it's a third-party service outside this repo's control)
-- Implementation notes: [CI pipeline restructure, workstream 11](../agents/plans/ci-pipeline-restructure.md) (most of this workstream's steps live in the new `octocov-central` repository, not in `tangle`)
+- Implementation notes: [CI pipeline restructure, workstream 11](../agents/plans/2026-09-20-ci-pipeline-restructure.md) (most of this workstream's steps live in the new `octocov-central` repository, not in `tangle`)
 - Related: [ADR 0010](0010-replace-codecov-with-octocov.md) (the artifact datastore this central repository reads from)
 - Superseded by, if adopted later: none.

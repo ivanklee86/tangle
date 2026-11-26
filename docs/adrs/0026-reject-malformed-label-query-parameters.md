@@ -76,4 +76,4 @@ The error-level server log is kept, since operators find it useful, but the `400
 
 ## More Information
 
-[#240](https://github.com/ivanklee86/tangle/issues/240) — an exclude-only query dropping its selector entirely and returning every application — is a plain bug in `internal/argocd/wrapper.go` rather than a decision, and is fixed alongside this without its own ADR. The two were found together and share the implementation plan in [docs/agents/plans](../agents/plans/label-query-validation-and-exclude-only-selector.md).
+[#240](https://github.com/ivanklee86/tangle/issues/240) — an exclude-only query dropping its selector entirely and returning every application — is a plain bug in `internal/argocd/wrapper.go` rather than a decision, and is fixed alongside this without its own ADR. The two were found together and share the implementation plan in [docs/agents/plans](../agents/plans/2026-09-23-label-query-validation-and-exclude-only-selector.md).

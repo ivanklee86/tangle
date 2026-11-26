@@ -18,7 +18,7 @@ Land the six workstreams below roughly in order — 1 is independent and can lan
 
 ## 2. Devcontainer: Playwright browser + font packages
 
-Reuses exactly the package list [ADR-0003's plan](svelte-e2e-testing.md) (workstream 2) already researched and verified in this devcontainer — a Chromium binary is already cached here (`~/.cache/ms-playwright`), confirming the binary itself installs fine, but the apt font/runtime packages aren't in the `Dockerfile` yet, and without them Chromium renders real content with genuinely zero-height/invisible text (a real risk for component tests asserting on visible text, not just a screenshot concern).
+Reuses exactly the package list [ADR-0003's plan](2026-09-19-svelte-e2e-testing.md) (workstream 2) already researched and verified in this devcontainer — a Chromium binary is already cached here (`~/.cache/ms-playwright`), confirming the binary itself installs fine, but the apt font/runtime packages aren't in the `Dockerfile` yet, and without them Chromium renders real content with genuinely zero-height/invisible text (a real risk for component tests asserting on visible text, not just a screenshot concern).
 
 **Steps**
 
@@ -159,5 +159,5 @@ In order of complexity — start with pure prop-driven components with no extern
 - Do 2 → 3 → 4 in order before 5: the devcontainer's fonts (2) and the dependency/config upgrade (3, 4) are both needed for a component test to even render correctly, let alone pass.
 - After 3, before touching `vite.config.ts` in 4: confirm the existing six specs still pass under the bumped `vitest`/`vite` alone, to isolate upgrade breakage from config-split breakage.
 - Do 6 last, once 5's tests exist locally-green — no point wiring a CI step for tests that don't exist yet or don't yet pass reliably in a fresh browser instance.
-- Commit each workstream separately, matching this repo's existing convention ([svelte-e2e-testing.md](svelte-e2e-testing.md), [svelte-frontend-lib-refactor.md](svelte-frontend-lib-refactor.md)).
+- Commit each workstream separately, matching this repo's existing convention ([2026-09-19-svelte-e2e-testing.md](2026-09-19-svelte-e2e-testing.md), [2026-09-19-svelte-frontend-lib-refactor.md](2026-09-19-svelte-frontend-lib-refactor.md)).
 - This plan and ADR-0003's e2e plan now share two prerequisites (the devcontainer Playwright/font install, the `playwright`/`@playwright/test` version pin) — whichever plan is implemented second should reuse what the first one already landed rather than redoing the research; workstream 2 above is written to be that shared piece regardless of order.

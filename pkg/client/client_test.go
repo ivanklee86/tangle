@@ -21,7 +21,7 @@ import (
 // small enough that a shared test-support package isn't worth it. This
 // package's tests previously hit a hardcoded "localhost:8081", relying on
 // nothing actually listening there and only "passing" because of a stale Go
-// test cache — see docs/agents/plans/go-major-dependency-migration.md's
+// test cache — see docs/agents/plans/2026-09-20-go-major-dependency-migration.md's
 // Outcome section for how that was found.
 func newFakeTangleServer(t *testing.T) *httptest.Server {
 	t.Helper()

@@ -108,7 +108,7 @@ See Decision Outcome.
 
 ## More Information
 
-- Implementation plan: [Structured key/value Labels input](../agents/plans/structured-key-value-labels-input.md)
+- Implementation plan: [Structured key/value Labels input](../agents/plans/2026-09-20-structured-key-value-labels-input.md)
 - Related: [ADR 0007](0007-flowbite-design-system-consistency.md) (Flowbite as the frontend's source of visual
   truth, which this decision's chip/button choices follow), [ADR 0008](0008-gate-searches-behind-explicit-user-action.md)
   (the shared-form-component precedent this decision extends down to the field level)

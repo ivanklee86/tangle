@@ -54,6 +54,6 @@ See Decision Outcome.
 
 ## More Information
 
-- Implementation plan: [Svelte e2e testing](../agents/plans/svelte-e2e-testing.md)
+- Implementation plan: [Svelte e2e testing](../agents/plans/2026-09-19-svelte-e2e-testing.md)
 - Related: [ADR 0002](0002-upgrade-svelte-frontend-to-tailwind-v4-and-flowbite-svelte-v1.md) (the upgrade whose manual Playwright verification motivated this ADR)
 - Superseded by: [ADR 0009](0009-ci-pipeline-test-taxonomy-and-conditional-jobs.md), which changes only the live-stack smoke suite's cadence (opt-in nightly/`workflow_dispatch` → folded into an always-run `e2e` job). The mocked-suite-as-required-check half of this decision is unchanged.

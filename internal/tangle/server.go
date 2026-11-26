@@ -50,7 +50,7 @@ func New(config *TangleConfig, version string) *Tangle {
 	schema := httplog.SchemaECS.Concise(true)
 	// httplog v3 dropped its own colorized console handler (v2's color.go/
 	// text_handler.go) in favor of plumbing straight to slog - see
-	// docs/agents/plans/go-major-dependency-migration.md. Restore colorized,
+	// docs/agents/plans/2026-09-20-go-major-dependency-migration.md. Restore colorized,
 	// human-readable logs for local dev (air, `task go:run`) by swapping in
 	// tint's handler when running interactively; keep plain JSON everywhere
 	// else (CI, tests, containers) so log shipping/parsing is unaffected.
@@ -71,7 +71,7 @@ func New(config *TangleConfig, version string) *Tangle {
 		slog.String("env", config.Env),
 	)
 	// quietRoutes are skipped from request logging entirely (no rate-limited "quiet down"
-	// period like httplog v2 had — see docs/agents/plans/go-major-dependency-migration.md).
+	// period like httplog v2 had — see docs/agents/plans/2026-09-20-go-major-dependency-migration.md).
 	quietRoutes := map[string]bool{
 		"/":        true,
 		"/metrics": true,

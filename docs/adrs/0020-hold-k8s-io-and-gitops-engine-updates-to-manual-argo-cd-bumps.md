@@ -101,7 +101,7 @@ rule:
 either failure) — verified directly against the `minimatch` matcher Renovate uses for
 `matchPackageNames` glob patterns: it matches `k8s.io/apimachinery` and `k8s.io/api`, and correctly
 excludes `sigs.k8s.io/yaml`. Schema-validated with `prek run renovate-config-validator --all-files`.
-See [the implementation plan](../agents/plans/fix-gomplate-v5-and-hold-argocd-k8s-pins.md).
+See [the implementation plan](../agents/plans/2026-09-20-fix-gomplate-v5-and-hold-argocd-k8s-pins.md).
 
 ### Consequences
 
@@ -140,7 +140,7 @@ See Decision Outcome.
 ## More Information
 
 - Blocked PR: [#216](https://github.com/ivanklee86/tangle/pull/216)
-- Implementation plan: [Fix gomplate v5 and hold argo-cd/k8s.io pins](../agents/plans/fix-gomplate-v5-and-hold-argocd-k8s-pins.md)
+- Implementation plan: [Fix gomplate v5 and hold argo-cd/k8s.io pins](../agents/plans/2026-09-20-fix-gomplate-v5-and-hold-argocd-k8s-pins.md)
 - [ADR 0015](0015-restrict-argo-cd-go-module-updates-to-major-only.md) (the rule this decision
   extends, and the shared reasoning — a manually-managed vendoring companion pin, not an
   independently-versioned dependency)

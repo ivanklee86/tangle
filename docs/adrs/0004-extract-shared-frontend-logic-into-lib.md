@@ -58,6 +58,6 @@ See Decision Outcome.
 
 ## More Information
 
-- Implementation plan: [Svelte frontend `$lib` refactor](../agents/plans/svelte-frontend-lib-refactor.md)
+- Implementation plan: [Svelte frontend `$lib` refactor](../agents/plans/2026-09-19-svelte-frontend-lib-refactor.md)
 - Related: [ADR 0002](0002-upgrade-svelte-frontend-to-tailwind-v4-and-flowbite-svelte-v1.md), [ADR 0003](0003-svelte-e2e-testing-strategy.md)
 - Follow-on (not yet an ADR): migrating routes from `onMount`-driven fetching to SvelteKit `load()` functions.

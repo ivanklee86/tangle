@@ -275,7 +275,7 @@ func TestDiffs(t *testing.T) {
 // (nil, on error) *argocd.GetManifestsResponse right after the error
 // response had already been written — silently recovered by chi's
 // Recoverer, so it never failed a test despite panicking on every real
-// GetManifests error. See docs/agents/plans/go-major-dependency-migration.md's
+// GetManifests error. See docs/agents/plans/2026-09-20-go-major-dependency-migration.md's
 // Outcome section for how this was found.
 func TestDiffsError(t *testing.T) {
 	t.Run("GetManifests error", func(t *testing.T) {

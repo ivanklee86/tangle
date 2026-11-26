@@ -231,7 +231,7 @@ comparing `octocov dump report` against each input file alone before landing thi
   per [ADR 0017](../adrs/0017-always-run-go-and-ts-ci-jobs.md)), and `format`'s fail-fast concern
   is moot now that it's folded into `go` as its first step.
 - **Resolved**: no caching of Go modules, npm packages, or the k3d/ArgoCD CLI downloads —
-  [workstream 12](plans/ci-pipeline-restructure.md#12-ci-dependency-caching) landed this: Go
+  [workstream 12](plans/2026-09-20-ci-pipeline-restructure.md#12-ci-dependency-caching) landed this: Go
   module/build cache, Go tool-binary cache, npm cache, Playwright-browser cache, k3d/argocd CLI
   cache, and Docker layer caching via buildx + the GitHub Actions cache backend.
 - **Resolved**: the Task CLI was the one dependency workstream 12 didn't cover — every job

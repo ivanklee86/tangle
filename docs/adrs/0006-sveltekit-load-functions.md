@@ -58,5 +58,5 @@ See Decision Outcome.
 
 ## More Information
 
-- Implementation plan: [SvelteKit load() migration](../agents/plans/sveltekit-load-migration.md)
+- Implementation plan: [SvelteKit load() migration](../agents/plans/2026-09-19-sveltekit-load-migration.md)
 - Related: [ADR 0004](0004-extract-shared-frontend-logic-into-lib.md) (deferred this as "workstream 7"), [ADR 0005](0005-svelte-component-unit-tests.md) (the test suite this migration is a follow-on to, and whose route-level scoping decision this ADR partially revisits)

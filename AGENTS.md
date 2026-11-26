@@ -3,7 +3,7 @@
 ## Documentation
 
 - Decisions should be recorded in [MADR 4.0.0](https://adr.github.io/madr/) format in `docs/adrs`.
-- Plans should be stored in `docs/agents/plans`.
+- Plans should be stored in `docs/agents/plans`, named `YYYY-MM-DD-<topic>.md` with the date the plan was started (e.g. `2026-11-26-multi-source-applications.md`).
 - Keep `docs/agents/internals.md` up to date as repository changes.
 - Let's use full-length lines when writing docs.
 

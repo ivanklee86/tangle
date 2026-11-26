@@ -49,7 +49,7 @@ Chosen options:
 
 ## More Information
 
-- Plan: [Drop pre-commit.ci, run prek in CI](../agents/plans/drop-precommit-ci-run-prek-in-actions.md)
+- Plan: [Drop pre-commit.ci, run prek in CI](../agents/plans/2026-09-20-drop-precommit-ci-run-prek-in-actions.md)
 - [`prek`](https://github.com/j178/prek)
 - [`j178/prek-action`](https://github.com/j178/prek-action)
 - [pre-commit.ci](https://pre-commit.ci) (being dropped)

@@ -262,7 +262,7 @@ one-time catch-up of the drift it left behind in
 
 ## More Information
 
-- Implementation plan: [Automate the `tangle-deployments` chart bump](../agents/plans/automate-tangle-deployments-chart-bump.md)
+- Implementation plan: [Automate the `tangle-deployments` chart bump](../agents/plans/2026-09-20-automate-tangle-deployments-chart-bump.md)
 - `chart-releaser-action`'s documented trigger: `on: push: branches: [main]` —
   <https://github.com/helm/chart-releaser-action>
 - `repository_dispatch` token requirements — <https://docs.github.com/en/rest/repos/repos#create-a-repository-dispatch-event>

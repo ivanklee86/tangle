@@ -31,7 +31,7 @@ informed: []
 
 ## Decision Outcome
 
-Chosen options, landed together in one `renovate.json` restructure (see [the implementation plan](../agents/plans/renovate-weekly-grouped-updates.md) for the exact config and file-by-file changes):
+Chosen options, landed together in one `renovate.json` restructure (see [the implementation plan](../agents/plans/2026-09-20-renovate-weekly-grouped-updates.md) for the exact config and file-by-file changes):
 
 1. **Weekly schedule**: `"schedule": ["on friday"]` (same day as today, biweekly modifier dropped).
 2. **Four ecosystem groups** — `go`, `ts`, `k8s`, `ci` — each grouping its native Renovate manager (`gomod`, `npm`, `helmv3`, `github-actions` respectively) together with the same-ecosystem `dockerfile` images (by `matchPackageNames`) and the new `customManagers` entries below (by `matchDatasources`).
@@ -66,7 +66,7 @@ Chosen options, landed together in one `renovate.json` restructure (see [the imp
 
 ## More Information
 
-- Plan: [Renovate weekly grouped updates](../agents/plans/renovate-weekly-grouped-updates.md)
+- Plan: [Renovate weekly grouped updates](../agents/plans/2026-09-20-renovate-weekly-grouped-updates.md)
 - [Renovate: `minimumReleaseAge`](https://docs.renovatebot.com/configuration-options/#minimumreleaseage) / [`minimumReleaseAgeBehaviour`](https://docs.renovatebot.com/configuration-options/#minimumreleaseagebehaviour)
 - [Renovate: `customManagers`](https://docs.renovatebot.com/configuration-options/#custommanagers)
 - [`renovatebot/pre-commit-hooks`](https://github.com/renovatebot/pre-commit-hooks)

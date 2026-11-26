@@ -60,5 +60,5 @@ Chosen option: "Upgrade in place", because it is the only option that satisfies 
 - [Flowbite Svelte introduction / setup docs](https://flowbite-svelte.com/docs/pages/introduction)
 - [Tailwind CSS v4 upgrade guide](https://tailwindcss.com/docs/upgrade-guide)
 - [`flowbite-svelte` CHANGELOG](https://github.com/themesberg/flowbite-svelte/blob/main/CHANGELOG.md)
-- Implementation plan: [Svelte frontend upgrade](../agents/plans/svelte-frontend-upgrade.md)
+- Implementation plan: [Svelte frontend upgrade](../agents/plans/2026-09-19-svelte-frontend-upgrade.md)
 - Superseded by, if adopted later: none.

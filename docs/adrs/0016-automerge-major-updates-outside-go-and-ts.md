@@ -26,7 +26,7 @@ informed: []
 
 ## Decision Outcome
 
-Restructure the repo-wide major-update rule in `renovate.json`: `matchUpdateTypes: ["major"]` now defaults to `automerge: true`/`platformAutomerge: true`, with three narrower rules layered after it (`matchDatasources: ["go"]`, `matchDatasources: ["npm"]`, and `matchManagers: ["dockerfile"]` + `matchPackageNames: ["golang", "ghcr.io/ivanklee86/devcontainer/go", "node"]`) putting `automerge: false` back for Go- and TypeScript-scoped majors specifically — the same matcher shapes already used by the `go`/`ts` groupName rules from ADR 0013, so the automerge scope now tracks the ecosystem grouping exactly. See [the implementation plan](../agents/plans/automerge-non-go-ts-majors.md) for the exact diff. This also reverts the `devcontainer` group's major-automerge back to unconditional (it's not Go/TS-scoped, so nothing overrides its own `automerge: true`), which ADR 0013 had tightened as a side effect of the old repo-wide rule.
+Restructure the repo-wide major-update rule in `renovate.json`: `matchUpdateTypes: ["major"]` now defaults to `automerge: true`/`platformAutomerge: true`, with three narrower rules layered after it (`matchDatasources: ["go"]`, `matchDatasources: ["npm"]`, and `matchManagers: ["dockerfile"]` + `matchPackageNames: ["golang", "ghcr.io/ivanklee86/devcontainer/go", "node"]`) putting `automerge: false` back for Go- and TypeScript-scoped majors specifically — the same matcher shapes already used by the `go`/`ts` groupName rules from ADR 0013, so the automerge scope now tracks the ecosystem grouping exactly. See [the implementation plan](../agents/plans/2026-09-20-automerge-non-go-ts-majors.md) for the exact diff. This also reverts the `devcontainer` group's major-automerge back to unconditional (it's not Go/TS-scoped, so nothing overrides its own `automerge: true`), which ADR 0013 had tightened as a side effect of the old repo-wide rule.
 
 ### Consequences
 
@@ -48,7 +48,7 @@ Restructure the repo-wide major-update rule in `renovate.json`: `matchUpdateType
 
 ## More Information
 
-- Plan: [Automerge non-Go/TS majors](../agents/plans/automerge-non-go-ts-majors.md)
+- Plan: [Automerge non-Go/TS majors](../agents/plans/2026-09-20-automerge-non-go-ts-majors.md)
 - [ADR 0013](0013-renovate-weekly-grouped-updates.md) (establishes the `go`/`ts`/`k8s`/`ci` groups this decision reuses the matchers from, and the original repo-wide major/automerge split this decision narrows)
 - [ADR 0015](0015-restrict-argo-cd-go-module-updates-to-major-only.md) (unaffected — argo-cd's minor/patch updates stay disabled regardless of this decision's automerge changes, since `enabled: false` means the update is never proposed)
 - Superseded by, if adopted later: none.

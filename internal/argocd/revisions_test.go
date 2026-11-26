@@ -35,7 +35,7 @@ func moved(plan argocd.RevisionPlan) []bool {
 }
 
 // Test cases, named after the use-case rows in
-// docs/agents/plans/multi-source-applications.md:
+// docs/agents/plans/2026-11-26-multi-source-applications.md:
 //
 // Single source:
 //   - S1: no target repos, git source: the source gets the target ref
