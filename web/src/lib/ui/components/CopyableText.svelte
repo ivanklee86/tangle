@@ -37,8 +37,9 @@
 	<div class="mt-1 flex items-center gap-2">
 		<code
 			class="grow overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs text-gray-700 dark:text-gray-300"
-			>{text}</code
 		>
+			{text}
+		</code>
 		<Button
 			type="button"
 			size="xs"

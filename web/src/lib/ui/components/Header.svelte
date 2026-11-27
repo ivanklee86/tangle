@@ -7,9 +7,9 @@
 	<NavBrand href="/">
 		<!-- The one place coral survives: a wordmark never competes with a status
 			 badge, and primary is indigo everywhere else (see app.css). -->
-		<span class="self-center whitespace-nowrap text-xl font-bold tracking-tight text-[#fe795d]"
-			>Tangle</span
-		>
+		<span class="self-center whitespace-nowrap text-xl font-bold tracking-tight text-[#fe795d]">
+			Tangle
+		</span>
 	</NavBrand>
 	<div class="flex items-center gap-2 md:order-2">
 		<DarkMode />

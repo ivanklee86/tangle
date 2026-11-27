@@ -62,14 +62,16 @@
 								<Badge color="gray">{kindLabels[source.kind] ?? source.kind}</Badge>
 								<span
 									class="font-mono font-semibold text-gray-900 dark:text-white"
-									title={source.repoURL}>{shortRepo(source.repoURL)}</span
+									title={source.repoURL}
 								>
+									{shortRepo(source.repoURL)}
+								</span>
 								{#if source.ref}
 									<Badge color="indigo" class="font-mono">ref: {source.ref}</Badge>
 									{#if usedByLabel(source.usedBy)}
-										<span class="text-xs text-gray-500 dark:text-gray-400"
-											>{usedByLabel(source.usedBy)}</span
-										>
+										<span class="text-xs text-gray-500 dark:text-gray-400">
+											{usedByLabel(source.usedBy)}
+										</span>
 									{/if}
 								{/if}
 							</div>
@@ -99,9 +101,9 @@
 								<RevisionPill revision={source.targetRevision} kind={source.kind} />
 								<!-- D9: where it moved from, whatever kind of revision that was. -->
 								<div class="mt-1 text-xs text-gray-600 dark:text-gray-400">
-									moved from <span class="font-mono" title={source.liveRevision}
-										>{shortRevision(source.liveRevision)}</span
-									>
+									moved from <span class="font-mono" title={source.liveRevision}>
+										{shortRevision(source.liveRevision)}
+									</span>
 								</div>
 							{:else}
 								<span class="text-xs text-gray-500 dark:text-gray-400">unchanged</span>

@@ -135,8 +135,10 @@
 			color="alternative"
 			disabled={!canAdd}
 			onclick={add}
-			aria-label="Add target repo">Add</Button
+			aria-label="Add target repo"
 		>
+			Add
+		</Button>
 		{#if hint}
 			<Tooltip>{hint}</Tooltip>
 		{/if}

@@ -130,14 +130,15 @@
 				query, because a target repo applies to every application (D8).
 			-->
 			<Alert color="yellow" border class={WARNING_ALERT}>
-				<span class="font-medium">Which repo is <span class="font-mono">{targetRef}</span> in?</span
-				>
+				<span class="font-medium">
+					Which repo is <span class="font-mono">{targetRef}</span> in?
+				</span>
 				<p class="mt-2 text-sm">
 					{#if candidates.length === 1}
-						Its git sources are all in <span class="font-mono" title={candidates[0]}
-							>{shortRepo(candidates[0])}</span
-						>, but the query has no target repo, so nothing was rendered. Add it below, or turn on
-						Infer target repo. CI fails on this until one of them is set.
+						Its git sources are all in <span class="font-mono" title={candidates[0]}>
+							{shortRepo(candidates[0])}
+						</span>, but the query has no target repo, so nothing was rendered. Add it below, or
+						turn on Infer target repo. CI fails on this until one of them is set.
 					{:else if candidates.length > 1}
 						This application has sources in {candidates.length} repos, and the query doesn't say which
 						one the target ref belongs to, so nothing was rendered. CI fails on this until a target repo
@@ -192,17 +193,19 @@
 					{#each targetRepos as repo, index (repo)}
 						{index > 0 ? (index === targetRepos.length - 1 ? ' or ' : ', ') : ''}<span
 							class="font-mono"
-							title={repo}>{shortRepo(repo)}</span
+							title={repo}
 						>
+							{shortRepo(repo)}
+						</span>
 					{/each}, so nothing was rendered.
 				</p>
 				{#if sources.length > 0}
 					<ul class="mt-3 list-none space-y-1 p-0 text-sm text-gray-600 dark:text-gray-400">
 						{#each sources as source (source.position)}
 							<li>
-								Uses <span class="font-mono" title={source.repoURL}
-									>{shortRepo(source.repoURL)}</span
-								>
+								Uses <span class="font-mono" title={source.repoURL}>
+									{shortRepo(source.repoURL)}
+								</span>
 								at <span class="font-mono">{source.liveRevision}</span>.
 							</li>
 						{/each}
@@ -226,9 +229,9 @@
 								? index === movedSources.length - 1
 									? ' and '
 									: ', '
-								: ''}{source.position} (<span class="font-mono" title={source.repoURL}
-								>{shortRepo(source.repoURL)}</span
-							>){/each}. Check that it exists there.
+								: ''}{source.position} (<span class="font-mono" title={source.repoURL}>
+								{shortRepo(source.repoURL)}
+							</span>){/each}. Check that it exists there.
 					</p>
 				{/if}
 			</Alert>
@@ -244,12 +247,12 @@
 					{#snippet titleSlot()}
 						Diff
 						{#if row.outcome === 'changed'}
-							<span class="ms-1.5 font-mono text-xs text-green-600 dark:text-green-400"
-								>+{row.stats.added}</span
-							>
-							<span class="ms-1 font-mono text-xs text-red-600 dark:text-red-400"
-								>−{row.stats.removed}</span
-							>
+							<span class="ms-1.5 font-mono text-xs text-green-600 dark:text-green-400">
+								+{row.stats.added}
+							</span>
+							<span class="ms-1 font-mono text-xs text-red-600 dark:text-red-400">
+								−{row.stats.removed}
+							</span>
 						{/if}
 					{/snippet}
 

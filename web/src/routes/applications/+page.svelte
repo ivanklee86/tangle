@@ -255,8 +255,9 @@
 						<div class="flex items-center gap-2">
 							<span
 								class="text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400"
-								>{facet.label}</span
 							>
+								{facet.label}
+							</span>
 							<div
 								role="group"
 								aria-label="Filter by {facet.label.toLowerCase()}"
@@ -315,8 +316,9 @@
 										type="button"
 										class="cursor-pointer select-none uppercase"
 										onclick={() => toggleSort(column.key)}
-										>{column.label}{sortIndicatorFor(sortState, column.key)}</button
 									>
+										{column.label}{sortIndicatorFor(sortState, column.key)}
+									</button>
 								</TableHeadCell>
 							{/each}
 							<TableHeadCell>Live ref</TableHeadCell>
@@ -331,15 +333,16 @@
 									<TableBodyCell>
 										<span
 											class="rounded bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-900 dark:text-gray-300"
-											>{application.instance}</span
 										>
+											{application.instance}
+										</span>
 									</TableBodyCell>
-									<TableBodyCell
-										><ArgoCDHealthStatus healthStatus={application.health} /></TableBodyCell
-									>
-									<TableBodyCell
-										><ArgoCDSyncStatus syncStatus={application.syncStatus} /></TableBodyCell
-									>
+									<TableBodyCell>
+										<ArgoCDHealthStatus healthStatus={application.health} />
+									</TableBodyCell>
+									<TableBodyCell>
+										<ArgoCDSyncStatus syncStatus={application.syncStatus} />
+									</TableBodyCell>
 									{#if sources.length > 1}
 										<TableBodyCell class="text-xs">
 											<button
@@ -359,9 +362,9 @@
 										</TableBodyCell>
 									{:else}
 										<!-- A one-entry spec.sources has no liveRef: use its source's. -->
-										<TableBodyCell class="font-mono text-xs text-gray-500 dark:text-gray-400"
-											>{application.liveRef || sources[0]?.targetRevision || ''}</TableBodyCell
-										>
+										<TableBodyCell class="font-mono text-xs text-gray-500 dark:text-gray-400">
+											{application.liveRef || sources[0]?.targetRevision || ''}
+										</TableBodyCell>
 									{/if}
 									<TableBodyCell class="text-right whitespace-nowrap">
 										<!-- Icon-only below xl, so the table fits a narrow window; the name stays in the label. -->
@@ -373,8 +376,9 @@
 											rel="external"
 											aria-label="Open {application.name} in ArgoCD"
 										>
-											<span class="hidden xl:inline">Open in ArgoCD</span
-											><ArrowUpRightFromSquareOutline class="h-3 w-3 xl:ms-1.5" />
+											<span class="hidden xl:inline">
+												Open in ArgoCD
+											</span><ArrowUpRightFromSquareOutline class="h-3 w-3 xl:ms-1.5" />
 										</Button>
 										<Tooltip class="xl:hidden">Open in ArgoCD</Tooltip>
 									</TableBodyCell>
@@ -410,32 +414,34 @@
 												<tbody>
 													{#each sources as source (source.position)}
 														<tr>
-															<td class="py-1 pe-3 font-mono text-gray-500 dark:text-gray-400"
-																>{source.position}</td
-															>
+															<td class="py-1 pe-3 font-mono text-gray-500 dark:text-gray-400">
+																{source.position}
+															</td>
 															<td class="py-1 pe-3">
-																<Badge color="gray"
-																	>{source.kind === 'helm'
+																<Badge color="gray">
+																	{source.kind === 'helm'
 																		? 'Helm'
 																		: source.kind === 'oci'
 																			? 'OCI'
-																			: 'Git'}</Badge
-																>
+																			: 'Git'}
+																</Badge>
 															</td>
 															<td class="py-1 pe-4">
 																<span class="flex min-w-0 items-center gap-2">
 																	<span
 																		class="truncate font-mono font-semibold text-gray-900 dark:text-white"
-																		title={source.repoURL}>{shortRepo(source.repoURL)}</span
+																		title={source.repoURL}
 																	>
+																		{shortRepo(source.repoURL)}
+																	</span>
 																	{#if source.ref}
-																		<Badge color="indigo" class="shrink-0 font-mono"
-																			>ref: {source.ref}</Badge
-																		>
+																		<Badge color="indigo" class="shrink-0 font-mono">
+																			ref: {source.ref}
+																		</Badge>
 																		{#if usedByLabel(source.usedBy)}
-																			<span class="shrink-0 text-gray-500 dark:text-gray-400"
-																				>{usedByLabel(source.usedBy)}</span
-																			>
+																			<span class="shrink-0 text-gray-500 dark:text-gray-400">
+																				{usedByLabel(source.usedBy)}
+																			</span>
 																		{/if}
 																	{/if}
 																</span>
@@ -448,8 +454,10 @@
 																	>
 																		<ChartPieOutline class="h-3.5 w-3.5 shrink-0" /><span
 																			class="truncate"
-																			title={source.chart}>{source.chart}</span
+																			title={source.chart}
 																		>
+																			{source.chart}
+																		</span>
 																	</span>
 																{:else if source.path}
 																	<span
@@ -458,8 +466,10 @@
 																	>
 																		<FolderOutline class="h-3.5 w-3.5 shrink-0" /><span
 																			class="truncate"
-																			title={source.path}>{source.path}</span
+																			title={source.path}
 																		>
+																			{source.path}
+																		</span>
 																	</span>
 																{/if}
 															</td>
@@ -488,9 +498,9 @@
 									{#if query.excludeLabels}without
 										<code class="font-mono">{query.excludeLabels}</code>{/if}.
 								</p>
-								<Button class="mt-5" color="primary" onclick={() => (editing = true)}
-									>Edit query</Button
-								>
+								<Button class="mt-5" color="primary" onclick={() => (editing = true)}>
+									Edit query
+								</Button>
 							{:else}
 								<!--
 									Filters hiding every row is a different state from the
@@ -504,8 +514,10 @@
 									class="mt-4"
 									size="sm"
 									color="alternative"
-									onclick={() => (facets = emptyFacets())}>Clear filters</Button
+									onclick={() => (facets = emptyFacets())}
 								>
+									Clear filters
+								</Button>
 							{/if}
 						</div>
 					{/if}
@@ -524,9 +536,9 @@
 								two buttons with the same name is a worse answer than one.
 							-->
 							{#if hasActiveFacets(facets) && visible.length > 0}
-								· <button type="button" class="underline" onclick={() => (facets = emptyFacets())}
-									>Clear filters</button
-								>
+								· <button type="button" class="underline" onclick={() => (facets = emptyFacets())}>
+									Clear filters
+								</button>
 							{/if}
 						</span>
 					</div>

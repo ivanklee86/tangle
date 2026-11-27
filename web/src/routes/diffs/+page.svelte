@@ -211,20 +211,20 @@
 			{rows.length === 1 ? 'application' : 'applications'} against
 			<span class="font-mono text-gray-900 dark:text-white">{query.targetRef}</span>
 			·
-			<span class="text-yellow-600 dark:text-yellow-300"
-				>{countOutcome(rows, 'changed')} changed</span
-			>
+			<span class="text-yellow-600 dark:text-yellow-300">
+				{countOutcome(rows, 'changed')} changed
+			</span>
 			{#if countOutcome(rows, 'error') > 0}
-				· <span class="text-red-600 dark:text-red-400"
-					>{countOutcome(rows, 'error')}
-					{countOutcome(rows, 'error') === 1 ? 'error' : 'errors'}</span
-				>
+				· <span class="text-red-600 dark:text-red-400">
+					{countOutcome(rows, 'error')}
+					{countOutcome(rows, 'error') === 1 ? 'error' : 'errors'}
+				</span>
 			{/if}
 			{#if needsRepoCount > 0}
-				· <span class="font-semibold text-yellow-700 dark:text-yellow-300"
-					>{needsRepoCount}
-					{needsRepoCount === 1 ? 'needs' : 'need'} target repo</span
-				>
+				· <span class="font-semibold text-yellow-700 dark:text-yellow-300">
+					{needsRepoCount}
+					{needsRepoCount === 1 ? 'needs' : 'need'} target repo
+				</span>
 			{/if}
 			{#if notAffectedCount > 0}
 				· {notAffectedCount} not affected
@@ -285,8 +285,9 @@
 					<div class="px-2 pt-2 pb-1">
 						<span
 							class="text-xs font-bold tracking-wider text-gray-500 uppercase dark:text-gray-400"
-							>{group.instance}</span
 						>
+							{group.instance}
+						</span>
 						<span class="ms-1.5 text-xs text-gray-500 dark:text-gray-400">
 							· {group.rows.filter((row) => row.outcome === 'changed').length} changed of
 							{group.rows.length}
@@ -319,9 +320,9 @@
 										{:else if row.outcome === 'error'}
 											<span class="font-semibold text-red-600 dark:text-red-400">Error</span>
 										{:else if row.outcome === 'needsTargetRepo'}
-											<span class="font-semibold text-yellow-700 dark:text-yellow-300"
-												>Needs repo</span
-											>
+											<span class="font-semibold text-yellow-700 dark:text-yellow-300">
+												Needs repo
+											</span>
 										{:else if row.outcome === 'notAffected'}
 											<span class="text-gray-500 dark:text-gray-400">Not affected</span>
 										{:else if row.outcome === 'changed'}
