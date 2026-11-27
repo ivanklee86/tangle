@@ -61,8 +61,9 @@
 		>
 			<Label for="{uid}-target">
 				Target ref
-				{#if targetRefMode === 'required'}<span class="text-red-500" aria-hidden="true">*</span
-					>{/if}
+				{#if targetRefMode === 'required'}<span class="text-red-500" aria-hidden="true">
+						*
+					</span>{/if}
 			</Label>
 			<!--
 				ps-10 clears the leading icon. Flowbite positions a `left` snippet

@@ -100,8 +100,10 @@
 					<Badge
 						color="gray"
 						class="border border-gray-300 font-mono font-semibold dark:border-gray-500 dark:bg-gray-700 dark:text-gray-100"
-						title={repo}>{shortRepo(repo)}</Badge
+						title={repo}
 					>
+						{shortRepo(repo)}
+					</Badge>
 				{/each}
 				{#if query.targetRepos.length > SHOWN_REPOS}
 					<button
@@ -109,8 +111,10 @@
 						class="text-primary-700 dark:text-primary-400 text-xs font-semibold"
 						aria-label="{query.targetRepos.length -
 							SHOWN_REPOS} more target repos: {hiddenRepos}. Edit the query to see them all."
-						onclick={onEdit}>+{query.targetRepos.length - SHOWN_REPOS} more</button
+						onclick={onEdit}
 					>
+						+{query.targetRepos.length - SHOWN_REPOS} more
+					</button>
 					<Tooltip>{hiddenRepos}</Tooltip>
 				{/if}
 			{:else if query.inferTargetRepo}

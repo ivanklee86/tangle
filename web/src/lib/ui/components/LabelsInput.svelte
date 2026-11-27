@@ -171,8 +171,10 @@
 			color="alternative"
 			disabled={!canAdd}
 			onclick={addPair}
-			aria-label="Add {noun}">Add</Button
+			aria-label="Add {noun}"
 		>
+			Add
+		</Button>
 		{#if hint}
 			<Tooltip>{hint}</Tooltip>
 		{/if}
